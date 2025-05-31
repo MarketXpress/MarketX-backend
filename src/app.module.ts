@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Listing } from './listing/entities/listing.entity';
 import { ListingsModule } from './listing/listing.module';
+import { MarketPlaceModule } from './market-place/market-place.module';
 
 @Module({
   imports: [
@@ -28,6 +29,8 @@ import { ListingsModule } from './listing/listing.module';
     }),
 
     ListingsModule,
+
+    MarketPlaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

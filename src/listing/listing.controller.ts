@@ -36,4 +36,6 @@ export class ListingsController {
   delete(@Param('id') id: string) {
     return this.listingsService.delete(id);
   }
+
+  
 }

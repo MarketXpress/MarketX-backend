@@ -34,4 +34,15 @@ export class ListingsService {
     await this.listingRepo.remove(listing);
     return { message: 'Listing deleted' };
   }
+
+  async findActiveListingsPaginated(take = 10, skip = 0): Promise<{ listings: Listing[]; total: number }> {
+    const [listings, total] = await this.listingRepo.findAndCount({
+      where: { status: 'active' },
+      order: { createdAt: 'DESC' },
+      take,
+      skip,
+    });
+
+    return { listings, total };
+  }
 }

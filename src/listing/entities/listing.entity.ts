@@ -23,6 +23,9 @@ export class Listing {
   @Column()
   ownerId: string;
 
+  @Column({ type: 'varchar' })
+  status: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }
