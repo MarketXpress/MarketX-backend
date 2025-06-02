@@ -8,6 +8,13 @@ import { ListingsModule } from './listing/listing.module';
 import { MarketPlaceModule } from './market-place/market-place.module';
 import { WalletModule } from './wallet/wallet.module';
 import { UserModule } from './user/user.module';
+import { AdminController } from './controllers/admin.controller';
+import { UsersController } from './controllers/users.controller';
+import { AdminService } from './services/admin.service';
+import { UsersService } from './services/users.service';
+import { AdminGuard } from './guards/admin.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -37,8 +44,11 @@ import { UserModule } from './user/user.module';
     WalletModule,
 
     UserModule,
+
+    AuthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, AdminController, UsersController],
+  providers: [AppService, AdminService, UsersService, AdminGuard, RolesGuard],
+  exports: [AdminGuard, RolesGuard],
 })
 export class AppModule {}
