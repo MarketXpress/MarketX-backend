@@ -8,6 +8,8 @@ import { ListingsModule } from './listing/listing.module';
 import { MarketPlaceModule } from './market-place/market-place.module';
 import { WalletModule } from './wallet/wallet.module';
 import { UserModule } from './user/user.module';
+import { FavoritesModule } from './favorites/favorites.module'; // Add this import
+
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { UserModule } from './user/user.module';
     WalletModule,
 
     UserModule,
+
+    FavoritesModule
   ],
   controllers: [AppController],
   providers: [AppService],
