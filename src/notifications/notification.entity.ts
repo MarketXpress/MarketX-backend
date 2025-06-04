@@ -1,5 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { User } from '../users/user.entity';
+
+
 
 export enum NotificationType {
   TRANSACTION_RECEIVED = 'transaction_received',
@@ -111,4 +114,20 @@ export class NotificationEntity {
   @ApiProperty({ description: 'Notification last update timestamp' })
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+    @ManyToOne(() => User, { eager: true })
+  @JoinColumn({ name: 'recipient_id' })
+  recipient: User;
+
+  @Column({ name: 'recipient_id' })
+  recipientId: number;
+
 }
+function ManyToOne(arg0: () => typeof User, arg1: { eager: boolean; }): (target: NotificationEntity, propertyKey: "recipient") => void {
+  throw new Error('Function not implemented.');
+}
+
+function JoinColumn(arg0: { name: string; }): (target: NotificationEntity, propertyKey: "recipient") => void {
+  throw new Error('Function not implemented.');
+}
+

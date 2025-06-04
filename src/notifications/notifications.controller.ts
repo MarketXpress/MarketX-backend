@@ -38,6 +38,9 @@ import {
   @Controller('notifications')
   // @UseGuards(JwtAuthGuard) // Uncomment when auth is implemented
   @ApiBearerAuth()
+  @Controller('notifications')
+  @UseGuards(AuthGuard('jwt')) // Enforce authentication on all routes
+
   export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) {}
   
@@ -177,3 +180,9 @@ import {
       return this.notificationsService.sendBulkNotifications(notifications);
     }
   }
+function AuthGuard(arg0: string): Function | import("@nestjs/common").CanActivate {
+  throw new Error('Function not implemented.');
+  
+}
+
+
