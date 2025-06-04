@@ -15,6 +15,7 @@ import { UsersService } from './services/users.service';
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
+import { FavoritesModule } from './favorites/favorites.module'; 
 
 @Module({
   imports: [
@@ -46,6 +47,8 @@ import { AuthModule } from './auth/auth.module';
     UserModule,
 
     AuthModule,
+
+    FavoritesModule
   ],
   controllers: [AppController, AdminController, UsersController],
   providers: [AppService, AdminService, UsersService, AdminGuard, RolesGuard],
