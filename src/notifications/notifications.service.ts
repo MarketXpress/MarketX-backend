@@ -2,7 +2,6 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindManyOptions, Between, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-
 import { NotificationEntity, NotificationType, NotificationChannel, NotificationPriority } from './notification.entity';
 import { CreateNotificationDto, UpdateNotificationDto, NotificationQueryDto } from './dto/notification.dto';
 
