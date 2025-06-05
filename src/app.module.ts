@@ -7,6 +7,7 @@ import { Listing } from './listing/entities/listing.entity';
 import { ListingsModule } from './listing/listing.module';
 import { MarketPlaceModule } from './market-place/market-place.module';
 import { WalletModule } from './wallet/wallet.module';
+import { SchedulerModule } from './scheduler';
 import { UserModule } from './user/user.module';
 import { AdminController } from './controllers/admin.controller';
 import { UsersController } from './controllers/users.controller';
@@ -16,6 +17,9 @@ import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { FavoritesModule } from './favorites/favorites.module'; 
+import { LoginLog } from './login-logs/login-log.entity';
+import { LoginLogModule } from './login-logs/login-log.module';
+
 
 @Module({
   imports: [
@@ -32,7 +36,7 @@ import { FavoritesModule } from './favorites/favorites.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [Listing], // or use: [__dirname + '/**/*.entity{.ts,.js}']
+        entities: [Listing, LoginLog], // or use: [__dirname + '/**/*.entity{.ts,.js}']
         synchronize: true, // disable in production, use migrations
       }),
       inject: [ConfigService],
@@ -48,7 +52,9 @@ import { FavoritesModule } from './favorites/favorites.module';
 
     AuthModule,
 
-    FavoritesModule
+    FavoritesModule,
+    LoginLogModule,
+    SchedulerModule
   ],
   controllers: [AppController, AdminController, UsersController],
   providers: [AppService, AdminService, UsersService, AdminGuard, RolesGuard],
