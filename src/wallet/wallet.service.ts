@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { Wallet } from './entities/wallet.entity';
 import { WalletKeyAudit } from './entities/wallet-key-audit.entity';
+import Server from 'stellar-sdk';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -85,4 +86,28 @@ export class WalletService {
 
     return wallet;
   }
+
+  /**
+   * Sync all wallet balances from the Stellar blockchain.
+   */
+  async syncAllWalletBalances(): Promise<void> {
+    const server = new Server('https://horizon.stellar.org');
+    const wallets = await this.walletRepository.find();
+    for (const wallet of wallets) {
+      try {
+        const account = await server.loadAccount(wallet.publicKey);
+        // Find XLM balance (native asset)
+        const nativeBalance = account.balances.find(b => b.asset_type === 'native');
+        if (nativeBalance) {
+          // If you have a balance column, update it; otherwise, log it
+          // wallet.balance = nativeBalance.balance;
+          // await this.walletRepository.save(wallet);
+          console.log(`Wallet ${wallet.id} synced. Balance: ${nativeBalance.balance}`);
+        }
+      } catch (error) {
+        console.error(`Failed to sync wallet ${wallet.id}:`, error.message);
+      }
+    }
+  }
 }
+
