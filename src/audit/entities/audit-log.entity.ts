@@ -1,15 +1,30 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
 
-export enum AuditActionType {
-  CREATE = 'CREATE',
-  READ = 'READ',
-  UPDATE = 'UPDATE',
-  DELETE = 'DELETE',
-  LOGIN = 'LOGIN',
+export enum AuditAction {
+  // Wallet Actions
+  WALLET_REGENERATION = 'WALLET_REGENERATION',
+  WALLET_TRANSACTION = 'WALLET_TRANSACTION',
+  
+  // Profile Actions
+  PROFILE_UPDATE = 'PROFILE_UPDATE',
+  PASSWORD_UPDATE = 'PASSWORD_UPDATE',
+  EMAIL_UPDATE = 'EMAIL_UPDATE',
+  PHONE_UPDATE = 'PHONE_UPDATE',
+  
+  // Security Actions
+  LOGIN_ATTEMPT = 'LOGIN_ATTEMPT',
   LOGOUT = 'LOGOUT',
-  PASSWORD_CHANGE = 'PASSWORD_CHANGE',
+  TWO_FACTOR_ENABLE = 'TWO_FACTOR_ENABLE',
+  TWO_FACTOR_DISABLE = 'TWO_FACTOR_DISABLE',
+  
+  // Account Actions
+  ACCOUNT_DELETION = 'ACCOUNT_DELETION',
+  ACCOUNT_SUSPENSION = 'ACCOUNT_SUSPENSION',
+  ACCOUNT_REACTIVATION = 'ACCOUNT_REACTIVATION',
+  
+  // Role & Permission Actions
+  ROLE_CHANGE = 'ROLE_CHANGE',
   PERMISSION_CHANGE = 'PERMISSION_CHANGE',
-  SYSTEM = 'SYSTEM',
 }
 
 export enum AuditStatus {
@@ -23,49 +38,40 @@ export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index()
-  @Column()
+  @Column({ type: 'uuid', name: 'user_id' })
+  @Index('idx_audit_logs_user_id')
   userId: string;
 
-  @Index()
   @Column({
     type: 'enum',
-    enum: AuditActionType,
-    default: AuditActionType.SYSTEM
+    enum: AuditAction,
+    name: 'action',
   })
-  action: AuditActionType;
+  @Index('idx_audit_logs_action')
+  action: AuditAction;
 
-  @Column({
-    type: 'enum',
-    enum: AuditStatus,
-    default: AuditStatus.SUCCESS
-  })
-  status: AuditStatus;
+  @CreateDateColumn({ name: 'timestamp' })
+  @Index('idx_audit_logs_timestamp')
+  timestamp: Date;
 
-  @Column({ type: 'jsonb', nullable: true })
-  details: Record<string, any>;
+  @Column({ type: 'jsonb', nullable: true, name: 'meta' })
+  meta: Record<string, any>;
 
-  @Column({ nullable: true })
-  resourceType: string;
-
-  @Column({ nullable: true })
-  resourceId: string;
-
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 45, nullable: true, name: 'ip_address' })
   ipAddress: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'user_agent' })
   userAgent: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'status' })
+  status: string;
+
+  @Column({ type: 'text', nullable: true, name: 'error_message' })
   errorMessage: string;
 
-  @Column({ type: 'int', nullable: true })
-  responseTime: number;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
-  expiresAt: Date;
+  @CreateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 } 
