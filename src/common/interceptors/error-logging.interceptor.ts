@@ -12,13 +12,14 @@ import { catchError } from 'rxjs/operators';
 import * as fs from 'fs';
 import * as path from 'path';
 import { captureException } from '../../config/sentry.config';
+import { AuditLogService } from './audit/services/audit-log.service';
 
 @Injectable()
 export class ErrorLoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger(ErrorLoggingInterceptor.name);
   private readonly logFilePath: string;
 
-  constructor() {
+  constructor(private readonly auditLogService: AuditLogService) {
     // Create logs directory if it doesn't exist
     const logsDir = path.join(process.cwd(), 'logs');
     if (!fs.existsSync(logsDir)) {
