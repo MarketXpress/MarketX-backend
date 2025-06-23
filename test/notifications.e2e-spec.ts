@@ -5,7 +5,7 @@ import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../src/notifications/notification.entity';
-import { User } from '../src/users/user.entity';
+import { User } from '../src/users/users.entity';
 import { JwtService } from '@nestjs/jwt';
 
 describe('NotificationsController (e2e)', () => {
@@ -24,11 +24,13 @@ describe('NotificationsController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
-    
+
     notificationRepository = moduleFixture.get<Repository<Notification>>(
       getRepositoryToken(Notification),
     );
-    userRepository = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
+    userRepository = moduleFixture.get<Repository<User>>(
+      getRepositoryToken(User),
+    );
     jwtService = moduleFixture.get<JwtService>(JwtService);
 
     await app.init();
@@ -68,7 +70,9 @@ describe('NotificationsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.message).toBe('Notification marked as read successfully');
+          expect(res.body.message).toBe(
+            'Notification marked as read successfully',
+          );
           expect(res.body.notification.id).toBe(testNotification.id);
           expect(res.body.notification.isRead).toBe(true);
           expect(res.body.notification.readAt).toBeDefined();
@@ -81,7 +85,9 @@ describe('NotificationsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404)
         .expect((res) => {
-          expect(res.body.message).toContain('Notification with ID 99999 not found');
+          expect(res.body.message).toContain(
+            'Notification with ID 99999 not found',
+          );
         });
     });
 
@@ -115,7 +121,9 @@ describe('NotificationsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(403)
         .expect((res) => {
-          expect(res.body.message).toBe('You can only mark your own notifications as read');
+          expect(res.body.message).toBe(
+            'You can only mark your own notifications as read',
+          );
         });
     });
 
@@ -141,9 +149,7 @@ describe('NotificationsController (e2e)', () => {
     });
 
     it('should return 401 without authentication', () => {
-      return request(app.getHttpServer())
-        .get('/notifications')
-        .expect(401);
+      return request(app.getHttpServer()).get('/notifications').expect(401);
     });
   });
 

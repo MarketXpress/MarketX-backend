@@ -1,10 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { Listing } from '../listings/listing.entity';
-
+import { Listing } from 'src/listing/entities/listing.entities'; // ✅ Adjust this import path
 
 @Entity('users')
-export class User {
+export class Users {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -30,7 +38,10 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-    @ManyToMany(() => Listing, (listing) => listing.favoritedBy)
+  @OneToMany(() => Listing, (listing) => listing.user)
+  listings: Listing[];
+
+  @ManyToMany(() => Listing, (listing) => listing.favoritedBy)
   @JoinTable({
     name: 'user_favorites',
     joinColumn: {

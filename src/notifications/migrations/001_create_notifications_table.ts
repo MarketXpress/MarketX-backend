@@ -1,9 +1,14 @@
-import { MigrationInterface, QueryRunner, Table, Index } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
-export class CreateNotificationsTable1640000000000 implements MigrationInterface {
+export class CreateNotificationsTable1640000000000
+  implements MigrationInterface
+{
   name = 'CreateNotificationsTable1640000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Optional: Ensure the uuid-ossp extension is enabled (Postgres only)
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
     await queryRunner.createTable(
       new Table({
         name: 'notifications',
@@ -49,19 +54,19 @@ export class CreateNotificationsTable1640000000000 implements MigrationInterface
               'promotion',
               'reminder',
             ],
-            default: "'system_alert'",
+            default: `'system_alert'`,
           },
           {
             name: 'channel',
             type: 'enum',
             enum: ['in_app', 'email', 'sms', 'push'],
-            default: "'in_app'",
+            default: `'in_app'`,
           },
           {
             name: 'priority',
             type: 'enum',
             enum: ['low', 'medium', 'high', 'urgent'],
-            default: "'medium'",
+            default: `'medium'`,
           },
           {
             name: 'metadata',
@@ -111,27 +116,44 @@ export class CreateNotificationsTable1640000000000 implements MigrationInterface
           },
         ],
       }),
-      true
-    );
-
-    // Create indexes
-    await queryRunner.createIndex(
-      'notifications',
-      new Index('IDX_notifications_user_id_created_at', ['user_id', 'created_at'])
+      true,
     );
 
     await queryRunner.createIndex(
       'notifications',
-      new Index('IDX_notifications_read_created_at', ['read', 'created_at'])
+      new TableIndex({
+        name: 'IDX_notifications_user_id_created_at',
+        columnNames: ['user_id', 'created_at'],
+      }),
     );
 
     await queryRunner.createIndex(
       'notifications',
-      new Index('IDX_notifications_user_id', ['user_id'])
+      new TableIndex({
+        name: 'IDX_notifications_read_created_at',
+        columnNames: ['read', 'created_at'],
+      }),
+    );
+
+    await queryRunner.createIndex(
+      'notifications',
+      new TableIndex({
+        name: 'IDX_notifications_user_id',
+        columnNames: ['user_id'],
+      }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropIndex(
+      'notifications',
+      'IDX_notifications_user_id_created_at',
+    );
+    await queryRunner.dropIndex(
+      'notifications',
+      'IDX_notifications_read_created_at',
+    );
+    await queryRunner.dropIndex('notifications', 'IDX_notifications_user_id');
     await queryRunner.dropTable('notifications');
   }
 }

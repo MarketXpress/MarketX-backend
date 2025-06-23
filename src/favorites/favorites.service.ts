@@ -1,20 +1,24 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/user.entity';
-import { Listing } from '../listings/listing.entity';
+import { Listing } from 'src/listing/entities/listing.entities';
+import { Users } from 'src/users/users.entity';
 
 @Injectable()
 export class FavoritesService {
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Users)
+    private readonly userRepository: Repository<Users>,
+
     @InjectRepository(Listing)
-    private listingRepository: Repository<Listing>,
+    private readonly listingRepository: Repository<Listing>,
   ) {}
 
-  async favoriteListing(userId: number, listingId: number): Promise<void> {
-    // Find user with their favorite listings
+  async favoriteListing(userId: number, listingId: string): Promise<void> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['favoriteListings'],
@@ -24,7 +28,6 @@ export class FavoritesService {
       throw new NotFoundException('User not found');
     }
 
-    // Find the listing
     const listing = await this.listingRepository.findOne({
       where: { id: listingId },
     });
@@ -33,7 +36,6 @@ export class FavoritesService {
       throw new NotFoundException('Listing not found');
     }
 
-    // Check if listing is already favorited
     const isAlreadyFavorited = user.favoriteListings.some(
       (favListing) => favListing.id === listingId,
     );
@@ -42,13 +44,11 @@ export class FavoritesService {
       throw new ConflictException('Listing is already favorited');
     }
 
-    // Add listing to favorites
     user.favoriteListings.push(listing);
     await this.userRepository.save(user);
   }
 
-  async unfavoriteListing(userId: number, listingId: number): Promise<void> {
-    // Find user with their favorite listings
+  async unfavoriteListing(userId: number, listingId: string): Promise<void> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['favoriteListings'],
@@ -58,17 +58,15 @@ export class FavoritesService {
       throw new NotFoundException('User not found');
     }
 
-    // Check if listing is in favorites
-    const favoriteIndex = user.favoriteListings.findIndex(
-      (listing) => listing.id === listingId,
+    const index = user.favoriteListings.findIndex(
+      (fav) => fav.id === listingId,
     );
 
-    if (favoriteIndex === -1) {
+    if (index === -1) {
       throw new NotFoundException('Listing not found in favorites');
     }
 
-    // Remove listing from favorites
-    user.favoriteListings.splice(favoriteIndex, 1);
+    user.favoriteListings.splice(index, 1);
     await this.userRepository.save(user);
   }
 
@@ -85,7 +83,10 @@ export class FavoritesService {
     return user.favoriteListings;
   }
 
-  async isListingFavorited(userId: number, listingId: number): Promise<boolean> {
+  async isListingFavorited(
+    userId: number,
+    listingId: string,
+  ): Promise<boolean> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['favoriteListings'],
@@ -95,6 +96,6 @@ export class FavoritesService {
       return false;
     }
 
-    return user.favoriteListings.some((listing) => listing.id === listingId);
+    return user.favoriteListings.some((fav) => fav.id === listingId);
   }
 }

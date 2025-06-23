@@ -4,7 +4,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { User } from '../src/users/user.entity';
+import { User } from '../src/users/users.entity';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 
@@ -28,8 +28,10 @@ describe('Profile Update (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
-    
-    userRepository = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
+
+    userRepository = moduleFixture.get<Repository<User>>(
+      getRepositoryToken(User),
+    );
     jwtService = moduleFixture.get<JwtService>(JwtService);
 
     await app.init();
@@ -76,7 +78,9 @@ describe('Profile Update (e2e)', () => {
       });
 
       // Verify database was updated
-      const updatedUser = await userRepository.findOne({ where: { id: userId } });
+      const updatedUser = await userRepository.findOne({
+        where: { id: userId },
+      });
       expect(updatedUser.name).toBe(updateData.name);
       expect(updatedUser.bio).toBe(updateData.bio);
       expect(updatedUser.avatarUrl).toBe(updateData.avatarUrl);
@@ -132,7 +136,9 @@ describe('Profile Update (e2e)', () => {
         .send(updateData)
         .expect(400);
 
-      expect(response.body.message).toContain('Name must be at least 2 characters long');
+      expect(response.body.message).toContain(
+        'Name must be at least 2 characters long',
+      );
     });
 
     it('should validate bio length', async () => {
@@ -146,7 +152,9 @@ describe('Profile Update (e2e)', () => {
         .send(updateData)
         .expect(400);
 
-      expect(response.body.message).toContain('Bio must not exceed 500 characters');
+      expect(response.body.message).toContain(
+        'Bio must not exceed 500 characters',
+      );
     });
 
     it('should validate avatar URL format', async () => {
