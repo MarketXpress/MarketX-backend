@@ -1,6 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { User } from '../../users/user.entity';
+import { Users } from 'src/users/users.entity';
 
 export enum TransactionStatus {
   PENDING = 'pending',
@@ -63,7 +72,9 @@ export class Transaction {
   @Index()
   receiverId: number;
 
-  @ApiProperty({ description: 'Related listing ID if transaction is for a purchase' })
+  @ApiProperty({
+    description: 'Related listing ID if transaction is for a purchase',
+  })
   @Column({ name: 'listing_id', nullable: true })
   listingId: string;
 
@@ -84,13 +95,13 @@ export class Transaction {
   updatedAt: Date;
 
   // Relations
-  @ApiProperty({ description: 'Sender user', type: () => User })
-  @ManyToOne(() => User, { eager: true })
+  @ApiProperty({ description: 'Sender user', type: () => Users })
+  @ManyToOne(() => Users, { eager: true })
   @JoinColumn({ name: 'sender_id' })
-  sender: User;
+  sender: Users;
 
-  @ApiProperty({ description: 'Receiver user', type: () => User })
-  @ManyToOne(() => User, { eager: true })
+  @ApiProperty({ description: 'Receiver user', type: () => Users })
+  @ManyToOne(() => Users, { eager: true })
   @JoinColumn({ name: 'receiver_id' })
-  receiver: User;
-} 
+  receiver: Users;
+}

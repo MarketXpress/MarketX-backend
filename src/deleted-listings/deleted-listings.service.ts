@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, IsNull } from 'typeorm';
-import { Listing } from '../listing/entities/listing.entity';
+import { Listing } from 'src/listing/entities/listing.entities';
+import {
+  Repository,
+  Not,
+  IsNull,
+  FindOptionsWhere,
+  FindOptionsOrder,
+} from 'typeorm';
 
 @Injectable()
 export class DeletedListingsService {
@@ -10,13 +16,22 @@ export class DeletedListingsService {
     private readonly listingRepository: Repository<Listing>,
   ) {}
 
-  async findAllDeleted(take = 10, skip = 0): Promise<{ listings: Listing[]; total: number }> {
+  async findAllDeleted(
+    take = 10,
+    skip = 0,
+  ): Promise<{ listings: Listing[]; total: number }> {
+    const where: FindOptionsWhere<Listing> = {
+      deletedAt: Not(IsNull()),
+    };
+
+    const order: FindOptionsOrder<Listing> = {
+      deletedAt: 'DESC',
+    };
+
     const [listings, total] = await this.listingRepository.findAndCount({
       withDeleted: true,
-      where: {
-        deletedAt: Not(IsNull()),
-      },
-      order: { deletedAt: 'DESC' },
+      where,
+      order,
       take,
       skip,
     });
@@ -38,8 +53,16 @@ export class DeletedListingsService {
   }
 
   async restore(id: string): Promise<Listing> {
-    const listing = await this.findOneDeleted(id);
+    const deletedListing = await this.findOneDeleted(id);
     await this.listingRepository.restore(id);
-    return this.listingRepository.findOneBy({ id });
+
+    const restored = await this.listingRepository.findOneBy({ id });
+    if (!restored) {
+      throw new NotFoundException(
+        `Listing with ID ${id} could not be restored`,
+      );
+    }
+
+    return restored;
   }
-} 
+}

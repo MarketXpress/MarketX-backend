@@ -1,3 +1,4 @@
+import { Users } from 'src/users/users.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -6,8 +7,9 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
+  ManyToMany,
 } from 'typeorm';
-import { User } from './user.entity';
 
 @Entity('listings')
 export class Listing {
@@ -38,14 +40,18 @@ export class Listing {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // Relation to User entity
-  @ManyToOne(() => User, (user) => user.listings, {
+  @DeleteDateColumn()
+  deletedAt?: Date;
+
+  @ManyToOne(() => Users, (user) => user.listings, {
     onDelete: 'CASCADE',
-    eager: false,
   })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: Users;
 
   @Column('uuid')
   userId: string;
+
+  @ManyToMany(() => Users, (user) => user.favoriteListings)
+  favoritedBy: Users[];
 }

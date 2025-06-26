@@ -1,6 +1,14 @@
-import { MigrationInterface, QueryRunner, Table, Index } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  Table,
+  TableForeignKey,
+  TableIndex,
+} from 'typeorm';
 
-export class CreateNotificationsTable1678901234567 implements MigrationInterface {
+export class CreateNotificationsTable1678901234567
+  implements MigrationInterface
+{
   name = 'CreateNotificationsTable1678901234567';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -28,7 +36,7 @@ export class CreateNotificationsTable1678901234567 implements MigrationInterface
             name: 'type',
             type: 'enum',
             enum: ['info', 'warning', 'error', 'success'],
-            default: "'info'",
+            default: `'info'`,
           },
           {
             name: 'is_read',
@@ -50,41 +58,78 @@ export class CreateNotificationsTable1678901234567 implements MigrationInterface
             type: 'int',
           },
         ],
-        foreignKeys: [
-          {
-            columnNames: ['recipient_id'],
-            referencedTableName: 'users',
-            referencedColumnNames: ['id'],
-            onDelete: 'CASCADE',
-          },
-        ],
       }),
       true,
     );
 
-    await queryRunner.createIndex(
+    await queryRunner.createForeignKey(
       'notifications',
-      new Index('IDX_NOTIFICATIONS_RECIPIENT_ID', ['recipient_id']),
+      new TableForeignKey({
+        columnNames: ['recipient_id'],
+        referencedTableName: 'users',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+      }),
     );
 
     await queryRunner.createIndex(
       'notifications',
-      new Index('IDX_NOTIFICATIONS_IS_READ', ['is_read']),
+      new TableIndex({
+        name: 'IDX_NOTIFICATIONS_RECIPIENT_ID',
+        columnNames: ['recipient_id'],
+      }),
     );
 
     await queryRunner.createIndex(
       'notifications',
-      new Index('IDX_NOTIFICATIONS_CREATED_AT', ['created_at']),
+      new TableIndex({
+        name: 'IDX_NOTIFICATIONS_IS_READ',
+        columnNames: ['is_read'],
+      }),
     );
 
-    // Composite index for common queries
     await queryRunner.createIndex(
       'notifications',
-      new Index('IDX_NOTIFICATIONS_RECIPIENT_READ', ['recipient_id', 'is_read']),
+      new TableIndex({
+        name: 'IDX_NOTIFICATIONS_CREATED_AT',
+        columnNames: ['created_at'],
+      }),
+    );
+
+    await queryRunner.createIndex(
+      'notifications',
+      new TableIndex({
+        name: 'IDX_NOTIFICATIONS_RECIPIENT_READ',
+        columnNames: ['recipient_id', 'is_read'],
+      }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropIndex(
+      'notifications',
+      'IDX_NOTIFICATIONS_RECIPIENT_READ',
+    );
+    await queryRunner.dropIndex(
+      'notifications',
+      'IDX_NOTIFICATIONS_CREATED_AT',
+    );
+    await queryRunner.dropIndex('notifications', 'IDX_NOTIFICATIONS_IS_READ');
+    await queryRunner.dropIndex(
+      'notifications',
+      'IDX_NOTIFICATIONS_RECIPIENT_ID',
+    );
+
+    const table = await queryRunner.getTable('notifications');
+    if (table) {
+      const foreignKey = table.foreignKeys.find((fk) =>
+        fk.columnNames.includes('recipient_id'),
+      );
+      if (foreignKey) {
+        await queryRunner.dropForeignKey('notifications', foreignKey);
+      }
+    }
+
     await queryRunner.dropTable('notifications');
   }
 }

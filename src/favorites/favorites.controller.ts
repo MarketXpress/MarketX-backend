@@ -1,19 +1,19 @@
-import { 
-  Controller, 
-  Post, 
-  Delete, 
-  Param, 
-  UseGuards, 
+import {
+  Controller,
+  Post,
+  Delete,
+  Param,
+  UseGuards,
   Request,
   HttpCode,
   HttpStatus,
-  Get
+  Get,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FavoritesService } from './favorites.service';
 
 @Controller('listings')
-@UseGuards(AuthGuard('jwt')) 
+@UseGuards(AuthGuard('jwt'))
 export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 
@@ -24,7 +24,7 @@ export class FavoritesController {
     @Request() req: any,
   ): Promise<{ message: string }> {
     const userId = req.user.id;
-    await this.favoritesService.favoriteListing(userId, parseInt(listingId));
+    await this.favoritesService.favoriteListing(userId, listingId);
     return { message: 'Listing added to favorites successfully' };
   }
 
@@ -35,7 +35,7 @@ export class FavoritesController {
     @Request() req: any,
   ): Promise<{ message: string }> {
     const userId = req.user.id;
-    await this.favoritesService.unfavoriteListing(userId, parseInt(listingId));
+    await this.favoritesService.unfavoriteListing(userId, listingId);
     return { message: 'Listing removed from favorites successfully' };
   }
 

@@ -3,30 +3,22 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { Listing } from './listing/entities/listing.entity';
 import { ListingsModule } from './listing/listing.module';
 import { MarketPlaceModule } from './market-place/market-place.module';
 import { WalletModule } from './wallet/wallet.module';
-import { SchedulerModule } from './scheduler';
-import { UserModule } from './user/user.module';
-import { AdminController } from './controllers/admin.controller';
-import { UsersController } from './controllers/users.controller';
-import { AdminService } from './services/admin.service';
-import { UsersService } from './services/users.service';
+import { SchedulerModule } from './scheduler/scheduler.module';
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
-import { FavoritesModule } from './favorites/favorites.module'; 
-import { LoginLog } from './login-logs/login-log.entity';
-import { LoginLogModule } from './login-logs/login-log.module';
-
+import { FavoritesModule } from './favorites/favorites.module';
+import { Listing } from './listing/entities/listing.entities';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
     }),
-
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -36,28 +28,21 @@ import { LoginLogModule } from './login-logs/login-log.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [Listing, LoginLog], // or use: [__dirname + '/**/*.entity{.ts,.js}']
+        entities: [Listing], // or use: [__dirname + '/**/*.entity{.ts,.js}']
         synchronize: true, // disable in production, use migrations
       }),
       inject: [ConfigService],
     }),
-
     ListingsModule,
-
     MarketPlaceModule,
-
     WalletModule,
-
-    UserModule,
-
+    UsersModule,
     AuthModule,
-
     FavoritesModule,
-    LoginLogModule,
-    SchedulerModule
+    SchedulerModule,
   ],
-  controllers: [AppController, AdminController, UsersController],
-  providers: [AppService, AdminService, UsersService, AdminGuard, RolesGuard],
+  controllers: [AppController],
+  providers: [AppService, AdminGuard, RolesGuard],
   exports: [AdminGuard, RolesGuard],
 })
 export class AppModule {}

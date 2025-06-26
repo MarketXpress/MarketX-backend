@@ -1,8 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { User } from '../users/user.entity';
-
-
+import { Users } from 'src/users/users.entity';
 
 export enum NotificationType {
   TRANSACTION_RECEIVED = 'transaction_received',
@@ -51,7 +56,10 @@ export class NotificationEntity {
   @Column('text')
   message: string;
 
-  @ApiProperty({ description: 'Whether the notification has been read', default: false })
+  @ApiProperty({
+    description: 'Whether the notification has been read',
+    default: false,
+  })
   @Column({ default: false })
   read: boolean;
 
@@ -63,7 +71,10 @@ export class NotificationEntity {
   })
   type: NotificationType;
 
-  @ApiProperty({ description: 'Notification channel', enum: NotificationChannel })
+  @ApiProperty({
+    description: 'Notification channel',
+    enum: NotificationChannel,
+  })
   @Column({
     type: 'enum',
     enum: NotificationChannel,
@@ -71,7 +82,10 @@ export class NotificationEntity {
   })
   channel: NotificationChannel;
 
-  @ApiProperty({ description: 'Notification priority', enum: NotificationPriority })
+  @ApiProperty({
+    description: 'Notification priority',
+    enum: NotificationPriority,
+  })
   @Column({
     type: 'enum',
     enum: NotificationPriority,
@@ -83,7 +97,9 @@ export class NotificationEntity {
   @Column('json', { nullable: true })
   metadata: Record<string, any>;
 
-  @ApiProperty({ description: 'Related entity ID (transaction, payment, etc.)' })
+  @ApiProperty({
+    description: 'Related entity ID (transaction, payment, etc.)',
+  })
   @Column({ name: 'related_entity_id', nullable: true })
   relatedEntityId: string;
 
@@ -115,19 +131,22 @@ export class NotificationEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-    @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => Users, { eager: true })
   @JoinColumn({ name: 'recipient_id' })
-  recipient: User;
+  recipient: Users;
 
   @Column({ name: 'recipient_id' })
   recipientId: number;
-
 }
-function ManyToOne(arg0: () => typeof User, arg1: { eager: boolean; }): (target: NotificationEntity, propertyKey: "recipient") => void {
+function ManyToOne(
+  arg0: () => typeof Users,
+  arg1: { eager: boolean },
+): (target: NotificationEntity, propertyKey: 'recipient') => void {
   throw new Error('Function not implemented.');
 }
 
-function JoinColumn(arg0: { name: string; }): (target: NotificationEntity, propertyKey: "recipient") => void {
+function JoinColumn(arg0: {
+  name: string;
+}): (target: NotificationEntity, propertyKey: 'recipient') => void {
   throw new Error('Function not implemented.');
 }
-

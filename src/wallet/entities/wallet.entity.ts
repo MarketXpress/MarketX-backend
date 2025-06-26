@@ -1,5 +1,12 @@
-import { User } from 'src/user/entities/user.entity';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import { Users } from 'src/users/users.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 
 @Entity()
 export class Wallet {
@@ -15,9 +22,9 @@ export class Wallet {
   @CreateDateColumn()
   createdAt: Date;
 
-  @OneToOne(() => User)
+  @OneToOne(() => Users)
   @JoinColumn()
-  user: User;
+  user: Users;
 
   @Column() // This is KEY: required for querying by userId
   userId: string;
