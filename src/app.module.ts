@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { Listing } from './listing/entities/listing.entities';
 import { UsersModule } from './users/users.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     FavoritesModule,
     SchedulerModule,
+    VerificationModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
