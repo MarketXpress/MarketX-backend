@@ -5,16 +5,16 @@ import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../src/notifications/notification.entity';
-import { User } from '../src/users/users.entity';
+import { Users } from '../src/users/users.entity';
 import { JwtService } from '@nestjs/jwt';
 
 describe('NotificationsController (e2e)', () => {
   let app: INestApplication;
   let notificationRepository: Repository<Notification>;
-  let userRepository: Repository<User>;
+  let userRepository: Repository<Users>;
   let jwtService: JwtService;
   let accessToken: string;
-  let testUser: User;
+  let testUser: Users;
   let testNotification: Notification;
 
   beforeAll(async () => {
@@ -28,8 +28,8 @@ describe('NotificationsController (e2e)', () => {
     notificationRepository = moduleFixture.get<Repository<Notification>>(
       getRepositoryToken(Notification),
     );
-    userRepository = moduleFixture.get<Repository<User>>(
-      getRepositoryToken(User),
+    userRepository = moduleFixture.get<Repository<Users>>(
+      getRepositoryToken(Users),
     );
     jwtService = moduleFixture.get<JwtService>(JwtService);
 

@@ -9,7 +9,7 @@ import {
   JoinTable,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { Listing } from 'src/listing/entities/listing.entities'; // ✅ Adjust this import path
+import { Listing } from '../listing/entities/listing.entity';
 
 @Entity('users')
 export class Users {

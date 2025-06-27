@@ -4,13 +4,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { User } from '../src/users/users.entity';
+import { Users } from '../src/users/users.entity';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 
 describe('Profile Update (e2e)', () => {
   let app: INestApplication;
-  let userRepository: Repository<User>;
+  let userRepository: Repository<Users>;
   let jwtService: JwtService;
 
   const testUser = {
@@ -29,8 +29,8 @@ describe('Profile Update (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
 
-    userRepository = moduleFixture.get<Repository<User>>(
-      getRepositoryToken(User),
+    userRepository = moduleFixture.get<Repository<Users>>(
+      getRepositoryToken(Users),
     );
     jwtService = moduleFixture.get<JwtService>(JwtService);
 

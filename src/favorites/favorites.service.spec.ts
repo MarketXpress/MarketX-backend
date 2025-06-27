@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FavoritesService } from './favorites.service';
-import { User } from '../users/users.entity';
+import { Users } from '../users/users.entity';
 import { Listing } from '../listings/listing.entity';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 
 describe('FavoritesService', () => {
   let service: FavoritesService;
-  let userRepository: Repository<User>;
+  let userRepository: Repository<Users>;
   let listingRepository: Repository<Listing>;
 
   const mockUser = {
@@ -29,7 +29,7 @@ describe('FavoritesService', () => {
       providers: [
         FavoritesService,
         {
-          provide: getRepositoryToken(User),
+          provide: getRepositoryToken(Users),
           useValue: {
             findOne: jest.fn(),
             save: jest.fn(),
@@ -45,7 +45,7 @@ describe('FavoritesService', () => {
     }).compile();
 
     service = module.get<FavoritesService>(FavoritesService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    userRepository = module.get<Repository<Users>>(getRepositoryToken(Users));
     listingRepository = module.get<Repository<Listing>>(
       getRepositoryToken(Listing),
     );
@@ -63,7 +63,7 @@ describe('FavoritesService', () => {
         .mockResolvedValue(mockListing as Listing);
       jest
         .spyOn(userRepository, 'save')
-        .mockResolvedValue(userWithFavorites as unknown as User);
+        .mockResolvedValue(userWithFavorites as unknown as Users);
 
       await service.favoriteListing(1, 1);
 
@@ -88,7 +88,7 @@ describe('FavoritesService', () => {
     it('should throw NotFoundException when listing not found', async () => {
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockUser as unknown as User);
+        .mockResolvedValue(mockUser as unknown as Users);
       jest.spyOn(listingRepository, 'findOne').mockResolvedValue(null);
 
       await expect(service.favoriteListing(1, 1)).rejects.toThrow(
@@ -104,7 +104,7 @@ describe('FavoritesService', () => {
 
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithFavorites as User);
+        .mockResolvedValue(userWithFavorites as Users);
       jest
         .spyOn(listingRepository, 'findOne')
         .mockResolvedValue(mockListing as Listing);
@@ -124,10 +124,10 @@ describe('FavoritesService', () => {
 
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithFavorites as User);
+        .mockResolvedValue(userWithFavorites as Users);
       jest
         .spyOn(userRepository, 'save')
-        .mockResolvedValue(userWithFavorites as User);
+        .mockResolvedValue(userWithFavorites as Users);
 
       await service.unfavoriteListing(1, 1);
 
@@ -147,7 +147,7 @@ describe('FavoritesService', () => {
 
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithFavorites as unknown as User);
+        .mockResolvedValue(userWithFavorites as unknown as Users);
 
       await expect(service.unfavoriteListing(1, 1)).rejects.toThrow(
         NotFoundException,

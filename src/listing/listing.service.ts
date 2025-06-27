@@ -12,8 +12,8 @@ export class ListingsService {
     private readonly listingRepo: Repository<Listing>,
   ) {}
 
-  async create(dto: CreateListingDto, ownerId: string) {
-    const listing = this.listingRepo.create({ ...dto, ownerId });
+  async create(dto: CreateListingDto, userId: string) {
+    const listing = this.listingRepo.create({ ...dto, userId });
     return await this.listingRepo.save(listing);
   }
 
@@ -37,7 +37,7 @@ export class ListingsService {
 
   async findActiveListingsPaginated(take = 10, skip = 0): Promise<{ listings: Listing[]; total: number }> {
     const [listings, total] = await this.listingRepo.findAndCount({
-      where: { status: 'active' },
+      where: { isActive: true },
       order: { createdAt: 'DESC' },
       take,
       skip,

@@ -11,8 +11,9 @@ import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { FavoritesModule } from './favorites/favorites.module';
-import { Listing } from './listing/entities/listing.entities';
+import { Listing } from './listing/entities/listing.entity';
 import { UsersModule } from './users/users.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     FavoritesModule,
     SchedulerModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
