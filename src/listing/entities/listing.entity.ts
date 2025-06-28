@@ -31,6 +31,9 @@ export class Listing {
   @Column({ type: 'varchar', length: 255 })
   location: string;
 
+  @Column({ nullable: true })
+  category: string;
+
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
