@@ -14,6 +14,7 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { Listing } from './listing/entities/listing.entity';
 import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
+import { Users } from './users/users.entity';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { ChatModule } from './chat/chat.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [Listing], // or use: [__dirname + '/**/*.entity{.ts,.js}']
+        entities: [Listing, Users], // or use: [__dirname + '/**/*.entity{.ts,.js}']
         synchronize: true, // disable in production, use migrations
       }),
       inject: [ConfigService],
