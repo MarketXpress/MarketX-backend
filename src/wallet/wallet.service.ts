@@ -109,5 +109,39 @@ export class WalletService {
       }
     }
   }
+
+  /**
+   * Get the wallet balance for a user
+   * @param userId - The ID of the user whose wallet balance is to be fetched
+   * @returns Object containing balance, currency, and publicKey
+   */
+  async getWalletBalance(userId: string): Promise<{ balance: string; currency: string; publicKey: string }> {
+    const wallet = await this.findByUserId(userId);
+    if (!wallet) {
+      throw new Error('Wallet not found for user');
+    }
+
+    const server = new Server('https://horizon.stellar.org');
+    try {
+      const account = await server.loadAccount(wallet.publicKey);
+      // Find XLM balance (native asset)
+      const nativeBalance = account.balances.find(b => b.asset_type === 'native');
+      
+      if (!nativeBalance) {
+        throw new Error('No balance found for wallet');
+      }
+
+      return {
+        balance: nativeBalance.balance,
+        currency: 'XLM',
+        publicKey: wallet.publicKey
+      };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Wallet not found on Stellar network');
+      }
+      throw new Error(`Failed to fetch wallet balance: ${error.message}`);
+    }
+  }
 }
 

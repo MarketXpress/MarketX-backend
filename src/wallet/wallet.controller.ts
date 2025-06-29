@@ -7,6 +7,26 @@ import { UpdateWalletDto } from './dto/update-wallet.dto';
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
+  // GET /wallet/balance
+  @Get('balance')
+  @UseGuards(require('../auth/guards/jwt-auth.guard').JwtAuthGuard)
+  async getWalletBalance(@Req() req) {
+    const user = req.user;
+    if (!user || !user.userId) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    try {
+      const balance = await this.walletService.getWalletBalance(user.userId);
+      return balance;
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to fetch wallet balance',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   // PATCH /wallet/regenerate
   @Patch('regenerate')
   @UseGuards(require('../auth/guards/jwt-auth.guard').JwtAuthGuard)
