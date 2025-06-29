@@ -11,9 +11,11 @@ import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { FavoritesModule } from './favorites/favorites.module';
-import { Listing } from './listing/entities/listing.entities';
+import { Listing } from './listing/entities/listing.entity';
 import { UsersModule } from './users/users.module';
 import { VerificationModule } from './verification/verification.module';
+import { ChatModule } from './chat/chat.module';
+import { Users } from './users/users.entity';
 
 @Module({
   imports: [
@@ -29,7 +31,7 @@ import { VerificationModule } from './verification/verification.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [Listing], // or use: [__dirname + '/**/*.entity{.ts,.js}']
+        entities: [Listing, Users], // or use: [__dirname + '/**/*.entity{.ts,.js}']
         synchronize: true, // disable in production, use migrations
       }),
       inject: [ConfigService],
@@ -42,6 +44,7 @@ import { VerificationModule } from './verification/verification.module';
     FavoritesModule,
     SchedulerModule,
     VerificationModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],

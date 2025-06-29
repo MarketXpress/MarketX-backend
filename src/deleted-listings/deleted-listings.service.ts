@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Listing } from 'src/listing/entities/listing.entities';
+import { Listing } from 'src/listing/entities/listing.entity';
 import {
   Repository,
   Not,

@@ -1,12 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { MarketPlaceService } from './market-place.service';
 import { CreateMarketPlaceDto } from './dto/create-market-place.dto';
 import { ListingsService } from 'src/listing/listing.service';
 
 @Controller('market-place')
 export class MarketPlaceController {
-  constructor(private readonly marketPlaceService: MarketPlaceService,
-              private readonly listingsService: ListingsService,
+  constructor(
+    private readonly marketPlaceService: MarketPlaceService,
+    private readonly listingsService: ListingsService,
   ) {}
 
   @Post()
@@ -21,8 +31,9 @@ export class MarketPlaceController {
     // parse query params with defaults
     const take = Math.min(parseInt(takeStr ?? '', 10) || 10, 50);
     const skip = parseInt(skipStr ?? '', 10) || 0;
-    
-    const { listings, total } = await this.listingsService.findActiveListingsPaginated(take, skip);
+
+    const { listings, total } =
+      await this.listingsService.findActiveListingsPaginated({take, skip});
 
     return {
       data: listings,
