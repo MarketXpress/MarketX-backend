@@ -15,6 +15,7 @@ import { Listing } from './listing/entities/listing.entity';
 import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { Users } from './users/users.entity';
     FavoritesModule,
     SchedulerModule,
     ChatModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
