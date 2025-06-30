@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { Listing } from './listing/entities/listing.entity';
 import { UsersModule } from './users/users.module';
+import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
@@ -43,6 +44,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     AuthModule,
     FavoritesModule,
     SchedulerModule,
+    VerificationModule,
     ChatModule,
     WebhooksModule,
   ],
