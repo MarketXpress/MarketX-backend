@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   ValidationPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,10 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Users } from './users.entity';
 import { CreateUserDto } from './dto/create-user-dto.dto';
+import { CacheInterceptor } from '../cache/cache.interceptor';
+import { Cacheable } from '../decorators/cacheable.decorator';
+import { CacheControl } from '../decorators/cache-control.decorator';
+
 
 @ApiTags('users')
 @Controller('users')
@@ -94,4 +99,22 @@ export class UsersController {
   remove(@Param('id') id: string): Promise<void> {
     return this.usersService.remove(+id);
   }
+
+    @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @Cacheable({ ttl: 3600, tags: ['users'] })
+  @CacheControl('public, max-age=3600')
+  findOne(@Param('id') id: string) {
+    return this.usersService.findProfile(id);
+  }
+
+  @Get(':id/stats')
+  @UseInterceptors(CacheInterceptor)
+  @Cacheable({ ttl: 1800, tags: ['users', 'stats'] })
+  @CacheControl('public, max-age=1800')
+  getUserStats(@Param('id') id: string) {
+    return this.usersService.getUserStats(id);
+  }
+
+
 }

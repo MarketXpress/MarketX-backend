@@ -16,6 +16,13 @@ import { UsersModule } from './users/users.module';
 import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from './cache/cache.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { AuditModule } from './audit/audit.module';
+import { DeletedListingsModule } from './deleted-listings/deleted-listings.module';
+
 
 @Module({
   imports: [
@@ -36,6 +43,7 @@ import { Users } from './users/users.entity';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     ListingsModule,
     MarketPlaceModule,
     WalletModule,
@@ -45,6 +53,22 @@ import { Users } from './users/users.entity';
     SchedulerModule,
     VerificationModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    MarketPlaceModule,
+    NotificationsModule,
+    FavoritesModule,
+    ChatModule,
+    TransactionsModule,
+    WalletModule,
+    VerificationModule,
+    AuditModule,
+    DeletedListingsModule,
+    SchedulerModule,
+    CacheModule,
+    AuthModule,
+    UsersModule,
+
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
