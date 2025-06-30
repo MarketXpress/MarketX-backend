@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module';
 import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
+import { WebhooksModule } from './webhooks/webhooks.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from './cache/cache.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -69,6 +70,7 @@ import { DeletedListingsModule } from './deleted-listings/deleted-listings.modul
     AuthModule,
     UsersModule,
 
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
