@@ -13,12 +13,34 @@ import {
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { ListingsService } from './listing.service';
+import { RateLimit, UserRateLimit } from '../decorators/rate-limit.decorator';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { UserTier } from '../rate-limiting/rate-limit.service';
 
 @Controller('listings')
+@UseGuards(RateLimitGuard)
+@UserRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 30,
+  tierLimits: {
+    [UserTier.FREE]: { maxRequests: 10 },
+    [UserTier.PREMIUM]: { maxRequests: 50 },
+    [UserTier.ENTERPRISE]: { maxRequests: 200 },
+  },
+})
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
 
   @Post()
+  @RateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    maxRequests: 5,
+    tierLimits: {
+      [UserTier.PREMIUM]: { maxRequests: 15 },
+      [UserTier.ENTERPRISE]: { maxRequests: 50 },
+    },
+    message: 'Too many listings created. Please wait before creating more.',
+  })
   create(@Body() dto: CreateListingDto, @Req() req) {
     return this.listingsService.create(dto, req.user.id);
   }

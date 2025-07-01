@@ -17,6 +17,8 @@ import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     VerificationModule,
     ChatModule,
     WebhooksModule,
+    RateLimitingModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
