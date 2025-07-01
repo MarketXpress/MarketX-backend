@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Users } from '../../users/users.entity';
 import {
   Entity,
@@ -9,6 +10,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   ManyToMany,
+  Index,
 } from 'typeorm';
 
 @Entity('listings')
@@ -29,7 +31,7 @@ export class Listing {
   currency: string;
 
   @Column({ type: 'varchar', length: 255 })
-  location: string;
+  address: string;
 
   @Column({ nullable: true })
   category: string;
@@ -54,6 +56,20 @@ export class Listing {
 
   @Column('uuid')
   userId: string;
+
+  // Use geography Point type for geospatial queries
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true,
+  })
+  @Index({ spatial: true })
+  location: string;
+
+  // Optional: privacy setting example
+  @Column({ default: true })
+  shareLocation: boolean;
 
   @ManyToMany(() => Users, (user) => user.favoriteListings)
   favoritedBy: Users[];
