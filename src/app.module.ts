@@ -17,6 +17,8 @@ import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
+import { AdminModule } from './admin/admin.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ReportsModule } from './reports/reports.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -71,6 +73,8 @@ import { DeletedListingsModule } from './deleted-listings/deleted-listings.modul
     AuthModule,
     UsersModule,
     WebhooksModule,
+    RateLimitingModule,
+    AdminModule,
     AnalyticsModule,
     ReportsModule,
   ],
