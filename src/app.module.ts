@@ -17,6 +17,7 @@ import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { CustomI18nModule } from './i18n/i18n.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     VerificationModule,
     ChatModule,
     WebhooksModule,
+    CustomI18nModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],

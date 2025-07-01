@@ -52,6 +52,9 @@ export class UsersService {
     if (updateProfileDto.avatarUrl !== undefined) {
       user.avatarUrl = updateProfileDto.avatarUrl;
     }
+    if (updateProfileDto.language !== undefined) {
+      user.language = updateProfileDto.language;
+    }
 
     // Save and return updated user
 
