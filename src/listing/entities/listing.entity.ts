@@ -57,4 +57,7 @@ export class Listing {
 
   @ManyToMany(() => Users, (user) => user.favoriteListings)
   favoritedBy: Users[];
+
+  @Column({ type: 'int', default: 0 })
+  views: number;
 }
