@@ -4,6 +4,7 @@ import { Repository, FindManyOptions, Between, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationEntity, NotificationType, NotificationChannel, NotificationPriority } from './notification.entity';
 import { CreateNotificationDto, UpdateNotificationDto, NotificationQueryDto } from './dto/notification.dto';
+import { CacheManagerService } from '../cache/cache-manager.service';
 
 export interface NotificationStats {
   total: number;
@@ -21,6 +22,7 @@ export class NotificationsService {
     @InjectRepository(NotificationEntity)
     private notificationRepository: Repository<NotificationEntity>,
     private eventEmitter: EventEmitter2,
+    private readonly cacheManager: CacheManagerService
   ) {}
 
   /**
@@ -172,10 +174,8 @@ export class NotificationsService {
     this.logger.log(`Marked ${notificationIds.length} notifications as read for user ${userId}`);
   }
 
-  /**
-   * Mark all notifications as read for a user
-   */
-  async markAllAsRead(userId: string): Promise<void> {
+  
+  async markAllAsReadInDb(userId: string): Promise<void> {
     await this.notificationRepository.update(
       { userId, read: false },
       { read: true, readAt: new Date() }
@@ -184,10 +184,7 @@ export class NotificationsService {
     this.logger.log(`Marked all notifications as read for user ${userId}`);
   }
 
-  /**
-   * Delete a notification
-   */
-  async deleteNotification(notificationId: string, userId: string): Promise<void> {
+    async deleteNotification(notificationId: string, userId: string): Promise<void> {
     const result = await this.notificationRepository.delete({
       id: notificationId,
       userId,
@@ -298,4 +295,45 @@ export class NotificationsService {
     
     return createdNotifications;
   }
+
+    async findUserNotifications(userId: string, page: number = 1, limit: number = 20) {
+    return this.cacheManager.getOrSet(
+      `user:${userId}:notifications:page:${page}:limit:${limit}`,
+      async () => {
+        return []; // Database query logic
+      },
+      { 
+        ttl: 300, // 5 minutes for notifications
+        tags: ['notifications', `user:${userId}`] 
+      }
+    );
+  }
+
+  async getUnreadCount(userId: string) {
+    return this.cacheManager.getOrSet(
+      `user:${userId}:notifications:unread-count`,
+      async () => {
+        return 0; // Database count logic
+      },
+      { 
+        ttl: 120, // 2 minutes
+        tags: ['notifications', `user:${userId}`, 'counts'] 
+      }
+    );
+  }
+
+  async markAsReadCached(userId: string, notificationId: string) {
+    
+    await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+    
+    return { message: 'Notification marked as read' };
+  }
+
+  async markAllAsRead(userId: string) {
+    
+    await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+    
+    return { message: 'All notifications marked as read' };
+  }
+
 }

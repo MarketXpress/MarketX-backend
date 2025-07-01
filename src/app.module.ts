@@ -19,6 +19,13 @@ import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
 import { AdminModule } from './admin/admin.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from './cache/cache.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { AuditModule } from './audit/audit.module';
+import { DeletedListingsModule } from './deleted-listings/deleted-listings.module';
+
 
 @Module({
   imports: [
@@ -39,6 +46,7 @@ import { AdminModule } from './admin/admin.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     ListingsModule,
     MarketPlaceModule,
     WalletModule,
@@ -48,6 +56,22 @@ import { AdminModule } from './admin/admin.module';
     SchedulerModule,
     VerificationModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    MarketPlaceModule,
+    NotificationsModule,
+    FavoritesModule,
+    ChatModule,
+    TransactionsModule,
+    WalletModule,
+    VerificationModule,
+    AuditModule,
+    DeletedListingsModule,
+    SchedulerModule,
+    CacheModule,
+    AuthModule,
+    UsersModule,
+
     WebhooksModule,
     RateLimitingModule,
     AdminModule,
