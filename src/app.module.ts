@@ -19,13 +19,14 @@ import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
 import { AdminModule } from './admin/admin.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ReportsModule } from './reports/reports.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from './cache/cache.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AuditModule } from './audit/audit.module';
 import { DeletedListingsModule } from './deleted-listings/deleted-listings.module';
-
 
 @Module({
   imports: [
@@ -71,10 +72,11 @@ import { DeletedListingsModule } from './deleted-listings/deleted-listings.modul
     CacheModule,
     AuthModule,
     UsersModule,
-
     WebhooksModule,
     RateLimitingModule,
     AdminModule,
+    AnalyticsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
