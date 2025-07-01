@@ -19,6 +19,12 @@ import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ReportsModule } from './reports/reports.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from './cache/cache.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { AuditModule } from './audit/audit.module';
+import { DeletedListingsModule } from './deleted-listings/deleted-listings.module';
 
 @Module({
   imports: [
@@ -39,6 +45,7 @@ import { ReportsModule } from './reports/reports.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     ListingsModule,
     MarketPlaceModule,
     WalletModule,
@@ -48,6 +55,21 @@ import { ReportsModule } from './reports/reports.module';
     SchedulerModule,
     VerificationModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    MarketPlaceModule,
+    NotificationsModule,
+    FavoritesModule,
+    ChatModule,
+    TransactionsModule,
+    WalletModule,
+    VerificationModule,
+    AuditModule,
+    DeletedListingsModule,
+    SchedulerModule,
+    CacheModule,
+    AuthModule,
+    UsersModule,
     WebhooksModule,
     AnalyticsModule,
     ReportsModule,
