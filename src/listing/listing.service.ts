@@ -20,6 +20,9 @@ export class ListingsService {
   async findOne(id: string) {
     const listing = await this.listingRepo.findOneBy({ id });
     if (!listing) throw new NotFoundException('Listing not found');
+    // Increment views count
+    listing.views = (listing.views || 0) + 1;
+    await this.listingRepo.save(listing);
     return listing;
   }
 

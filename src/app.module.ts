@@ -18,6 +18,16 @@ import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { CustomI18nModule } from './i18n/i18n.module';
+import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
+import { AdminModule } from './admin/admin.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ReportsModule } from './reports/reports.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from './cache/cache.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { AuditModule } from './audit/audit.module';
+import { DeletedListingsModule } from './deleted-listings/deleted-listings.module';
 
 @Module({
   imports: [
@@ -38,6 +48,7 @@ import { CustomI18nModule } from './i18n/i18n.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     ListingsModule,
     MarketPlaceModule,
     WalletModule,
@@ -47,8 +58,27 @@ import { CustomI18nModule } from './i18n/i18n.module';
     SchedulerModule,
     VerificationModule,
     ChatModule,
+    AuthModule,
+    UsersModule,
+    MarketPlaceModule,
+    NotificationsModule,
+    FavoritesModule,
+    ChatModule,
+    TransactionsModule,
+    WalletModule,
+    VerificationModule,
+    AuditModule,
+    DeletedListingsModule,
+    SchedulerModule,
+    CacheModule,
+    AuthModule,
+    UsersModule,
     WebhooksModule,
     CustomI18nModule,
+    RateLimitingModule,
+    AdminModule,
+    AnalyticsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],

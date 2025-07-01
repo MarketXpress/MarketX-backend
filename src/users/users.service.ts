@@ -4,12 +4,16 @@ import { Repository } from 'typeorm';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Users } from './users.entity';
 import { CreateUserDto } from './dto/create-user-dto.dto';
+import { CacheManagerService } from '../cache/cache-manager.service';
+import { CreateUserDtoDto } from './dto/create-user-dto.dto';
+
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    private readonly cacheManager: CacheManagerService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Users> {
@@ -68,4 +72,60 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
   }
+
+  async findOneWithCache(id: string) {
+    return this.cacheManager.getOrSet(
+      `user:${id}:profile`,
+      async () => {
+        return {};
+      },
+      { 
+        ttl: 7200, 
+        tags: ['users', `user:${id}`] 
+      }
+    );
+  }
+
+  async findProfile(id: string) {
+    return this.cacheManager.getOrSet(
+      `user:${id}:public-profile`,
+      async () => {
+        return {};
+      },
+      { 
+        ttl: 3600, 
+        tags: ['users', `user:${id}`, 'profiles'] 
+      }
+    );
+  }
+
+  async updateProfile(id: string, updateProfileDto: UpdateProfileDto) {
+    const user = {}; 
+    
+    await this.cacheManager.invalidateUser(id);
+    
+    return user;
+  }
+
+  async getUserStats(id: string) {
+    return this.cacheManager.getOrSet(
+      `user:${id}:stats`,
+      async () => {
+        return {
+          totalListings: 0,
+          totalSales: 0,
+          rating: 0
+        }; 
+      },
+      { 
+        ttl: 1800, 
+        tags: ['users', `user:${id}`, 'stats'] 
+      }
+    );
+  }
 }
+
+
+  
+
+
