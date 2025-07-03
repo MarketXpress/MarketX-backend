@@ -76,4 +76,7 @@ export class Listing {
 
   @Column({ type: 'int', default: 0 })
   views: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  expiresAt: Date;
 }
