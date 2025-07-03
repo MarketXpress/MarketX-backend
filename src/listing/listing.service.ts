@@ -4,16 +4,22 @@ import { Repository } from 'typeorm';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { Listing } from './entities/listing.entity';
+import { ConfigService } from '@nestjs/config';
 
+// NOTE: Ensure ConfigService is provided in the ListingsModule for dependency injection.
 @Injectable()
 export class ListingsService {
   constructor(
     @InjectRepository(Listing)
     private readonly listingRepo: Repository<Listing>,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(dto: CreateListingDto, userId: string) {
-    const listing = this.listingRepo.create({ ...dto, userId });
+    const expiryDays = this.configService.get<number>('LISTING_EXPIRY_DAYS', 30);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + expiryDays * 24 * 60 * 60 * 1000);
+    const listing = this.listingRepo.create({ ...dto, userId, expiresAt });
     return await this.listingRepo.save(listing);
   }
 
@@ -57,10 +63,12 @@ export class ListingsService {
       q,
     } = filters;
 
+    const now = new Date();
     const query = this.listingRepo
       .createQueryBuilder('listing')
       .where('listing.isActive = :isActive', { isActive: true })
-      .andWhere('listing.deletedAt IS NULL');
+      .andWhere('listing.deletedAt IS NULL')
+      .andWhere('(listing.expiresAt IS NULL OR listing.expiresAt > :now)', { now });
 
     if (category) {
       query.andWhere('listing.category = :category', { category });
