@@ -81,6 +81,49 @@ export interface IDisputeResolution {
 }
 
 /**
+ * DTO Interfaces
+ */
+export interface CreateEscrowDto {
+  transactionId: string;
+  amount: number;
+  buyerAddress: string;
+  sellerAddress: string;
+  timeoutHours?: number;
+}
+
+export interface ReleaseEscrowDto {
+  escrowId: string;
+  recipientAddress: string;
+  amount?: number; // For partial releases
+}
+
+export interface ConfirmReceiptDto {
+  escrowId: string;
+  buyerAddress: string;
+}
+
+export interface InitiateDisputeDto {
+  escrowId: string;
+  reason: DisputeReason;
+  description?: string;
+  initiatedBy: string;
+}
+
+export interface ResolveDisputeDto {
+  escrowId: string;
+  resolution: 'release' | 'refund';
+  resolvedBy: string;
+  reason?: string;
+}
+
+export interface PartialReleaseDto {
+  escrowId: string;
+  amount: number;
+  recipientAddress: string;
+  reason?: string;
+}
+
+/**
  * Escrow Service Interface
  */
 export interface IEscrowService {

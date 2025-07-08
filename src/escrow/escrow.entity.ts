@@ -7,7 +7,8 @@ export enum EscrowStatus {
   LOCKED = 'LOCKED',
   RELEASED = 'RELEASED',
   DISPUTED = 'DISPUTED',
-  EXPIRED = 'EXPIRED'
+  EXPIRED = 'EXPIRED',
+  REFUNDED = 'REFUNDED'
 }
 
 @Entity()
@@ -50,7 +51,7 @@ export class Escrow {
   @Column({ type: 'timestamptz', nullable: true })
   @IsOptional()
   @IsDate()
-  @ValidateIf(o => o.status === EscrowStatus.RELEASED)
+  @ValidateIf(o => o.status === EscrowStatus.RELEASED || o.status === EscrowStatus.REFUNDED)
   releasedAt?: Date;
 
   @Column({ type: 'timestamptz' })
@@ -71,13 +72,15 @@ export class Escrow {
 
   // Helper methods for state transitions
   canTransitionTo(newStatus: EscrowStatus): boolean {
-    const validTransitions = {
+    const validTransitions: Record<EscrowStatus, EscrowStatus[]> = {
       [EscrowStatus.PENDING]: [EscrowStatus.LOCKED],
       [EscrowStatus.LOCKED]: [EscrowStatus.RELEASED, EscrowStatus.DISPUTED, EscrowStatus.EXPIRED],
-      [EscrowStatus.DISPUTED]: [EscrowStatus.RELEASED, EscrowStatus.EXPIRED],
+      [EscrowStatus.DISPUTED]: [EscrowStatus.RELEASED, EscrowStatus.REFUNDED, EscrowStatus.EXPIRED],
       [EscrowStatus.RELEASED]: [],
-      [EscrowStatus.EXPIRED]: []
+      [EscrowStatus.EXPIRED]: [],
+      [EscrowStatus.REFUNDED]: []
     };
+
     return validTransitions[this.status].includes(newStatus);
   }
 }
