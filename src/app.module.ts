@@ -49,6 +49,19 @@ import { OrdersModule } from './orders/orders.module';
     OrdersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    AdminGuard,
+    RolesGuard,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottleGuard,
+    },
+  ],
+  exports: [AdminGuard, RolesGuard, ThrottleGuard],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(SecurityMiddleware).forRoutes('*');
+  }
+}
