@@ -1,0 +1,7 @@
+{
+  "greeting": "Hello, {{name}}!",
+  "items": "You have {{count}} item",
+  "items_plural": "You have {{count}} items",
+  "date_format": "MM/DD/YYYY",
+  "currency_format": "USD"
+} 
