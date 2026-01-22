@@ -86,6 +86,10 @@ export class Transaction {
   @Column({ name: 'external_reference', nullable: true })
   externalReference: string;
 
+  @ApiProperty({ description: 'Stellar blockchain transaction hash' })
+  @Column({ name: 'stellar_hash', nullable: true, length: 64 })
+  stellarHash: string;
+
   @ApiProperty({ description: 'Transaction creation timestamp' })
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
