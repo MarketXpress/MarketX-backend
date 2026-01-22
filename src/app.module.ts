@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, APP_GUARD } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -28,6 +28,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AuditModule } from './audit/audit.module';
 import { DeletedListingsModule } from './deleted-listings/deleted-listings.module';
+import { ThrottleGuard } from './common/guards/throttle.guard';
+import { SecurityMiddleware } from './common/middleware/security.middleware';
 
 @Module({
   imports: [
@@ -81,7 +83,19 @@ import { DeletedListingsModule } from './deleted-listings/deleted-listings.modul
     ReportsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, AdminGuard, RolesGuard],
-  exports: [AdminGuard, RolesGuard],
+  providers: [
+    AppService,
+    AdminGuard,
+    RolesGuard,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottleGuard,
+    },
+  ],
+  exports: [AdminGuard, RolesGuard, ThrottleGuard],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(SecurityMiddleware).forRoutes('*');
+  }
+}
