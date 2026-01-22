@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
@@ -55,6 +56,7 @@ async function bootstrap() {
   app.use(compression());
 
   // Global validation pipe
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
