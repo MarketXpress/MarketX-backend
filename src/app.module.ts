@@ -17,6 +17,8 @@ import { VerificationModule } from './verification/verification.module';
 import { ChatModule } from './chat/chat.module';
 import { Users } from './users/users.entity';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { Transaction } from './transactions/entities/transaction.entity';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [Listing, Users], // or use: [__dirname + '/**/*.entity{.ts,.js}']
+        entities: [Listing, Users, Transaction], // or use: [__dirname + '/**/*.entity{.ts,.js}']
         synchronize: true, // disable in production, use migrations
       }),
       inject: [ConfigService],
@@ -47,6 +49,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     VerificationModule,
     ChatModule,
     WebhooksModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
