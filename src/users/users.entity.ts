@@ -32,6 +32,9 @@ export class Users {
   @Column({ nullable: true })
   avatarUrl: string;
 
+  @Column({ nullable: true })
+  language: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

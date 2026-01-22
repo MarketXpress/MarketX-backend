@@ -7,12 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Listing } from 'src/listing/entities/listing.entity';
 import { Users } from 'src/users/users.entity';
+import { CacheManagerService } from '../cache/cache-manager.service';
 
 @Injectable()
 export class FavoritesService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    private readonly cacheManager: CacheManagerService 
+
 
     @InjectRepository(Listing)
     private readonly listingRepository: Repository<Listing>,
@@ -98,4 +101,33 @@ export class FavoritesService {
 
     return user.favoriteListings.some((fav) => fav.id === listingId);
   }
+
+
+  async findUserFavorites(userId: string, page: number = 1, limit: number = 10) {
+    return this.cacheManager.getOrSet(
+      `user:${userId}:favorites:page:${page}:limit:${limit}`,
+      async () => {
+        return [];
+      },
+      { 
+        ttl: 1800, 
+        tags: ['favorites', `user:${userId}`] 
+      }
+    );
+  }
+
+  async addToFavorites(userId: string, listingId: string) {
+    
+    await this.cacheManager.invalidatePattern(`user:${userId}:favorites:*`);
+    
+    return { message: 'Added to favorites' };
+  }
+
+  async removeFromFavorites(userId: string, listingId: string) {
+   
+    await this.cacheManager.invalidatePattern(`user:${userId}:favorites:*`);
+    
+    return { message: 'Removed from favorites' };
+  }
 }
+
