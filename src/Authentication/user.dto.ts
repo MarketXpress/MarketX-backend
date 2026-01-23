@@ -1,71 +1,37 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  BeforeInsert,
-  BeforeUpdate,
-} from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { IsEmail, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
+import { UserRole } from '../entities/user.entity';
 
-export enum UserRole {
-  BUYER = 'buyer',
-  SELLER = 'seller',
-  ADMIN = 'admin',
-}
-
-@Entity('users')
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ unique: true })
+export class CreateUserDto {
+  @IsEmail()
   email: string;
 
-  @Column()
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password: string;
 
-  @Column()
+  @IsString()
+  @MinLength(2)
   firstName: string;
 
-  @Column()
+  @IsString()
+  @MinLength(2)
   lastName: string;
 
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.BUYER,
-  })
-  role: UserRole;
+  @IsEnum(UserRole)
+  @IsOptional()
+  role?: UserRole;
+}
 
-  @Column({ default: true })
-  isActive: boolean;
+export class UpdateUserDto {
+  @IsString()
+  @IsOptional()
+  firstName?: string;
 
-  @Column({ nullable: true })
-  refreshToken: string;
+  @IsString()
+  @IsOptional()
+  lastName?: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-
-  @BeforeInsert()
-  @BeforeUpdate()
-  async hashPassword() {
-    if (this.password && !this.password.startsWith('$2b$')) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-    }
-  }
-
-  async validatePassword(password: string): Promise<boolean> {
-    return bcrypt.compare(password, this.password);
-  }
-
-  toJSON() {
-    const { password, refreshToken, ...result } = this;
-    return result;
-  }
+  @IsEnum(UserRole)
+  @IsOptional()
+  role?: UserRole;
 }
