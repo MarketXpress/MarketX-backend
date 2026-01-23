@@ -1,10 +1,15 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateDisputeDto {
   @IsString()
-  description: string;
+  transactionId: string;
 
-  @IsOptional()
   @IsString()
-  evidence?: string;
-}
+  complainantId: string;
+
+  @IsString()
+  respondentId: string;
+
+  @IsString()
+  reason: string;
+} 

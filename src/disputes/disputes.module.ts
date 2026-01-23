@@ -1,14 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Dispute } from './dispute.entity';
+import { Evidence } from './evidence.entity';
 import { DisputesService } from './disputes.service';
 import { DisputesController } from './disputes.controller';
-import { Dispute } from './entities/dispute.entity';
-import { EscrowService } from '../escrow/escrow.service';
+import { AdminDisputesController } from './admin-disputes.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Dispute])],
-  controllers: [DisputesController],
-  providers: [DisputesService, EscrowService],
+  imports: [TypeOrmModule.forFeature([Dispute, Evidence])],
+  providers: [DisputesService],
+  controllers: [DisputesController, AdminDisputesController],
   exports: [DisputesService],
 })
-export class DisputesModule {}
+export class DisputesModule {} 
