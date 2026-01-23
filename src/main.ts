@@ -1,14 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
 import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LoggerService } from './common/logger/logger.service';
+import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
+
+  // Get logger service
+  const loggerService = app.get(LoggerService);
 
   // Enable CORS with security configuration
   app.enableCors({
@@ -55,6 +62,9 @@ async function bootstrap() {
   // Enable compression for responses
   app.use(compression());
 
+  // Apply global logging middleware
+  app.use(new RequestResponseMiddleware(loggerService).use.bind(new RequestResponseMiddleware(loggerService)));
+
   // Global validation pipe
 
   app.useGlobalPipes(
@@ -68,6 +78,12 @@ async function bootstrap() {
     }),
   );
 
+  // Apply global exception filter
+  app.useGlobalFilters(new HttpExceptionFilter(loggerService));
+
+  // Apply global logging interceptor
+  app.useGlobalInterceptors(new LoggingInterceptor(loggerService));
+
   // Apply locale middleware
   app.use(LocaleMiddleware.prototype.use);
 
@@ -80,6 +96,13 @@ async function bootstrap() {
   logger.log(`CORS origins: ${CORS_CONFIG.origin.join(', ')}`);
   logger.log(`Max JSON payload: ${REQUEST_SIZE_LIMITS.JSON}`);
   logger.log(`Max file upload: ${REQUEST_SIZE_LIMITS.FILE}`);
+
+  // Log startup event
+  loggerService.info('Application bootstrap complete', {
+    port,
+    environment: process.env.NODE_ENV || 'development',
+    logLevel: process.env.LOG_LEVEL || 'info',
+  });
 }
 
 bootstrap().catch((error) => {
