@@ -11,6 +11,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { ThrottleGuard } from './common/guards/throttle.guard';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { HealthModule } from './health/health.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { HealthModule } from './health/health.module';
     CommonModule,
     LoggerModule,
     HealthModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [
