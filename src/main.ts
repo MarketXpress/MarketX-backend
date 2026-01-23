@@ -1,5 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggerService } from './common/logger/logger.service';
 
 import { ValidationPipe, Logger, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
