@@ -1,54 +1,53 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, APP_GUARD } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { CategoriesModule } from './categories/categories.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import databaseConfig from './config/database.config';
-import { OrdersModule } from './orders/orders.module';
+import { MessagesModule } from './messages/messages.module';
+import { CommonModule } from './common/common.module';
+import { LoggerModule } from './common/logger/logger.module';
+import { AdminGuard } from './guards/admin.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { ThrottleGuard } from './common/guards/throttle.guard';
+import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { HealthModule } from './health/health.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env'],
-      load: [databaseConfig],
     }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
-        const dbConfig = configService.get('database');
-
-        // If DATABASE_URL is set, use connection string (production)
-        if (dbConfig.url) {
-          return {
-            type: 'postgres',
-            url: dbConfig.url,
-            autoLoadEntities: dbConfig.autoload,
-            synchronize: dbConfig.synchronize,
-          };
-        }
-
-        // Otherwise fall back to normal config (development)
-        return {
-          type: 'postgres',
-          host: dbConfig.host,
-          port: dbConfig.port,
-          username: dbConfig.user,
-          password: dbConfig.password,
-          database: dbConfig.name,
-          autoLoadEntities: dbConfig.autoload,
-          synchronize: dbConfig.synchronize,
-        };
-      },
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT, 10) || 5432,
+      username: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD,
+      database: process.env.DATABASE_NAME,
+      autoLoadEntities: true,
+      synchronize: process.env.NODE_ENV !== 'production',
     }),
-    CategoriesModule,
-    OrdersModule,
+    MessagesModule,
+    CommonModule,
+    LoggerModule,
+    HealthModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    AdminGuard,
+    RolesGuard,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottleGuard,
+    },
+  ],
+  exports: [AdminGuard, RolesGuard, ThrottleGuard, LoggerModule],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(SecurityMiddleware).forRoutes('*');
+  }
+}
