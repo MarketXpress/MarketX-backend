@@ -31,6 +31,9 @@ export class Order {
   @Column()
   buyerId: string;
 
+  @Column({ nullable: true })
+  sellerId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -2,8 +2,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import { JwtPayload, JWT_CONSTANTS } from '../interfaces/jwt-payload.interface';
-import { UsersService } from '../../users/users.service';
+import { JwtPayload, JWT_CONSTANTS } from './jwt-payload.interface';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
@@ -27,7 +27,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       throw new UnauthorizedException('Refresh token not found');
     }
 
-    const user = await this.usersService.findOne(payload.sub);
+    const user = await this.usersService.findOne(parseInt(payload.sub));
     
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User not found or inactive');

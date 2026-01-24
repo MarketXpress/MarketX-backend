@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import * as StellarSdk from 'stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { ConfigService } from '@nestjs/config';
 
 import { Payment } from './entities/payment.entity';
@@ -26,7 +26,7 @@ import { OrderStatus } from 'src/orders/dto/create-order.dto';
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-  private stellarServer: StellarSdk.Server;
+  private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
 
   constructor(
@@ -44,10 +44,10 @@ export class PaymentsService {
       'STELLAR_HORIZON_URL',
       'https://horizon-testnet.stellar.org',
     );
-    this.stellarServer = new StellarSdk.Server(horizonUrl);
+    this.stellarServer = new StellarSdk.Horizon.Server(horizonUrl);
     this.networkPassphrase =
       this.configService.get<string>('STELLAR_NETWORK_PASSPHRASE') ||
-      StellarSdk.Networks.TESTNET_NETWORK_PASSPHRASE;
+      StellarSdk.Networks.TESTNET;
   }
 
   /**
@@ -335,7 +335,7 @@ export class PaymentsService {
       confirmationCount: payment.confirmationCount,
       createdAt: payment.createdAt,
       confirmedAt: payment.confirmedAt,
-      expiresAt: payment.expiresAt,
+      expiresAt: payment.expiresAt || new Date(),
     };
   }
 

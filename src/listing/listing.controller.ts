@@ -21,8 +21,6 @@ import { CacheInterceptor } from '../cache/cache.interceptor';
 import { Cacheable } from '../decorators/cacheable.decorator';
 import { CacheControl } from '../decorators/cache-control.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ListingService } from './listing.service.spec';
-
 
 @Controller('listings')
 @UseGuards(RateLimitGuard)
@@ -37,9 +35,9 @@ import { ListingService } from './listing.service.spec';
 })
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
-  private readonly listingService: ListingService
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @RateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     maxRequests: 5,
@@ -51,6 +49,18 @@ export class ListingsController {
   })
   create(@Body() dto: CreateListingDto, @Req() req) {
     return this.listingsService.create(dto, req.user.id);
+  }
+
+  @Get()
+  @UseInterceptors(CacheInterceptor)
+  @Cacheable({ ttl: 1800, tags: ['listings'] })
+  @CacheControl('public, max-age=1800')
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('category') category?: string,
+  ) {
+    return this.listingsService.findAll(page, limit, category);
   }
 
   @Get('activeListings')
@@ -74,77 +84,31 @@ export class ListingsController {
     });
   }
 
-  
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.listingsService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateListingDto) {
-    return this.listingsService.update(id, dto);
-  }
-
-  @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.listingsService.delete(id);
-  }
-
-
-    @Post()
-  @UseGuards(JwtAuthGuard)
-  create(@Body() createListingDto: CreateListingDto) {
-    return this.listingService.create(createListingDto);
-  }
-
-  @Get()
-  @UseInterceptors(CacheInterceptor)
-  @Cacheable({ ttl: 1800, tags: ['listings'] })
-  @CacheControl('public, max-age=1800')
-  findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('category') category?: string,
-    @Query('search') search?: string
-  ) {
-    return this.listingService.findAll(page, limit, category, search);
-  }
-
   @Get('featured')
   @UseInterceptors(CacheInterceptor)
   @Cacheable({ ttl: 3600, tags: ['listings', 'featured'] })
   @CacheControl('public, max-age=3600')
   findFeatured() {
-    return this.listingService.findFeatured();
+    return this.listingsService.findFeatured();
   }
-
-  @Get('popular')
-  @UseInterceptors(CacheInterceptor)
-  @Cacheable({ ttl: 7200, tags: ['listings', 'popular'] })
-  @CacheControl('public, max-age=7200')
-  findPopular() {
-    return this.listingService.findPopular();
-  }
-
+  
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @Cacheable({ ttl: 3600, tags: ['listings'] })
   @CacheControl('public, max-age=3600')
   findOne(@Param('id') id: string) {
-    return this.listingService.findOne(id);
+    return this.listingsService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto) {
-    return this.listingService.update(id, updateListingDto);
+  update(@Param('id') id: string, @Body() dto: UpdateListingDto) {
+    return this.listingsService.update(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string) {
-    return this.listingService.remove(id);
+    return this.listingsService.remove(id);
   }
-}
-
 }

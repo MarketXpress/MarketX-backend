@@ -1,9 +1,10 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/entities/user.entity';
-import { RegisterDto, AuthResponseDto } from './dto/auth.dto';
-import { JwtPayload, JWT_CONSTANTS } from './interfaces/jwt-payload.interface';
+import { User } from './user.entity';
+import { Users } from '../users/users.entity';
+import { RegisterDto, AuthResponseDto } from './auth.dto';
+import { JwtPayload, JWT_CONSTANTS } from './jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -12,7 +13,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<User | null> {
+  async validateUser(email: string, password: string): Promise<Users | null> {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
@@ -29,12 +30,12 @@ export class AuthService {
       throw new UnauthorizedException('User account is inactive');
     }
 
-    return user;
+    return user as any;
   }
 
   async login(user: User): Promise<AuthResponseDto> {
-    const tokens = await this.generateTokens(user);
-    await this.usersService.updateRefreshToken(user.id, tokens.refreshToken);
+    const tokens = await this.generateTokens(user as any);
+    await this.usersService.updateRefreshToken(parseInt(String(user.id)), tokens.refreshToken);
 
     return {
       ...tokens,
@@ -49,12 +50,13 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    const user = await this.usersService.create(registerDto);
-    return await this.login(user);
+    const createDto = { ...registerDto, name: registerDto.email.split('@')[0] };
+    const user = await this.usersService.create(createDto as any);
+    return await this.login(user as any);
   }
 
   async refreshTokens(userId: string, refreshToken: string): Promise<AuthResponseDto> {
-    const user = await this.usersService.findOne(userId);
+    const user = await this.usersService.findOne(parseInt(userId));
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Access denied');
@@ -72,46 +74,46 @@ export class AuthService {
     return {
       ...tokens,
       user: {
-        id: user.id,
+        id: user.id.toString(),
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
+        firstName: user.name,
+        lastName: '',
+        role: user.role || 'user',
       },
     };
   }
 
   async logout(userId: string): Promise<void> {
-    await this.usersService.updateRefreshToken(userId, null);
+    await this.usersService.updateRefreshToken(parseInt(userId), null);
   }
 
-  private async generateTokens(user: User): Promise<{
+  private async generateTokens(user: Users): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
     const accessPayload: JwtPayload = {
-      sub: user.id,
+      sub: user.id.toString(),
       email: user.email,
-      role: user.role,
+      role: user.role || 'user',
       type: 'access',
     };
 
     const refreshPayload: JwtPayload = {
-      sub: user.id,
+      sub: user.id.toString(),
       email: user.email,
-      role: user.role,
+      role: user.role || 'user',
       type: 'refresh',
     };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload, {
+      this.jwtService.signAsync(accessPayload as any, {
         secret: JWT_CONSTANTS.accessTokenSecret,
         expiresIn: JWT_CONSTANTS.accessTokenExpiration,
-      }),
-      this.jwtService.signAsync(refreshPayload, {
+      } as any),
+      this.jwtService.signAsync(refreshPayload as any, {
         secret: JWT_CONSTANTS.refreshTokenSecret,
         expiresIn: JWT_CONSTANTS.refreshTokenExpiration,
-      }),
+      } as any),
     ]);
 
     return {

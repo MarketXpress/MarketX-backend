@@ -18,8 +18,7 @@ export class CacheService {
   constructor() {
     this.redis = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT) || 6379,
-      retryDelayOnFailover: 100,
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
       enableReadyCheck: false,
       maxRetriesPerRequest: null,
     });
@@ -38,7 +37,7 @@ export class CacheService {
 
       result = await this.getFromRedis<T>(key);
       if (result) {
-        await this.setInMemory(key, result, config);
+        await this.setInMemory(key, result, config || { ttl: 3600 });
         this.recordHit(startTime);
         return result;
       }
@@ -197,7 +196,7 @@ export class CacheService {
   }
 
   private cleanupMemoryCache(): void {
-    const maxItems = parseInt(process.env.CACHE_MAX_MEMORY_ITEMS) || 1000;
+    const maxItems = parseInt(process.env.CACHE_MAX_MEMORY_ITEMS || '1000', 10);
     
     if (this.inMemoryCache.size <= maxItems) return;
 

@@ -15,7 +15,7 @@ export class MessagesController {
     @Req() req: Request,
   ) {
     // Extract user ID from request (assuming it's added by auth middleware)
-    const userId = req['user']?.id || 1; // Fallback to a test user ID
+    const userId = (req['user'] as any)?.id || 1; // Fallback to a test user ID
     
     // Create a new DTO with the route param orderId
     const sendMessageDto: SendMessageDto = {
@@ -32,7 +32,7 @@ export class MessagesController {
     @Req() req: Request,
   ) {
     // Extract user ID from request (assuming it's added by auth middleware)
-    const userId = req['user']?.id || 1; // Fallback to a test user ID
+    const userId = (req['user'] as any)?.id || 1; // Fallback to a test user ID
     
     return await this.messagesService.getMessagesByOrderId(Number(orderId), userId);
   }

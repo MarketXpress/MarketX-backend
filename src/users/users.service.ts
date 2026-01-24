@@ -5,7 +5,6 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Users } from './users.entity';
 import { CreateUserDto } from './dto/create-user-dto.dto';
 import { CacheManagerService } from '../cache/cache-manager.service';
-import { CreateUserDtoDto } from './dto/create-user-dto.dto';
 
 
 @Injectable()
@@ -77,7 +76,7 @@ export class UsersService {
     return this.cacheManager.getOrSet(
       `user:${id}:profile`,
       async () => {
-        return {};
+        return this.findOne(+id);
       },
       { 
         ttl: 7200, 
@@ -90,21 +89,13 @@ export class UsersService {
     return this.cacheManager.getOrSet(
       `user:${id}:public-profile`,
       async () => {
-        return {};
+        return this.findOne(+id);
       },
       { 
         ttl: 3600, 
         tags: ['users', `user:${id}`, 'profiles'] 
       }
     );
-  }
-
-  async updateProfile(id: string, updateProfileDto: UpdateProfileDto) {
-    const user = {}; 
-    
-    await this.cacheManager.invalidateUser(id);
-    
-    return user;
   }
 
   async getUserStats(id: string) {
@@ -123,9 +114,13 @@ export class UsersService {
       }
     );
   }
+
+  async validateRefreshToken(userId: string, token: string): Promise<boolean> {
+    // Stub implementation - should compare hashed tokens
+    return true;
+  }
+
+  async updateRefreshToken(userId: number, token: string | null): Promise<void> {
+    await this.userRepository.update(userId, { refreshToken: token } as any);
+  }
 }
-
-
-  
-
-

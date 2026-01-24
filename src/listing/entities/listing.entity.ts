@@ -39,6 +39,15 @@ export class Listing {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ type: 'int', default: 1 })
+  quantity: number;
+
+  @Column({ type: 'int', default: 0 })
+  reserved: number;
+
+  @Column({ type: 'int', default: 1 })
+  available: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

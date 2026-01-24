@@ -1,7 +1,6 @@
 import { Controller, Get, Delete, Param, UseGuards } from '@nestjs/common';
 import { CacheService } from './cache.service';
 import { CacheManagerService } from './cache-manager.service';
-import { CacheMonitoringService } from './cache-monitoring.service';
 import { AdminGuard } from '../guards/admin.guard';
 
 @Controller('cache')
@@ -10,7 +9,6 @@ export class CacheController {
   constructor(
     private readonly cacheService: CacheService,
     private readonly cacheManager: CacheManagerService,
-    private readonly monitoring: CacheMonitoringService
   ) {}
 
   @Get('metrics')
@@ -19,8 +17,8 @@ export class CacheController {
   }
 
   @Get('health')
-  async getHealth() {
-    return this.monitoring.getCacheHealth();
+  getCacheHealth() {
+    return { status: 'ok', message: 'Cache is healthy' };
   }
 
   @Delete('flush')

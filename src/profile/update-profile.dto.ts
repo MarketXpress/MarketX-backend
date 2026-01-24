@@ -10,7 +10,7 @@ import {
   IsPhoneNumber,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ProfileVisibility } from '../entities/user.entity';
+import { ProfileVisibility } from './user.entity';
 
 export class UpdateProfileDto {
   @ApiProperty({ required: false, example: 'John' })

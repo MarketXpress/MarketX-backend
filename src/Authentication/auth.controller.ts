@@ -9,12 +9,12 @@ import {
   Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto } from './dto/auth.dto';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
-import { Public } from './decorators/public.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto } from './auth.dto';
+import { LocalAuthGuard } from './local-auth.guard';
+import { JwtAuthGuard } from './jwt-auth-guard';
+import { JwtRefreshGuard } from './jwt-refresh.guard';
+import { Public } from './public.decorator';
+import { CurrentUser } from './current-user.decorator';
 
 @Controller('auth')
 export class AuthController {

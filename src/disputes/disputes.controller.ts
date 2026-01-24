@@ -28,7 +28,7 @@ export class DisputesController {
   @UseInterceptors(FileInterceptor('file'))
   async submitEvidence(
     @Body() dto: SubmitEvidenceDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: any,
   ) {
     if (file) {
       dto.fileUrl = await this.disputesService.uploadEvidenceFile(file);
@@ -39,7 +39,7 @@ export class DisputesController {
   @Post('escalate')
   async escalateDispute(@Body() dto: EscalateDisputeDto, @Req() req) {
     // Assume req.user.id is available from auth middleware
-    const userId = req.user?.id || dto.complainantId;
+    const userId = req.user?.id || 1;
     return this.disputesService.escalateDispute(dto, userId);
   }
 } 

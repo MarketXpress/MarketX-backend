@@ -3,14 +3,10 @@ import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './common/logger/logger.service';
-
-import { ValidationPipe, Logger, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
 import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { LoggerService } from './common/logger/logger.service';
 import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
 
 async function bootstrap() {

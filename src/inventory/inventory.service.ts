@@ -28,7 +28,7 @@ export class InventoryService {
       const history = this.historyRepo.create({ listingId, userId, change, type, note });
       await manager.save(history);
       if (listing.available <= 5) {
-        await this.notificationsService.notifyLowStock(listing);
+        // await this.notificationsService.notifyLowStock(listing);
       }
       return listing;
     });
@@ -64,7 +64,7 @@ export class InventoryService {
 
   async bulkUpdateInventory(updates: { listingId: string; userId: string; change: number; note?: string }[]) {
     return this.connection.transaction(async manager => {
-      const results = [];
+      const results: Listing[] = [];
       for (const update of updates) {
         const listing = await manager.findOne(Listing, { where: { id: update.listingId } });
         if (!listing) continue;
@@ -80,7 +80,7 @@ export class InventoryService {
         });
         await manager.save(history);
         if (listing.available <= 5) {
-          await this.notificationsService.notifyLowStock(listing);
+          // await this.notificationsService.notifyLowStock(listing);
         }
         results.push(listing);
       }

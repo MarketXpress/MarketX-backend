@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { Listing } from '../listing/entities/listing.entity';
 
 @Injectable()
@@ -21,7 +21,7 @@ export class ExpireListingsTask {
       const expiredListings = await this.listingRepo.find({
         where: {
           isActive: true,
-          expiresAt: { $lt: now },
+          expiresAt: LessThan(now),
         },
       });
       if (expiredListings.length > 0) {

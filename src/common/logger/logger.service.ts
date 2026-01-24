@@ -106,7 +106,7 @@ export class LoggerService {
           datePattern: 'YYYY-MM-DD',
           level: 'error',
           maxSize: '20m',
-          maxDays: '14d',
+          maxFiles: '14d',
           format: customFormat,
         }),
 
@@ -115,7 +115,7 @@ export class LoggerService {
           filename: path.join(logsDir, 'combined-%DATE%.log'),
           datePattern: 'YYYY-MM-DD',
           maxSize: '20m',
-          maxDays: '7d',
+          maxFiles: '7d',
           format: customFormat,
         }),
 
@@ -127,7 +127,7 @@ export class LoggerService {
                 datePattern: 'YYYY-MM-DD',
                 level: 'debug',
                 maxSize: '20m',
-                maxDays: '3d',
+                maxFiles: '3d',
                 format: customFormat,
               }),
             ]
