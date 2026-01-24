@@ -1,10 +1,32 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, Between, In } from 'typeorm';
+import { Repository, FindManyOptions, Between, In, UpdateResult } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NotificationEntity, NotificationType, NotificationChannel, NotificationPriority } from './notification.entity';
-import { CreateNotificationDto, UpdateNotificationDto, NotificationQueryDto } from './dto/notification.dto';
+import {
+  NotificationEntity,
+  NotificationType,
+  NotificationChannel,
+  NotificationPriority,
+  NotificationStatus,
+} from './notification.entity'; 
+import { NotificationPreferencesEntity } from './entities/notification-preferences.entity'; 
+
+
+import {
+  CreateNotificationDto as CreateNotificationDtoV1,
+  UpdateNotificationDto,
+  NotificationQueryDto,
+} from './dto/notification.dto';
+import { CreateNotificationDto as CreateNotificationDtoV2 } from './dto/create-notification.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
+import { QueryNotificationsDto } from './dto/query-notifications.dto';
+
+// Cache manager service used in first file
 import { CacheManagerService } from '../cache/cache-manager.service';
+
+// unify CreateNotificationDto type (accept either shape)
+type CreateNotificationDto = CreateNotificationDtoV1 | CreateNotificationDtoV2;
+type GetNotificationsQuery = NotificationQueryDto | QueryNotificationsDto;
 
 export interface NotificationStats {
   total: number;
@@ -20,45 +42,179 @@ export class NotificationsService {
 
   constructor(
     @InjectRepository(NotificationEntity)
-    private notificationRepository: Repository<NotificationEntity>,
-    private eventEmitter: EventEmitter2,
-    private readonly cacheManager: CacheManagerService
+    private readonly notificationRepository: Repository<NotificationEntity>,
+
+    // preferences repository (from second implementation)
+    @InjectRepository(NotificationPreferencesEntity)
+    private readonly preferencesRepository: Repository<NotificationPreferencesEntity>,
+
+    private readonly eventEmitter: EventEmitter2,
+    private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
   ) {}
 
   /**
-   * Create and store a new notification
+   * Get or create default preferences for a user
    */
-  async createNotification(createNotificationDto: CreateNotificationDto): Promise<NotificationEntity> {
+  async getUserPreferences(userId: string): Promise<NotificationPreferencesEntity> {
+    let preferences = await this.preferencesRepository.findOne({ where: { userId } });
+
+    if (!preferences) {
+      preferences = this.preferencesRepository.create({ userId });
+      await this.preferencesRepository.save(preferences);
+    }
+
+    return preferences;
+  }
+
+  /**
+   * Update preferences
+   */
+  async updateUserPreferences(userId: string, dto: UpdatePreferencesDto): Promise<NotificationPreferencesEntity> {
+    const preferences = await this.getUserPreferences(userId);
+
+    if (dto.preferences) preferences.preferences = dto.preferences;
+    if (dto.emailEnabled !== undefined) preferences.emailEnabled = dto.emailEnabled;
+    if (dto.inAppEnabled !== undefined) preferences.inAppEnabled = dto.inAppEnabled;
+    if (dto.pushEnabled !== undefined) preferences.pushEnabled = dto.pushEnabled;
+
+    return this.preferencesRepository.save(preferences);
+  }
+
+  /**
+   * Create a notification (respects user preferences, creates per-channel notifications and processes them)
+   */
+  async createNotification(dto: CreateNotificationDto): Promise<NotificationEntity[] | NotificationEntity> {
     try {
-      const notification = this.notificationRepository.create({
-        ...createNotificationDto,
-        createdAt: new Date(),
-      });
+      // Attempt to get preferences and determine enabled channels
+      const preferences = await this.getUserPreferences((dto as any).userId);
+      const preferredChannels: NotificationChannel[] =
+        (preferences.preferences && preferences.preferences[(dto as any).type]) || [];
 
-      const savedNotification = await this.notificationRepository.save(notification);
+      // If DTO already specifies channel(s), prefer that
+      const requestedChannel = (dto as any).channel;
+      const channelsToCreate: NotificationChannel[] = requestedChannel
+        ? Array.isArray(requestedChannel)
+          ? requestedChannel
+          : [requestedChannel]
+        : preferredChannels.length > 0
+        ? preferredChannels
+        : [NotificationChannel.IN_APP]; // default to IN_APP when nothing configured
 
-      // Emit event for real-time notification delivery
-      this.eventEmitter.emit('notification.created', savedNotification);
+      const notificationsToSave: NotificationEntity[] = [];
 
-      this.logger.log(`Notification created for user ${savedNotification.userId}: ${savedNotification.title}`);
-      
-      return savedNotification;
+      for (const channel of channelsToCreate) {
+        // Respect global channel toggles
+        if (channel === NotificationChannel.EMAIL && !preferences.emailEnabled) continue;
+        if (channel === NotificationChannel.IN_APP && !preferences.inAppEnabled) continue;
+        if (channel === NotificationChannel.PUSH && !preferences.pushEnabled) continue;
+
+        const notification = this.notificationRepository.create({
+          ...(dto as any),
+          channel,
+          status: NotificationStatus.PENDING,
+          createdAt: (dto as any).createdAt ? new Date((dto as any).createdAt) : new Date(),
+        } as Partial<NotificationEntity>);
+
+        notificationsToSave.push(notification);
+      }
+
+      if (notificationsToSave.length === 0) {
+        this.logger.log(`No notifications created for user ${(dto as any).userId} due to preferences.`);
+        return [];
+      }
+
+      const saved = await this.notificationRepository.save(notificationsToSave);
+
+      // Emit created events & process each notification (async but not backgrounded by the assistant — we trigger here)
+      for (const notification of saved) {
+        this.eventEmitter.emit('notification.created', notification);
+        // process but don't block the save. We catch errors to prevent unhandled rejections.
+        this.processNotification(notification).catch((err) => {
+          this.logger.error(`Error processing notification ${notification.id}:`, err);
+        });
+      }
+
+      // Invalidate caches related to the user
+      if (this.cacheManager && saved[0]) {
+        await this.cacheManager.invalidatePattern(`user:${saved[0].userId}:notifications:*`);
+        await this.cacheManager.invalidatePattern(`user:${saved[0].userId}:notifications:unread-count`);
+      }
+
+      // if single channel created, return that; otherwise return list
+      return saved.length === 1 ? saved[0] : saved;
     } catch (error) {
-      this.logger.error('Failed to create notification', error);
+      this.logger.error('Failed to create notification:', error);
       throw error;
     }
   }
 
   /**
-   * Send notification for transaction received event
+   * Process one notification (send via appropriate channel)
+   */
+  private async processNotification(notification: NotificationEntity): Promise<void> {
+    try {
+      switch (notification.channel) {
+        case NotificationChannel.EMAIL:
+          await this.sendEmailNotification(notification);
+          break;
+        case NotificationChannel.IN_APP:
+          await this.sendInAppNotification(notification);
+          break;
+        case NotificationChannel.PUSH:
+          await this.sendPushNotification(notification);
+          break;
+        default:
+          this.logger.warn(`Unknown notification channel for ${notification.id}: ${notification.channel}`);
+      }
+
+      notification.status = NotificationStatus.SENT;
+      notification.sentAt = new Date();
+      await this.notificationRepository.save(notification);
+    } catch (error) {
+      this.logger.error(`Failed to send ${notification.channel} notification:`, error);
+      notification.status = NotificationStatus.FAILED;
+      try {
+        await this.notificationRepository.save(notification);
+      } catch (saveErr) {
+        this.logger.error('Failed to save failed notification status:', saveErr);
+      }
+    }
+  }
+
+  private async sendEmailNotification(notification: NotificationEntity): Promise<void> {
+    // TODO: integrate real email provider (SendGrid/SES/etc)
+    this.logger.log(`(EMAIL) To user ${notification.userId}: ${notification.title}`);
+    // Optionally emit event for external worker
+    this.eventEmitter.emit('notification.send_email', notification);
+  }
+
+  private async sendInAppNotification(notification: NotificationEntity): Promise<void> {
+    // In-app items are already persisted to DB; emit for realtime delivery (websockets)
+    this.eventEmitter.emit('notification.in-app', { userId: notification.userId, notification });
+    this.logger.log(`In-app notification created for user ${notification.userId}`);
+  }
+
+  private async sendPushNotification(notification: NotificationEntity): Promise<void> {
+    // TODO: integrate with FCM/APNs
+    this.logger.log(`(PUSH) To user ${notification.userId}: ${notification.title}`);
+    this.eventEmitter.emit('notification.send_push', {
+      userId: notification.userId,
+      title: notification.title,
+      message: notification.message,
+      data: { notificationId: notification.id, relatedEntityId: (notification as any).relatedEntityId },
+    });
+  }
+
+  /**
+   * Shortcut: create a transaction received notification (keeps existing API)
    */
   async sendTransactionReceivedNotification(
     userId: string,
     transactionId: string,
     amount: number,
-    currency: string = 'USD'
-  ): Promise<NotificationEntity> {
-    const notification = await this.createNotification({
+    currency = 'USD',
+  ): Promise<NotificationEntity | NotificationEntity[]> {
+    const dto: Partial<CreateNotificationDto> = {
       userId,
       title: 'Transaction Received',
       message: `You received ${currency} ${amount.toFixed(2)}`,
@@ -67,146 +223,280 @@ export class NotificationsService {
       priority: NotificationPriority.HIGH,
       relatedEntityId: transactionId,
       relatedEntityType: 'transaction',
-      metadata: {
-        amount,
-        currency,
-        transactionId,
-      },
-    });
+      metadata: { amount, currency, transactionId },
+    } as any;
 
-    // Also send push notification for high priority
-    this.eventEmitter.emit('notification.send_push', {
-      userId,
-      title: notification.title,
-      message: notification.message,
-      data: { notificationId: notification.id, transactionId },
-    });
+    const created = await this.createNotification(dto as CreateNotificationDto);
 
-    return notification;
+    // Also emit push send event for high priority (duplicate-safe)
+    if (Array.isArray(created)) {
+      created.forEach((c) =>
+        this.eventEmitter.emit('notification.send_push', {
+          userId,
+          title: c.title,
+          message: c.message,
+          data: { notificationId: c.id, transactionId },
+        }),
+      );
+    } else if (created) {
+      this.eventEmitter.emit('notification.send_push', {
+        userId,
+        title: (created as NotificationEntity).title,
+        message: (created as NotificationEntity).message,
+        data: { notificationId: (created as NotificationEntity).id, transactionId },
+      });
+    }
+
+    return created as NotificationEntity | NotificationEntity[];
   }
 
   /**
-   * Get notifications for a specific user with filtering and pagination
+   * Get user notifications (supports both DTO shapes and fallbacks)
    */
-  async getUserNotifications(
-    userId: string,
-    queryDto: NotificationQueryDto
-  ): Promise<{ notifications: NotificationEntity[]; total: number; unreadCount: number }> {
-    const {
-      page = 1,
-      limit = 20,
-      read,
-      type,
-      priority,
-      startDate,
-      endDate,
-      sortBy = 'createdAt',
-      sortOrder = 'DESC',
-    } = queryDto;
+  async getUserNotifications(userId: string, queryDto: GetNotificationsQuery) {
+    // Normalize common params
+    const page = (queryDto as any).page ?? 1;
+    const limit = (queryDto as any).limit ?? 20;
+    const type = (queryDto as any).type ?? (queryDto as any).notificationType;
+    const status = (queryDto as any).status;
+    const isRead = (queryDto as any).isRead ?? (queryDto as any).read;
+    const sortBy = (queryDto as any).sortBy ?? 'createdAt';
+    const sortOrder = ((queryDto as any).sortOrder ?? 'DESC') as 'ASC' | 'DESC';
 
-    const whereConditions: any = { userId };
+    // If user requested only IN_APP channel, use queryBuilder and filters
+    const qb = this.notificationRepository.createQueryBuilder('notification');
+    qb.where('notification.userId = :userId', { userId });
 
-    if (read !== undefined) {
-      whereConditions.read = read;
+    // If DTO specified channel filtering include it (default to IN_APP for listing in-app)
+    if ((queryDto as any).channel) {
+      qb.andWhere('notification.channel = :channel', { channel: (queryDto as any).channel });
+    } else {
+      // default to in-app for user-facing listing
+      qb.andWhere('notification.channel = :channel', { channel: NotificationChannel.IN_APP });
     }
 
-    if (type) {
-      whereConditions.type = type;
-    }
+    if (type) qb.andWhere('notification.type = :type', { type });
+    if (status) qb.andWhere('notification.status = :status', { status });
+    if (isRead !== undefined) qb.andWhere('notification.isRead = :isRead OR notification.read = :isRead', { isRead });
 
-    if (priority) {
-      whereConditions.priority = priority;
-    }
+    const [items, total] = await qb
+      .orderBy(`notification.${sortBy}`, sortOrder)
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
-    if (startDate && endDate) {
-      whereConditions.createdAt = Between(new Date(startDate), new Date(endDate));
-    }
-
-    const options: FindManyOptions<NotificationEntity> = {
-      where: whereConditions,
-      order: { [sortBy]: sortOrder },
-      skip: (page - 1) * limit,
-      take: limit,
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
-
-    const [notifications, total] = await this.notificationRepository.findAndCount(options);
-
-    // Get unread count
-    const unreadCount = await this.notificationRepository.count({
-      where: { userId, read: false },
-    });
-
-    return { notifications, total, unreadCount };
   }
 
   /**
-   * Mark notification as read
+   * A cached finder used by frontends (keeps first file API)
    */
-  async markAsRead(notificationId: string, userId: string): Promise<NotificationEntity> {
-    const notification = await this.notificationRepository.findOne({
-      where: { id: notificationId, userId },
-    });
-
-    if (!notification) {
-      throw new NotFoundException('Notification not found');
+  async findUserNotifications(userId: string, page = 1, limit = 20) {
+    if (!this.cacheManager) {
+      // fallback to direct DB query
+      return this.notificationRepository.find({
+        where: { userId },
+        order: { createdAt: 'DESC' as 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
     }
 
-    if (!notification.read) {
-      notification.read = true;
-      notification.readAt = new Date();
+    return this.cacheManager.getOrSet(
+      `user:${userId}:notifications:page:${page}:limit:${limit}`,
+      async () => {
+        return this.notificationRepository.find({
+          where: { userId },
+          order: { createdAt: 'DESC' as 'DESC' },
+          skip: (page - 1) * limit,
+          take: limit,
+        });
+      },
+      { ttl: 300, tags: ['notifications', `user:${userId}`] },
+    );
+  }
+
+  /**
+   * Unread count with caching
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    if (!this.cacheManager) {
+      return this.notificationRepository.count({ where: { userId, isRead: false, channel: NotificationChannel.IN_APP } });
+    }
+
+    return this.cacheManager.getOrSet(
+      `user:${userId}:notifications:unread-count`,
+      async () => {
+        return this.notificationRepository.count({
+          where: { userId, isRead: false, channel: NotificationChannel.IN_APP },
+        });
+      },
+      { ttl: 120, tags: ['notifications', `user:${userId}`, 'counts'] },
+    );
+  }
+
+  /**
+   * Mark a single notification as read (works with read or isRead fields)
+   */
+  async markAsRead(userId: string, notificationId: string): Promise<NotificationEntity> {
+    const notification = await this.notificationRepository.findOne({ where: { id: notificationId, userId } });
+
+    if (!notification) throw new NotFoundException('Notification not found');
+
+    // Support both schema variants
+    if ((notification as any).isRead === false || (notification as any).read === false) {
+      (notification as any).isRead = true;
+      (notification as any).read = true;
+      (notification as any).readAt = new Date();
       await this.notificationRepository.save(notification);
 
+      // emit event and invalidate cache
       this.eventEmitter.emit('notification.read', notification);
+      if (this.cacheManager) {
+        await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+        await this.cacheManager.invalidatePattern(`user:${userId}:notifications:unread-count`);
+      }
     }
 
     return notification;
   }
 
   /**
-   * Mark multiple notifications as read
+   * Mark multiple notifications as read in DB
    */
-  async markMultipleAsRead(notificationIds: string[], userId: string): Promise<void> {
-    await this.notificationRepository.update(
+  async markMultipleAsRead(notificationIds: string[], userId: string): Promise<UpdateResult> {
+    const res = await this.notificationRepository.update(
       { id: In(notificationIds), userId, read: false },
-      { read: true, readAt: new Date() }
+      { read: true, isRead: true, readAt: new Date() } as any,
     );
 
     this.logger.log(`Marked ${notificationIds.length} notifications as read for user ${userId}`);
-  }
 
-  
-  async markAllAsReadInDb(userId: string): Promise<void> {
-    await this.notificationRepository.update(
-      { userId, read: false },
-      { read: true, readAt: new Date() }
-    );
-
-    this.logger.log(`Marked all notifications as read for user ${userId}`);
-  }
-
-    async deleteNotification(notificationId: string, userId: string): Promise<void> {
-    const result = await this.notificationRepository.delete({
-      id: notificationId,
-      userId,
-    });
-
-    if (result.affected === 0) {
-      throw new NotFoundException('Notification not found');
+    if (this.cacheManager) {
+      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:unread-count`);
     }
 
+    return res;
+  }
+
+  /**
+   * Mark all unread as read (DB)
+   */
+  async markAllAsReadInDb(userId: string): Promise<void> {
+    await this.notificationRepository
+      .createQueryBuilder()
+      .update(NotificationEntity)
+      .set({ read: true, isRead: true, readAt: new Date() } as any)
+      .where('userId = :userId', { userId })
+      .andWhere('(isRead = :isRead OR read = :isRead)', { isRead: false })
+      .execute();
+
+    this.logger.log(`Marked all notifications as read for user ${userId}`);
+
+    if (this.cacheManager) {
+      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:unread-count`);
+    }
+  }
+
+  /**
+   * Cached helper that marks a notification as read (high-level)
+   */
+  async markAsReadCached(userId: string, notificationId: string) {
+    await this.markAsRead(userId, notificationId);
+
+    if (this.cacheManager) {
+      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+    }
+
+    return { message: 'Notification marked as read' };
+  }
+
+  /**
+   * Mark all as read with cache invalidation
+   */
+  async markAllAsRead(userId: string) {
+    await this.markAllAsReadInDb(userId);
+
+    if (this.cacheManager) {
+      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+    }
+
+    return { message: 'All notifications marked as read' };
+  }
+
+  /**
+   * Get a single notification
+   */
+  async getNotificationById(notificationId: string, userId: string): Promise<NotificationEntity> {
+    const notification = await this.notificationRepository.findOne({ where: { id: notificationId, userId } });
+
+    if (!notification) throw new NotFoundException('Notification not found');
+
+    return notification;
+  }
+
+  /**
+   * Update notification (partial)
+   */
+  async updateNotification(notificationId: string, userId: string, updateDto: UpdateNotificationDto) {
+    const notification = await this.getNotificationById(notificationId, userId);
+
+    Object.assign(notification, updateDto);
+    const saved = await this.notificationRepository.save(notification);
+
+    if (this.cacheManager) await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+
+    return saved;
+  }
+
+  /**
+   * Delete single notification
+   */
+  async deleteNotification(notificationId: string, userId: string): Promise<void> {
+    const result = await this.notificationRepository.delete({ id: notificationId, userId });
+    if ((result as any).affected === 0) throw new NotFoundException('Notification not found');
+
     this.logger.log(`Deleted notification ${notificationId} for user ${userId}`);
+    if (this.cacheManager) await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
   }
 
   /**
    * Delete multiple notifications
    */
   async deleteMultipleNotifications(notificationIds: string[], userId: string): Promise<void> {
-    await this.notificationRepository.delete({
-      id: In(notificationIds),
-      userId,
-    });
-
+    await this.notificationRepository.delete({ id: In(notificationIds), userId });
     this.logger.log(`Deleted ${notificationIds.length} notifications for user ${userId}`);
+    if (this.cacheManager) await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+  }
+
+  /**
+   * Send bulk notifications
+   */
+  async sendBulkNotifications(notifications: CreateNotificationDto[]): Promise<NotificationEntity[]> {
+    const created = await this.notificationRepository.save(this.notificationRepository.create(notifications as any));
+    created.forEach((n) => this.eventEmitter.emit('notification.created', n));
+
+    // Process each notification (fire-and-forget)
+    created.forEach((n) =>
+      this.processNotification(n).catch((err) => this.logger.error(`Failed processing bulk notification ${n.id}:`, err)),
+    );
+
+    // Invalidate caches per user (simple implementation)
+    if (this.cacheManager) {
+      const uniqueUsers = Array.from(new Set(created.map((c) => c.userId)));
+      await Promise.all(uniqueUsers.map((u) => this.cacheManager.invalidatePattern(`user:${u}:notifications:*`)));
+    }
+
+    this.logger.log(`Created ${created.length} bulk notifications`);
+    return created;
   }
 
   /**
@@ -215,20 +505,22 @@ export class NotificationsService {
   async getUserNotificationStats(userId: string): Promise<NotificationStats> {
     const notifications = await this.notificationRepository.find({
       where: { userId },
-      select: ['read', 'type', 'priority'],
-    });
+      select: ['read', 'isRead', 'type', 'priority'],
+    } as any);
 
     const total = notifications.length;
-    const unread = notifications.filter(n => !n.read).length;
+    const unread = notifications.filter((n: any) => !(n.isRead ?? n.read)).length;
     const read = total - unread;
 
-    const byType = notifications.reduce((acc, notification) => {
-      acc[notification.type] = (acc[notification.type] || 0) + 1;
+    const byType = notifications.reduce((acc, n: any) => {
+      const t = n.type || 'unknown';
+      acc[t] = (acc[t] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const byPriority = notifications.reduce((acc, notification) => {
-      acc[notification.priority] = (acc[notification.priority] || 0) + 1;
+    const byPriority = notifications.reduce((acc, n: any) => {
+      const p = n.priority || 'normal';
+      acc[p] = (acc[p] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -236,104 +528,20 @@ export class NotificationsService {
   }
 
   /**
-   * Get a single notification by ID
-   */
-  async getNotificationById(notificationId: string, userId: string): Promise<NotificationEntity> {
-    const notification = await this.notificationRepository.findOne({
-      where: { id: notificationId, userId },
-    });
-
-    if (!notification) {
-      throw new NotFoundException('Notification not found');
-    }
-
-    return notification;
-  }
-
-  /**
-   * Update notification
-   */
-  async updateNotification(
-    notificationId: string,
-    userId: string,
-    updateDto: UpdateNotificationDto
-  ): Promise<NotificationEntity> {
-    const notification = await this.getNotificationById(notificationId, userId);
-    
-    Object.assign(notification, updateDto);
-    return await this.notificationRepository.save(notification);
-  }
-
-  /**
-   * Clean up expired notifications
+   * Cleanup expired notifications (where expiresAt is in the past)
    */
   async cleanupExpiredNotifications(): Promise<number> {
-    const result = await this.notificationRepository.delete({
-      expiresAt: Between(new Date('1970-01-01'), new Date()),
-    });
+    const now = new Date();
+    const result = await this.notificationRepository
+      .createQueryBuilder()
+      .delete()
+      .from(NotificationEntity)
+      .where('expiresAt IS NOT NULL')
+      .andWhere('expiresAt < :now', { now })
+      .execute();
 
-    const deletedCount = result.affected || 0;
+    const deletedCount = (result as any).affected || 0;
     this.logger.log(`Cleaned up ${deletedCount} expired notifications`);
-    
     return deletedCount;
   }
-
-  /**
-   * Send bulk notifications
-   */
-  async sendBulkNotifications(notifications: CreateNotificationDto[]): Promise<NotificationEntity[]> {
-    const createdNotifications = await this.notificationRepository.save(
-      this.notificationRepository.create(notifications)
-    );
-
-    // Emit events for each notification
-    createdNotifications.forEach(notification => {
-      this.eventEmitter.emit('notification.created', notification);
-    });
-
-    this.logger.log(`Created ${createdNotifications.length} bulk notifications`);
-    
-    return createdNotifications;
-  }
-
-    async findUserNotifications(userId: string, page: number = 1, limit: number = 20) {
-    return this.cacheManager.getOrSet(
-      `user:${userId}:notifications:page:${page}:limit:${limit}`,
-      async () => {
-        return []; // Database query logic
-      },
-      { 
-        ttl: 300, // 5 minutes for notifications
-        tags: ['notifications', `user:${userId}`] 
-      }
-    );
-  }
-
-  async getUnreadCount(userId: string) {
-    return this.cacheManager.getOrSet(
-      `user:${userId}:notifications:unread-count`,
-      async () => {
-        return 0; // Database count logic
-      },
-      { 
-        ttl: 120, // 2 minutes
-        tags: ['notifications', `user:${userId}`, 'counts'] 
-      }
-    );
-  }
-
-  async markAsReadCached(userId: string, notificationId: string) {
-    
-    await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
-    
-    return { message: 'Notification marked as read' };
-  }
-
-  async markAllAsRead(userId: string) {
-    
-    await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
-    
-    return { message: 'All notifications marked as read' };
-  }
-
 }
