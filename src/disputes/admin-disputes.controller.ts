@@ -8,7 +8,7 @@ export class AdminDisputesController {
 
   @Get()
   async listAllDisputes(@Query('status') status?: string) {
-    return this.disputesService.listDisputes(status ? { status } : {});
+    return this.disputesService.listDisputes(status ? { status: status as any } : undefined);
   }
 
   @Get(':id')

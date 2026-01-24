@@ -13,10 +13,10 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { UsersService } from './users.service';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ProfileResponseDto } from './dto/profile-response.dto';
-import { PublicProfileDto } from './dto/public-profile.dto';
+import { UsersService } from './user.service';
+import { UpdateProfileDto } from './update-profile.dto';
+import { ProfileResponseDto } from './profile-response.dto';
+import { PublicProfileDto } from './public-profile.dto';
 // You'll need to create these guards based on your auth implementation
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 

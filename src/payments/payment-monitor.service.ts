@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import * as StellarSdk from 'stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { ConfigService } from '@nestjs/config';
 
 import { Payment } from './entities/payment.entity';
@@ -19,7 +19,7 @@ interface StreamingConnection {
 @Injectable()
 export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PaymentMonitorService.name);
-  private stellarServer: StellarSdk.Server;
+  private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
   private activeStreams: Map<string, StreamingConnection> = new Map();
   private timeoutIntervals: Map<string, NodeJS.Timeout> = new Map();
@@ -36,10 +36,10 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
       'STELLAR_HORIZON_URL',
       'https://horizon-testnet.stellar.org',
     );
-    this.stellarServer = new StellarSdk.Server(horizonUrl);
+    this.stellarServer = new StellarSdk.Horizon.Server(horizonUrl);
     this.networkPassphrase =
       this.configService.get<string>('STELLAR_NETWORK_PASSPHRASE') ||
-      StellarSdk.Networks.TESTNET_NETWORK_PASSPHRASE;
+      StellarSdk.Networks.TESTNET;
   }
 
   /**
@@ -85,10 +85,10 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
           onmessage: (transaction: any) => {
             this.handleIncomingTransaction(paymentId, transaction, destinationAddress);
           },
-          onerror: (error: Error) => {
+          onerror: (event: any) => {
             this.logger.error(
-              `Stream error for payment ${paymentId}: ${error.message}`,
-              error.stack,
+              `Stream error for payment ${paymentId}: ${event.message || 'Unknown error'}`,
+              event,
             );
           },
         });

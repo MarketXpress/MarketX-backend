@@ -3,36 +3,36 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/users.entity';
+import { Users } from '../users/users.entity';
 import { Order } from '../orders/entities/order.entity';
-import { AdminStatsDto } from './dto/admin-stats.dto';
+import { AdminStatsDto } from './dtos/admin-stats.dto';
 
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(Users)
+    private readonly userRepository: Repository<Users>,
 
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
   ) {}
 
   /** Get all users (admin-only) */
-  async getAllUsers(): Promise<User[]> {
+  async getAllUsers(): Promise<Users[]> {
     return this.userRepository.find();
   }
 
   /** Suspend a user by ID */
-  async suspendUser(userId: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  async suspendUser(userId: string): Promise<Users> {
+    const user = await this.userRepository.findOne({ where: { id: parseInt(userId) } });
     if (!user) throw new ForbiddenException('User not found');
     user.role = 'SUSPENDED'; // simple approach, adjust as needed
     return this.userRepository.save(user);
   }
 
   /** Activate a suspended user */
-  async activateUser(userId: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  async activateUser(userId: string): Promise<Users> {
+    const user = await this.userRepository.findOne({ where: { id: parseInt(userId) } });
     if (!user) throw new ForbiddenException('User not found');
     user.role = 'USER';
     return this.userRepository.save(user);
@@ -55,6 +55,7 @@ export class AdminService {
     return {
       totalUsers,
       activeUsers,
+      totalOrders: await this.orderRepository.count(),
       totalSales: Number(totalSales.sum) || 0,
     };
   }

@@ -59,6 +59,9 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @Cacheable({ ttl: 3600, tags: ['users'] })
+  @CacheControl('public, max-age=3600')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({
     status: 200,
@@ -68,6 +71,14 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   findOne(@Param('id') id: string): Promise<Users> {
     return this.usersService.findOne(+id);
+  }
+
+  @Get(':id/stats')
+  @UseInterceptors(CacheInterceptor)
+  @Cacheable({ ttl: 1800, tags: ['users', 'stats'] })
+  @CacheControl('public, max-age=1800')
+  getUserStats(@Param('id') id: string) {
+    return this.usersService.getUserStats(id);
   }
 
   @Patch('profile')
@@ -99,22 +110,5 @@ export class UsersController {
   remove(@Param('id') id: string): Promise<void> {
     return this.usersService.remove(+id);
   }
-
-    @Get(':id')
-  @UseInterceptors(CacheInterceptor)
-  @Cacheable({ ttl: 3600, tags: ['users'] })
-  @CacheControl('public, max-age=3600')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findProfile(id);
-  }
-
-  @Get(':id/stats')
-  @UseInterceptors(CacheInterceptor)
-  @Cacheable({ ttl: 1800, tags: ['users', 'stats'] })
-  @CacheControl('public, max-age=1800')
-  getUserStats(@Param('id') id: string) {
-    return this.usersService.getUserStats(id);
-  }
-
 
 }

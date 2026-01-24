@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { Wallet } from './entities/wallet.entity';
 import { WalletKeyAudit } from './entities/wallet-key-audit.entity';
-import Server from 'stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -91,7 +91,7 @@ export class WalletService {
    * Sync all wallet balances from the Stellar blockchain.
    */
   async syncAllWalletBalances(): Promise<void> {
-    const server = new Server('https://horizon.stellar.org');
+    const server = new StellarSdk.Horizon.Server('https://horizon.stellar.org');
     const wallets = await this.walletRepository.find();
     for (const wallet of wallets) {
       try {
@@ -121,7 +121,7 @@ export class WalletService {
       throw new Error('Wallet not found for user');
     }
 
-    const server = new Server('https://horizon.stellar.org');
+    const server = new StellarSdk.Horizon.Server('https://horizon.stellar.org');
     try {
       const account = await server.loadAccount(wallet.publicKey);
       // Find XLM balance (native asset)

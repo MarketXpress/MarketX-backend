@@ -14,9 +14,7 @@ export class FavoritesService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
-    private readonly cacheManager: CacheManagerService 
-
-
+    private readonly cacheManager: CacheManagerService,
     @InjectRepository(Listing)
     private readonly listingRepository: Repository<Listing>,
   ) {}

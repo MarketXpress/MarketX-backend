@@ -2,7 +2,7 @@
 
 import { Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { AdminStatsDto } from './dto/admin-stats.dto';
+import { AdminStatsDto } from './dtos/admin-stats.dto';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 

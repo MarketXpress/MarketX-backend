@@ -183,7 +183,7 @@ export class StellarService {
   /**
    * Get network info
    */
-  getNetworkInfo(): { network: string; horizonUrl: string } {
+  getNetworkInfo(): { network: string; horizonUrl: string | undefined } {
     return {
       network: this.network,
       horizonUrl: this.configService.get<string>('STELLAR_HORIZON_URL'),

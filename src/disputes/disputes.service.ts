@@ -80,7 +80,7 @@ export class DisputesService {
   }
 
   // Evidence file upload helper (stub)
-  async uploadEvidenceFile(file: Express.Multer.File): Promise<string> {
+  async uploadEvidenceFile(file: any): Promise<string> {
     // Implement actual file storage (e.g., S3, local, etc.)
     // For now, just return the filename
     return file.filename;

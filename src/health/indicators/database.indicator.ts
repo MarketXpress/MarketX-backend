@@ -29,7 +29,7 @@ export class DatabaseIndicator {
 
       // Get database info for detailed reporting
       const dbName = this.dataSource.options.database;
-      const dbHost = this.dataSource.options.host;
+      const dbHost = (this.dataSource.options as any).host || 'localhost';
       
       return {
         database: {

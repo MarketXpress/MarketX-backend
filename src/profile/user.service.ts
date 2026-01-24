@@ -6,10 +6,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, ProfileVisibility } from './entities/user.entity';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ProfileResponseDto } from './dto/profile-response.dto';
-import { PublicProfileDto } from './dto/public-profile.dto';
+import { User, ProfileVisibility } from './user.entity';
+import { UpdateProfileDto } from './update-profile.dto';
+import { ProfileResponseDto } from './profile-response.dto';
+import { PublicProfileDto } from './public-profile.dto';
 import { plainToClass } from 'class-transformer';
 
 @Injectable()

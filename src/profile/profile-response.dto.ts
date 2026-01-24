@@ -1,6 +1,6 @@
 import { Exclude, Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { ProfileVisibility } from '../entities/user.entity';
+import { ProfileVisibility } from './user.entity';
 
 @Exclude()
 export class ProfileResponseDto {

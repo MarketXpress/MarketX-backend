@@ -1,4 +1,5 @@
-import { Module, NestModule, MiddlewareConsumer, APP_GUARD } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -12,6 +13,7 @@ import { ThrottleGuard } from './common/guards/throttle.guard';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { HealthModule } from './health/health.module';
 import { PaymentsModule } from './payments/payments.module';
+import { CustomI18nModule } from './i18n/i18n.module';
 
 @Module({
   imports: [
@@ -21,7 +23,7 @@ import { PaymentsModule } from './payments/payments.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
-      port: parseInt(process.env.DATABASE_PORT, 10) || 5432,
+      port: parseInt(process.env.DATABASE_PORT || '5432', 10),
       username: process.env.DATABASE_USER,
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
@@ -33,6 +35,7 @@ import { PaymentsModule } from './payments/payments.module';
     LoggerModule,
     HealthModule,
     PaymentsModule,
+    CustomI18nModule,
   ],
   controllers: [AppController],
   providers: [
@@ -44,7 +47,7 @@ import { PaymentsModule } from './payments/payments.module';
       useClass: ThrottleGuard,
     },
   ],
-  exports: [AdminGuard, RolesGuard, ThrottleGuard, LoggerModule],
+  exports: [AdminGuard, RolesGuard, LoggerModule],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

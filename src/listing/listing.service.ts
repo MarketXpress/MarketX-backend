@@ -103,4 +103,37 @@ export class ListingsService {
 
     return { listings, total };
   }
+
+  async findAll(page?: number, limit?: number, category?: string) {
+    const take = limit || 10;
+    const skip = ((page || 1) - 1) * take;
+
+    const query = this.listingRepo.createQueryBuilder('listing')
+      .where('listing.isActive = :isActive', { isActive: true });
+
+    if (category) {
+      query.andWhere('listing.category = :category', { category });
+    }
+
+    query.orderBy('listing.createdAt', 'DESC')
+      .take(take)
+      .skip(skip);
+
+    const [listings, total] = await query.getManyAndCount();
+    return { listings, total, page: page || 1, limit: take };
+  }
+
+  async findFeatured() {
+    return this.listingRepo.find({
+      where: { isActive: true },
+      order: { createdAt: 'DESC' },
+      take: 10,
+    });
+  }
+
+  async remove(id: string) {
+    const listing = await this.findOne(id);
+    await this.listingRepo.remove(listing);
+    return { message: 'Listing removed successfully' };
+  }
 }

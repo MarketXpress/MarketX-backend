@@ -14,13 +14,13 @@ export class Review {
   @Column({ type: 'text', nullable: true })
   comment?: string;
 
-  @ManyToOne(() => Users, (user) => user.reviewsGiven, { eager: true })
+  @ManyToOne(() => Users, { eager: true })
   buyer: Users;
 
-  @ManyToOne(() => Users, (user) => user.reviewsReceived, { eager: true })
+  @ManyToOne(() => Users, { eager: true })
   seller: Users;
 
-  @ManyToOne(() => Order, (order) => order.review, { eager: true })
+  @ManyToOne(() => Order, { eager: true })
   order: Order;
 
   @Column({ default: false })

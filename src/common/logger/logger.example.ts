@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { LoggerService } from '../common/logger/logger.service';
+import { LoggerService } from './logger.service';
 
 /**
  * Example service demonstrating comprehensive logging usage

@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Listing } from '../listing/entities/listing.entity';
+import * as bcrypt from 'bcrypt';
 
 @Entity('users')
 export class Users {
@@ -35,6 +36,12 @@ export class Users {
   @Column({ nullable: true })
   language: string;
 
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Column({ nullable: true })
+  role: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -57,4 +64,8 @@ export class Users {
     },
   })
   favoriteListings: Listing[];
+
+  async validatePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
+  }
 }

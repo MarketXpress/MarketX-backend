@@ -8,7 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Listing, InventoryHistory])],
-  providers: [InventoryService, forwardRef(() => NotificationsService)],
+  providers: [InventoryService],
   controllers: [InventoryController],
   exports: [InventoryService],
 })

@@ -9,7 +9,7 @@ export class StellarIndicator {
   async isHealthy(): Promise<HealthIndicatorResult> {
     try {
       // Set timeout to ensure fast response as per requirements (must respond within 2 seconds)
-      const timeout = parseInt(process.env.HEALTH_CHECK_TIMEOUT) || 2000; // 2 seconds timeout
+      const timeout = parseInt(process.env.HEALTH_CHECK_TIMEOUT || '2000', 10); // 2 seconds timeout
       
       // Check Stellar Horizon API availability
       const response = await axios.get(`${this.stellarHorizonUrl}/ledgers?limit=1`, {
