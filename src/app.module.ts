@@ -29,6 +29,8 @@ import { CustomI18nModule } from './i18n/i18n.module';
       database: process.env.DATABASE_NAME,
       autoLoadEntities: true,
       synchronize: process.env.NODE_ENV !== 'production',
+      migrations: ['dist/migrations/*.js'],
+      migrationsRun: false,
     }),
     MessagesModule,
     CommonModule,

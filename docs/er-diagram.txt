@@ -1,0 +1,78 @@
+MARKETX DATABASE SCHEMA - ENTITY RELATIONSHIP DIAGRAM
+
+┌─────────────┐          ┌─────────────┐          ┌─────────────┐
+│   USERS     │          │  PRODUCTS   │          │   ORDERS    │
+├─────────────┤          ├─────────────┤          ├─────────────┤
+│ id (PK)     │◄─────────┤ user_id (FK)│          │ id (PK)     │
+│ email       │          │ id (PK)     │◄─────────┤ buyer_id(FK)│
+│ password    │          │ title       │    ┌────►│ seller_id   │
+│ first_name  │          │ description │    │     │ items       │
+│ last_name   │          │ price       │    │     │ status      │
+│ phone_num   │          │ currency    │    │     │ total_amt   │
+│ bio         │          │ address     │    │     │ created_at  │
+│ avatar_url  │          │ category_id │    │     └─────────────┘
+│ stellar_wa  │          │ status      │    │            │
+│ role        │          │ condition   │    │            ▼
+│ status      │          │ quantity    │    │     ┌─────────────┐
+│ is_active   │          │ reserved    │    │     │TRANSACTIONS │
+│ seller_rat  │          │ available   │    │     ├─────────────┤
+│ total_rev   │          │ images      │    │     │ id (PK)     │
+│ total_sales │          │ tags        │    │     │ amount      │
+│ is_verified │          │ is_featured │    │     │ currency    │
+│ created_at  │          │ views       │    │     │ status      │
+│ updated_at  │          │ favorites_c │    │     │ type        │
+│ deleted_at  │          │ avg_rating  │    └────►│ sender_id   │
+└─────────────┘          │ total_rev   │          │ receiver_id │
+                         │ created_at  │          │ order_id(FK)│
+                         │ updated_at  │          │ created_at  │
+                         │ deleted_at  │          └─────────────┘
+                         └─────────────┘                 │
+                              ▲                          │
+                              │                          ▼
+                         ┌─────────────┐          ┌─────────────┐
+                         │ CATEGORIES  │          │NOTIFICATIONS│
+                         ├─────────────┤          ├─────────────┤
+                         │ id (PK)     │          │ id (PK)     │
+                         │ name        │          │ user_id (FK)│
+                         │ description │          │ title       │
+                         │ parent_id   │          │ message     │
+                         │ is_active   │          │ is_read     │
+                         │ created_at  │          │ created_at  │
+                         │ updated_at  │          └─────────────┘
+                         └─────────────┘
+
+RELATIONSHIPS:
+
+ONE-TO-MANY RELATIONSHIPS:
+• USERS ───► PRODUCTS (One user sells many products)
+• USERS ───► ORDERS (One user buys many orders)  
+• USERS ───► ORDERS (One user sells many orders)
+• USERS ───► TRANSACTIONS (One user sends many transactions)
+• USERS ───► TRANSACTIONS (One user receives many transactions)
+• USERS ───► NOTIFICATIONS (One user receives many notifications)
+• CATEGORIES ───► PRODUCTS (One category has many products)
+
+MANY-TO-MANY RELATIONSHIPS:
+• USERS ◄──► PRODUCTS (Users can favorite many products, products can be favorited by many users)
+  (via user_favorites join table)
+
+KEY CONSTRAINTS:
+• Primary Keys: UUID for global uniqueness
+• Foreign Keys: Maintain referential integrity
+• Unique Constraints: email, stellar_wallet_address
+• Not Null: Essential business fields
+• Check Constraints: Data validation rules
+
+INDEXING STRATEGY:
+• Primary key indexes (automatic)
+• Foreign key indexes (performance)
+• Frequently queried columns
+• Composite indexes for complex queries
+• Spatial indexes for geolocation data
+• Unique indexes for business constraints
+
+SOFT DELETE IMPLEMENTATION:
+• All major entities include deleted_at timestamp
+• Allows data recovery and audit trails
+• Maintains historical data integrity
+• Supports compliance requirements
