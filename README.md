@@ -23,7 +23,21 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository for MarketX marketplace platform.
+
+## Database Schema
+
+This project includes a comprehensive database schema implementation with:
+
+- **Core Entities**: Users, Products, Orders, and Transactions
+- **Relationships**: Proper foreign key constraints and associations
+- **Indexing**: Optimized queries with strategic indexing
+- **Migrations**: Forward and rollback migration capabilities
+- **Documentation**: Detailed schema documentation with ER diagrams
+
+See [Database Schema Documentation](./docs/database-schema.md) for complete details.
+
+## Project setup
 
 ## Project setup
 
