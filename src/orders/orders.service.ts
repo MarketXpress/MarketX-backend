@@ -3,12 +3,14 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto, OrderStatus, UpdateOrderStatusDto } from './dto/create-order.dto';
+import { PricingService, SupportedCurrency } from '../products/services/pricing.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
+    private readonly pricingService: PricingService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -16,29 +18,50 @@ export class OrdersService {
     // For now, we'll simulate calculating the total
     
     // Simulate fetching product prices (in a real app, you'd query the products service)
-    const simulatedProductPrices = {
-      '1': 10.99,
-      '2': 24.99,
-      '3': 5.49,
+    const simulatedProductPrices: Record<
+      string,
+      { price: number; currency: SupportedCurrency }
+    > = {
+      '1': { price: 10.99, currency: SupportedCurrency.USD },
+      '2': { price: 24.99, currency: SupportedCurrency.USD },
+      '3': { price: 5.49, currency: SupportedCurrency.USD },
     };
 
-    let totalAmount = 0;
+    const paymentCurrency = createOrderDto.paymentCurrency ?? SupportedCurrency.USD;
+    const subtotals: number[] = [];
+
     const itemsWithDetails = createOrderDto.items.map(item => {
-      const price = simulatedProductPrices[item.productId] || 0;
-      const subtotal = price * item.quantity;
-      totalAmount += subtotal;
+      const productPricing = simulatedProductPrices[item.productId] || {
+        price: 0,
+        currency: SupportedCurrency.USD,
+      };
+      const convertedPrice = this.pricingService.convertAmount(
+        productPricing.price,
+        productPricing.currency,
+        paymentCurrency,
+      );
+      const subtotal = this.pricingService.multiplyAmount(
+        convertedPrice,
+        item.quantity,
+        paymentCurrency,
+      );
+      subtotals.push(subtotal);
       
       return {
         productId: item.productId,
         productName: `Product ${item.productId}`, // In real app, fetch from product service
         quantity: item.quantity,
-        price,
+        price: convertedPrice,
         subtotal,
+        priceCurrency: paymentCurrency,
       };
     });
 
+    const totalAmount = this.pricingService.addAmounts(subtotals, paymentCurrency);
+
     const order = this.ordersRepository.create({
       totalAmount,
+      currency: paymentCurrency,
       status: OrderStatus.PENDING,
       items: itemsWithDetails,
       buyerId: createOrderDto.buyerId,

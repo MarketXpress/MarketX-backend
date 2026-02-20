@@ -9,6 +9,7 @@ export enum PaymentStatus {
 export enum PaymentCurrency {
   XLM = 'XLM',
   USDC = 'USDC',
+  USD = 'USD',
 }
 
 export class CreatePaymentDto {
