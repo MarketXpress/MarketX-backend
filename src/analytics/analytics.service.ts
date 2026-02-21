@@ -1,4 +1,5 @@
-import { Injectable, Inject, CACHE_MANAGER } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
@@ -100,7 +101,7 @@ export class AnalyticsService {
     }
 
     const result = { data: { totalRevenue, totalOrders, series: data }, csv };
-    await this.cacheManager.set(cacheKey, result, { ttl: 60 });
+    await this.cacheManager.set(cacheKey, result, 60);
     return result;
   }
 
@@ -139,7 +140,7 @@ export class AnalyticsService {
     }
 
     const result = { data, csv };
-    await this.cacheManager.set(cacheKey, result, { ttl: 60 });
+    await this.cacheManager.set(cacheKey, result, 60);
     return result;
   }
 } 
