@@ -61,7 +61,7 @@ export class ProductsController {
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete product (owner only)' })
-  remove(@Param('id') id: string, @Req() req) {
+  async remove(@Param('id') id: string, @Req() req) {
     return this.productsService.remove(id, req.user?.id ?? 'seller-1');
   }
 }
