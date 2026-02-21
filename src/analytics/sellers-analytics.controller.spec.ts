@@ -9,6 +9,7 @@ describe('SellersAnalyticsController', () => {
   const mockAnalyticsService = {
     getSellerSalesAnalytics: jest.fn(),
     getSellerProductPerformance: jest.fn(),
+    getSellerCustomerDemographics: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -145,6 +146,73 @@ describe('SellersAnalyticsController', () => {
       );
 
       const result = await controller.getProducts(mockQuery);
+
+      expect(result).toEqual({ csv: mockResult.csv });
+    });
+  });
+
+  describe('getCustomerDemographics', () => {
+    it('should return customer demographics for a seller', async () => {
+      const mockQuery = {
+        sellerId: 'seller-1',
+      };
+
+      const mockResult = {
+        data: {
+          totalUniqueCustomers: 450,
+          totalCustomerRevenue: 45000,
+          avgCustomerLifetimeValue: 100,
+          repeatCustomers: 180,
+          topCustomers: [
+            {
+              customerId: 'user-001',
+              customerName: 'John Smith',
+              purchaseCount: 25,
+              totalSpent: 2500,
+              avgOrderValue: 100,
+            },
+          ],
+        },
+      };
+
+      mockAnalyticsService.getSellerCustomerDemographics.mockResolvedValue(
+        mockResult,
+      );
+
+      const result = await controller.getCustomerDemographics(mockQuery);
+
+      expect(mockAnalyticsService.getSellerCustomerDemographics).toHaveBeenCalledWith(
+        'seller-1',
+        mockQuery,
+      );
+      expect(result).toEqual(mockResult.data);
+    });
+
+    it('should throw BadRequestException when sellerId is missing', async () => {
+      const mockQuery = {
+        sellerId: '',
+      };
+
+      await expect(controller.getCustomerDemographics(mockQuery)).rejects.toThrow(
+        'sellerId is required',
+      );
+    });
+
+    it('should export CSV when export param is csv', async () => {
+      const mockQuery = {
+        sellerId: 'seller-1',
+        export: 'csv' as const,
+      };
+
+      const mockResult = {
+        csv: 'customerId,customerName,purchaseCount,totalSpent,avgOrderValue\nuser-001,John Smith,25,2500,100',
+      };
+
+      mockAnalyticsService.getSellerCustomerDemographics.mockResolvedValue(
+        mockResult,
+      );
+
+      const result = await controller.getCustomerDemographics(mockQuery);
 
       expect(result).toEqual({ csv: mockResult.csv });
     });
