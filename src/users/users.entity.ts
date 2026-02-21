@@ -15,6 +15,10 @@ import {
   VerificationLevel,
   VerificationStatus,
 } from '../verification/enums/verification.enums';
+import {
+  SubscriptionTier,
+  SubscriptionStatus,
+} from '../subscriptions/enums/subscription.enums';
 import * as bcrypt from 'bcrypt';
 
 @Entity('users')
@@ -76,6 +80,29 @@ export class Users {
   @ApiProperty({ description: 'Trust score based on verifications' })
   @Column({ default: 0 })
   trustScore: number;
+
+  @ApiProperty({
+    description: 'Current subscription tier',
+    enum: SubscriptionTier,
+  })
+  @Column({
+    type: 'enum',
+    enum: SubscriptionTier,
+    default: SubscriptionTier.FREE,
+  })
+  subscriptionTier: SubscriptionTier;
+
+  @ApiProperty({ description: 'Subscription status', enum: SubscriptionStatus })
+  @Column({ type: 'enum', enum: SubscriptionStatus, nullable: true })
+  subscriptionStatus: SubscriptionStatus;
+
+  @ApiProperty({ description: 'Subscription expiry date' })
+  @Column({ name: 'subscription_expires_at', nullable: true })
+  subscriptionExpiresAt: Date;
+
+  @ApiProperty({ description: 'Has active premium subscription' })
+  @Column({ name: 'has_premium_subscription', default: false })
+  hasPremiumSubscription: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

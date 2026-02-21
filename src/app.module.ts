@@ -18,6 +18,8 @@ import { CustomI18nModule } from './i18n/i18n.module';
 import { PriceModule } from './price/price.module';
 import { UserVerification } from './verification/user-verification.entity';
 import { VerificationModule } from './verification/verification.module';
+import { Subscription } from './subscriptions/entities/subscription.entity';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -45,6 +47,7 @@ import { VerificationModule } from './verification/verification.module';
     ProductsModule,
     CustomI18nModule,
     VerificationModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [
