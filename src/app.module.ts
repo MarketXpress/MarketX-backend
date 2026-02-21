@@ -22,6 +22,7 @@ import { UserVerification } from './verification/user-verification.entity';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     CustomI18nModule,
     VerificationModule,
     SubscriptionsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

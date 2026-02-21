@@ -143,4 +143,62 @@ export class AnalyticsService {
     await this.cacheManager.set(cacheKey, result, 60);
     return result;
   }
+
+  async getSellerCustomerDemographics(sellerId: string, dto: { startDate?: string; endDate?: string; export?: 'csv' | 'json' }) {
+    const cacheKey = `seller_customers:${sellerId}:${dto.startDate || ''}:${dto.endDate || ''}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached as any;
+
+    const qb = this.transactionRepository.createQueryBuilder('t')
+      .innerJoin(Listing, 'l', 'l.id = t.listing_id')
+      .innerJoin(Users, 'u', 'u.id = t.buyer_id')
+      .where('l.userId = :sellerId', { sellerId })
+      .andWhere('t.type = :type', { type: TransactionType.PURCHASE })
+      .andWhere('t.status = :status', { status: TransactionStatus.COMPLETED });
+
+    if (dto.startDate && dto.endDate) {
+      qb.andWhere('t.created_at BETWEEN :start AND :end', { start: new Date(dto.startDate), end: new Date(dto.endDate) });
+    }
+
+    // Get unique customers and their purchase metrics
+    qb.select('u.id', 'customerId')
+      .addSelect('u.name', 'customerName')
+      .addSelect('COUNT(*)', 'purchaseCount')
+      .addSelect('SUM(t.amount)', 'totalSpent')
+      .addSelect('AVG(t.amount)', 'avgOrderValue')
+      .groupBy('u.id')
+      .addGroupBy('u.name')
+      .orderBy('totalSpent', 'DESC')
+      .limit(100);
+
+    const rows = await qb.getRawMany();
+
+    const data = rows.map((r) => ({
+      customerId: r.customerId,
+      customerName: r.customerName,
+      purchaseCount: Number(r.purchaseCount),
+      totalSpent: Number(r.totalSpent),
+      avgOrderValue: Number(r.avgOrderValue),
+    }));
+
+    const summary = {
+      totalUniqueCustomers: data.length,
+      totalCustomerRevenue: data.reduce((s, c) => s + Number(c.totalSpent), 0),
+      avgCustomerLifetimeValue: data.length > 0 ? data.reduce((s, c) => s + Number(c.totalSpent), 0) / data.length : 0,
+      repeatCustomers: data.filter((c) => Number(c.purchaseCount) > 1).length,
+      topCustomers: data.slice(0, 10),
+    };
+
+    let csv: string | undefined;
+    if (dto.export === 'csv') {
+      const parser = new Json2CsvParser({
+        fields: ['customerId', 'customerName', 'purchaseCount', 'totalSpent', 'avgOrderValue'],
+      });
+      csv = parser.parse(data as any);
+    }
+
+    const result = { data: summary, csv };
+    await this.cacheManager.set(cacheKey, result, 60);
+    return result;
+  }
 } 

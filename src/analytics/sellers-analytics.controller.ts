@@ -20,4 +20,12 @@ export class SellersAnalyticsController {
     if (query.export === 'csv') return { csv: result.csv };
     return result.data;
   }
+
+  @Get('customers')
+  async getCustomerDemographics(@Query() query: any) {
+    if (!query.sellerId) throw new BadRequestException('sellerId is required');
+    const result = await this.analyticsService.getSellerCustomerDemographics(query.sellerId, query);
+    if (query.export === 'csv') return { csv: result.csv };
+    return result.data;
+  }
 }
