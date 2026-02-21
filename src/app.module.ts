@@ -22,6 +22,7 @@ import { UserVerification } from './verification/user-verification.entity';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { ShippingModule } from './shipping/shipping.module';
 import { MediaModule } from './media/media.module';
 import { ProductImage } from './media/entities/image.entity';
 
@@ -55,6 +56,7 @@ import { ProductImage } from './media/entities/image.entity';
     CustomI18nModule,
     VerificationModule,
     SubscriptionsModule,
+    ShippingModule,
     MediaModule,
   ],
   controllers: [AppController],
