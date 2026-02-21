@@ -28,6 +28,7 @@ import { CouponsModule } from './coupons/coupons.module';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     SubscriptionsModule,
     MediaModule,
     CouponsModule,
+    AnalyticsModule,
     AnalyticsModule,
   ],
   controllers: [AppController],
