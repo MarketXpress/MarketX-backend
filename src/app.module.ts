@@ -25,6 +25,7 @@ import { ProductImage } from './media/entities/image.entity';
 import { CouponsModule } from './coupons/coupons.module';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { CouponUsage } from './coupons/entities/coupon-usage.entity';
     SubscriptionsModule,
     MediaModule,
     CouponsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
