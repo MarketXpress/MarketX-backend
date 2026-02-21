@@ -9,6 +9,8 @@ import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
 import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
 import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
+import * as express from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -62,6 +64,9 @@ async function bootstrap() {
   // Enable compression for responses
   app.use(compression());
 
+  // Serve static files for uploaded images
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+
   // Apply global logging middleware
   app.use(new RequestResponseMiddleware(loggerService).use.bind(new RequestResponseMiddleware(loggerService)));
 
@@ -101,5 +106,4 @@ bootstrap().catch((error) => {
   process.exit(1);
 });
 
-// Import express for middleware
-import * as express from 'express';
+
