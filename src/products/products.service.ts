@@ -32,11 +32,18 @@ export class ProductsService {
 
     this.pricingService.validatePrice(basePrice, baseCurrency);
 
+    const basePriceDecimal = basePrice.toString();
+    const basePriceMinor = this.pricingService.toMinorUnitsString(basePrice, baseCurrency);
+    const rateSnapshot = this.pricingService.getRateSnapshot();
+
     const initialHistory: ProductPriceHistoryEntry = {
       id: crypto.randomUUID(),
-      basePrice,
+      basePrice: basePriceDecimal,
+      basePriceMinor,
       baseCurrency,
       changedAt: new Date(),
+      rateSnapshot: rateSnapshot.rates,
+      rateTimestamp: rateSnapshot.timestamp,
       updatedBy: sellerId,
       reason: 'initial_price',
     };
@@ -46,9 +53,11 @@ export class ProductsService {
       sellerId,
       name: dto.name,
       category: dto.category,
-      basePrice,
+      basePrice: basePriceDecimal,
+      basePriceMinor,
       baseCurrency,
-      price: basePrice,
+      price: basePriceDecimal,
+      priceMinor: basePriceMinor,
       currency: baseCurrency,
       description: dto.description,
       images: dto.images,
@@ -101,6 +110,7 @@ export class ProductsService {
     const { basePrice, baseCurrency, price, currency, ...rest } = dto as UpdateProductDto & {
       basePrice?: number;
       baseCurrency?: SupportedCurrency;
+      price?: number;
       currency?: SupportedCurrency;
     };
 
@@ -111,7 +121,7 @@ export class ProductsService {
       currency !== undefined
     ) {
       this.updatePrice(id, sellerId, {
-        basePrice: basePrice ?? price ?? product.basePrice,
+        basePrice: basePrice ?? price ?? Number(product.basePrice),
         baseCurrency: baseCurrency ?? currency ?? product.baseCurrency,
       });
     }
@@ -131,23 +141,31 @@ export class ProductsService {
 
     this.pricingService.validatePrice(dto.basePrice, dto.baseCurrency);
 
-    const hasChanged =
-      product.basePrice !== dto.basePrice || product.baseCurrency !== dto.baseCurrency;
+    const basePriceDecimal = dto.basePrice.toString();
+    const basePriceMinor = this.pricingService.toMinorUnitsString(dto.basePrice, dto.baseCurrency);
+
+    const hasChanged = product.basePrice !== basePriceDecimal || product.baseCurrency !== dto.baseCurrency;
 
     if (!hasChanged) {
       return product;
     }
 
-    product.basePrice = dto.basePrice;
+    product.basePrice = basePriceDecimal;
+    product.basePriceMinor = basePriceMinor;
     product.baseCurrency = dto.baseCurrency;
-    product.price = dto.basePrice;
+    product.price = basePriceDecimal;
+    product.priceMinor = basePriceMinor;
     product.currency = dto.baseCurrency;
     product.updatedAt = new Date();
+    const rateSnapshot = this.pricingService.getRateSnapshot();
     product.priceHistory.push({
       id: crypto.randomUUID(),
-      basePrice: dto.basePrice,
+      basePrice: basePriceDecimal,
+      basePriceMinor,
       baseCurrency: dto.baseCurrency,
       changedAt: new Date(),
+      rateSnapshot: rateSnapshot.rates,
+      rateTimestamp: rateSnapshot.timestamp,
       updatedBy: sellerId,
       reason: dto.reason,
     });
@@ -156,7 +174,10 @@ export class ProductsService {
       productId: product.id,
       sellerId,
       basePrice: product.basePrice,
+      basePriceMinor: product.basePriceMinor,
       baseCurrency: product.baseCurrency,
+      rateSnapshot: rateSnapshot.rates,
+      rateTimestamp: rateSnapshot.timestamp,
       updatedAt: product.updatedAt,
     });
 
@@ -184,11 +205,12 @@ export class ProductsService {
 
   private toDisplayProduct(product: Product, preferredCurrency?: SupportedCurrency) {
     const displayCurrency = preferredCurrency ?? product.baseCurrency;
-    const convertedPrice = this.pricingService.convertAmount(
+    const convertedPriceString = this.pricingService.convertAmountToString(
       product.basePrice,
       product.baseCurrency,
       displayCurrency,
     );
+    const convertedPrice = Number(convertedPriceString);
     const conversionRate = this.pricingService.getConversionRate(
       product.baseCurrency,
       displayCurrency,
@@ -197,11 +219,10 @@ export class ProductsService {
     return {
       ...product,
       convertedPrice,
+      convertedPriceString,
       convertedCurrency: displayCurrency,
       conversionRate,
-      displayPrice: `${displayCurrency} ${convertedPrice.toFixed(
-        this.pricingService.getCurrencyPrecision(displayCurrency),
-      )}`,
+      displayPrice: `${displayCurrency} ${convertedPriceString}`,
     };
   }
 }

@@ -246,4 +246,45 @@ export class PricingService {
     }
     return 10n ** BigInt(power);
   }
+
+  // Public helpers for deterministic, precision-safe operations using strings
+  toMinorUnitsString(value: number | string, currency: SupportedCurrency): string {
+    if (typeof value === 'number') {
+      return this.toMinorUnits(value, currency).toString();
+    }
+
+    // assume a decimal string like '12.34'
+    return this.toMinorUnitsFromString(value, currency).toString();
+  }
+
+  fromMinorUnitsToDecimalString(amountMinor: bigint | string, currency: SupportedCurrency): string {
+    const n = typeof amountMinor === 'string' ? BigInt(amountMinor) : amountMinor;
+    const precision = this.getCurrencyPrecision(currency);
+    const negative = n < 0n;
+    const absolute = negative ? -n : n;
+    const base = this.pow10(precision);
+    const integer = absolute / base;
+    const fractional = absolute % base;
+    const fractionalString = precision > 0 ? fractional.toString().padStart(precision, '0') : '';
+    const value = precision > 0 ? `${integer.toString()}.${fractionalString}` : integer.toString();
+    return negative ? `-${value}` : value;
+  }
+
+  getRateSnapshot(): { rates: Record<SupportedCurrency, string>; timestamp: string } {
+    return { rates: { ...this.usdRateByCurrency }, timestamp: new Date().toISOString() };
+  }
+
+  convertAmountToString(
+    amount: number | string,
+    sourceCurrency: SupportedCurrency,
+    targetCurrency: SupportedCurrency,
+  ): string {
+    const sourceMinor = typeof amount === 'number'
+      ? this.toMinorUnits(amount, sourceCurrency)
+      : this.toMinorUnitsFromString(amount, sourceCurrency);
+
+    const targetMinor = this.convertMinorUnits(sourceMinor, sourceCurrency, targetCurrency);
+
+    return this.fromMinorUnitsToDecimalString(targetMinor, targetCurrency);
+  }
 }
