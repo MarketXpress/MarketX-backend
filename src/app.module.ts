@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductsModule } from './products/products.module';
+import { FraudModule } from './fraud/fraud.module';
 import { MessagesModule } from './messages/messages.module';
 import { CommonModule } from './common/common.module';
 import { LoggerModule } from './common/logger/logger.module';
@@ -12,6 +13,7 @@ import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { ThrottleGuard } from './common/guards/throttle.guard';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.middleware';
 import { HealthModule } from './health/health.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CustomI18nModule } from './i18n/i18n.module';
@@ -39,6 +41,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
       migrationsRun: false,
     }),
     PriceModule,
+    ProductsModule,
+    FraudModule,
     MessagesModule,
     CommonModule,
     LoggerModule,
@@ -63,6 +67,6 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SecurityMiddleware).forRoutes('*');
+    consumer.apply(SecurityMiddleware, RequestMonitorMiddleware).forRoutes('*');
   }
 }
