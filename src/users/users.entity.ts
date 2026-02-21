@@ -9,7 +9,12 @@ import {
   JoinTable,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import { Listing } from '../listing/entities/listing.entity';
+import {
+  VerificationLevel,
+  VerificationStatus,
+} from '../verification/enums/verification.enums';
 import * as bcrypt from 'bcrypt';
 
 @Entity('users')
@@ -41,6 +46,36 @@ export class Users {
 
   @Column({ nullable: true })
   role: string;
+
+  @ApiProperty({
+    description: 'User verification status',
+    enum: VerificationStatus,
+  })
+  @Column({ type: 'enum', enum: VerificationStatus, nullable: true })
+  verificationStatus: VerificationStatus;
+
+  @ApiProperty({
+    description: 'User verification level',
+    enum: VerificationLevel,
+  })
+  @Column({
+    type: 'enum',
+    enum: VerificationLevel,
+    default: VerificationLevel.BASIC,
+  })
+  verificationLevel: VerificationLevel;
+
+  @ApiProperty({ description: 'Is user a verified seller' })
+  @Column({ default: false })
+  isVerifiedSeller: boolean;
+
+  @ApiProperty({ description: 'Verification expiry date' })
+  @Column({ nullable: true })
+  verificationExpiryAt: Date;
+
+  @ApiProperty({ description: 'Trust score based on verifications' })
+  @Column({ default: 0 })
+  trustScore: number;
 
   @CreateDateColumn()
   createdAt: Date;

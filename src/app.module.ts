@@ -16,7 +16,8 @@ import { HealthModule } from './health/health.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CustomI18nModule } from './i18n/i18n.module';
 import { PriceModule } from './price/price.module';
-
+import { UserVerification } from './verification/user-verification.entity';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { PriceModule } from './price/price.module';
     PaymentsModule,
     ProductsModule,
     CustomI18nModule,
+    VerificationModule,
   ],
   controllers: [AppController],
   providers: [
@@ -56,7 +58,6 @@ import { PriceModule } from './price/price.module';
   ],
   exports: [AdminGuard, RolesGuard, LoggerModule],
 })
-
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(SecurityMiddleware).forRoutes('*');
