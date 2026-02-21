@@ -8,10 +8,10 @@ import { PaymentsService } from './payments.service';
 import { PaymentMonitorService } from './payment-monitor.service';
 import { PaymentsController } from './payments.controller';
 import { Payment } from './entities/payment.entity';
-import { Order } from 'src/orders/entities/order.entity';
-import { Wallet } from 'src/wallet/entities/wallet.entity';
-import { OrdersModule } from 'src/orders/orders.module';
-import { WalletModule } from 'src/wallet/wallet.module';
+import { Order } from '../orders/entities/order.entity';
+import { Wallet } from '../wallet/entities/wallet.entity';
+import { OrdersModule } from '../orders/orders.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
