@@ -1,4 +1,10 @@
-import { CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  Column,
+} from 'typeorm';
 import { SupportedCurrency } from '../services/pricing.service';
 
 @Entity('product_prices')
