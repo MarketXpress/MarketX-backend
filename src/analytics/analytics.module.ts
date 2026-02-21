@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { UserAnalyticsService } from './user-analytics.service';
@@ -9,10 +10,18 @@ import { AnalyticsGateway } from './analytics.gateway';
 import { Order } from '../entities/order.entity';
 import { Product } from '../entities/product.entity';
 import { User } from '../entities/user.entity';
+import { SellersAnalyticsController } from './sellers-analytics.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, Product, User])],
-  controllers: [AnalyticsController, SellerAnalyticsController],
+  imports: [
+    TypeOrmModule.forFeature([Order, Product, User]),
+    CacheModule.register({ ttl: 60 }),
+  ],
+  controllers: [
+    AnalyticsController,
+    SellerAnalyticsController,
+    SellersAnalyticsController,
+  ],
   providers: [
     AnalyticsService,
     UserAnalyticsService,
@@ -26,4 +35,4 @@ import { User } from '../entities/user.entity';
     AnalyticsGateway,
   ],
 })
-export class AnalyticsModule {} 
+export class AnalyticsModule {}

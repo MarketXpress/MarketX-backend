@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { MarketPlaceService } from './market-place.service';
 import { CreateMarketPlaceDto } from './dto/create-market-place.dto';
-import { ListingsService } from 'src/listing/listing.service';
+import { ListingsService } from '../listing/listing.service';
 
 @Controller('market-place')
 export class MarketPlaceController {

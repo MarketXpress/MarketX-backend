@@ -9,7 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Users } from 'src/users/users.entity';
+import { Users } from '../../users/users.entity';
 
 export enum TransactionStatus {
   PENDING = 'pending',
