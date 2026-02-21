@@ -10,6 +10,7 @@ import { FilterProductDto } from './dto/filter-product.dto';
 import { Product, ProductPriceHistoryEntry } from './interfaces/product.interface';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { PricingService, SupportedCurrency } from './services/pricing.service';
+import { MediaService } from '../media/media.service';
 
 @Injectable()
 export class ProductsService {
@@ -18,6 +19,7 @@ export class ProductsService {
   constructor(
     private readonly pricingService: PricingService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly mediaService: MediaService,
   ) {}
 
   create(sellerId: string, dto: CreateProductDto): Product {
@@ -161,11 +163,19 @@ export class ProductsService {
     return product;
   }
 
-  remove(id: string, sellerId: string) {
+  async remove(id: string, sellerId: string) {
     const product = this.findOne(id);
 
     if (!product || product.sellerId !== sellerId) {
       throw new ForbiddenException('Not allowed to delete this product');
+    }
+
+    // Delete all associated images from storage and database
+    try {
+      await this.mediaService.deleteProductImages(id);
+    } catch (error) {
+      // Log error but don't prevent product deletion if image deletion fails
+      console.error(`Failed to delete images for product ${id}:`, error);
     }
 
     this.products = this.products.filter(p => p.id !== id);

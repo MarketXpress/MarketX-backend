@@ -22,6 +22,8 @@ import { UserVerification } from './verification/user-verification.entity';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { MediaModule } from './media/media.module';
+import { ProductImage } from './media/entities/image.entity';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
       migrations: ['dist/migrations/*.js'],
       migrationsRun: false,
     }),
+    TypeOrmModule.forFeature([ProductImage]),
     PriceModule,
     ProductsModule,
     FraudModule,
@@ -52,6 +55,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     CustomI18nModule,
     VerificationModule,
     SubscriptionsModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [
