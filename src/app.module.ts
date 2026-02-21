@@ -15,6 +15,8 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { HealthModule } from './health/health.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CustomI18nModule } from './i18n/i18n.module';
+import { PriceModule } from './price/price.module';
+
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { CustomI18nModule } from './i18n/i18n.module';
       migrations: ['dist/migrations/*.js'],
       migrationsRun: false,
     }),
+    PriceModule,
     MessagesModule,
     CommonModule,
     LoggerModule,
@@ -41,7 +44,6 @@ import { CustomI18nModule } from './i18n/i18n.module';
     ProductsModule,
     CustomI18nModule,
   ],
-
   controllers: [AppController],
   providers: [
     AppService,
@@ -54,6 +56,7 @@ import { CustomI18nModule } from './i18n/i18n.module';
   ],
   exports: [AdminGuard, RolesGuard, LoggerModule],
 })
+
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(SecurityMiddleware).forRoutes('*');
