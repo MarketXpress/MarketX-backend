@@ -41,6 +41,7 @@ import { PriceModule } from './price/price.module';
     LoggerModule,
     HealthModule,
     PaymentsModule,
+    ProductsModule,
     CustomI18nModule,
   ],
   controllers: [AppController],

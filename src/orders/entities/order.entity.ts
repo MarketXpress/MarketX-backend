@@ -1,13 +1,21 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { OrderStatus } from '../dto/create-order.dto';
+import { SupportedCurrency } from '../../products/services/pricing.service';
 
 @Entity()
 export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 20, scale: 7 })
   totalAmount: number;
+
+  @Column({
+    type: 'enum',
+    enum: SupportedCurrency,
+    default: SupportedCurrency.USD,
+  })
+  currency: SupportedCurrency;
 
   @Column({
     type: 'enum',
@@ -26,6 +34,7 @@ export class Order {
     quantity: number;
     price: number;
     subtotal: number;
+    priceCurrency: SupportedCurrency;
   }>;
 
   @Column()

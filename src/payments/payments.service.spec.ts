@@ -5,10 +5,10 @@ import { ConfigService } from '@nestjs/config';
 
 import { PaymentsService } from './payments.service';
 import { Payment } from './entities/payment.entity';
-import { Order } from 'src/orders/entities/order.entity';
-import { Wallet } from 'src/wallet/entities/wallet.entity';
+import { Order } from '../orders/entities/order.entity';
+import { Wallet } from '../wallet/entities/wallet.entity';
 import { PaymentStatus, PaymentCurrency } from './dto/payment.dto';
-import { OrderStatus } from 'src/orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/dto/create-order.dto';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;

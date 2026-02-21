@@ -5,12 +5,14 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { SanitizeString } from '../../common/transformers/sanitize-string.transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SupportedCurrency } from '../../products/services/pricing.service';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -42,6 +44,10 @@ export class CreateOrderDto {
   @IsNotEmpty()
   @SanitizeString()
   buyerId: string;
+
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  paymentCurrency?: SupportedCurrency;
 }
 
 export class UpdateOrderStatusDto {
@@ -69,6 +75,10 @@ class OrderItemResponseDto {
   @ApiProperty()
   @Expose()
   subtotal: number;
+
+  @ApiProperty({ enum: SupportedCurrency })
+  @Expose()
+  priceCurrency: SupportedCurrency;
 }
 
 export class OrderResponseDto {
@@ -96,6 +106,10 @@ export class OrderResponseDto {
   @ApiProperty()
   @Expose()
   buyerId: string;
+
+  @ApiProperty({ enum: SupportedCurrency })
+  @Expose()
+  currency: SupportedCurrency;
 
   @ApiProperty()
   @Expose()

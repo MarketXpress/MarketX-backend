@@ -3,10 +3,12 @@ import { OrdersService } from './orders.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { OrderStatus } from './dto/create-order.dto';
+import { PricingService, SupportedCurrency } from '../products/services/pricing.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
   let mockRepository: any;
+  let mockPricingService: any;
 
   beforeEach(async () => {
     mockRepository = {
@@ -16,12 +18,22 @@ describe('OrdersService', () => {
       findOne: jest.fn(),
     };
 
+    mockPricingService = {
+      convertAmount: jest.fn((amount) => amount),
+      multiplyAmount: jest.fn((amount, quantity) => amount * quantity),
+      addAmounts: jest.fn((amounts) => amounts.reduce((sum, item) => sum + item, 0)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
         {
           provide: getRepositoryToken(Order),
           useValue: mockRepository,
+        },
+        {
+          provide: PricingService,
+          useValue: mockPricingService,
         },
       ],
     }).compile();
@@ -43,6 +55,7 @@ describe('OrdersService', () => {
       const expectedResult = {
         id: 'generated-id',
         totalAmount: 21.98,
+        currency: SupportedCurrency.USD,
         status: OrderStatus.PENDING,
         items: [
           {
@@ -51,6 +64,7 @@ describe('OrdersService', () => {
             quantity: 2,
             price: 10.99,
             subtotal: 21.98,
+            priceCurrency: SupportedCurrency.USD,
           },
         ],
         buyerId: 'user123',
@@ -64,6 +78,7 @@ describe('OrdersService', () => {
       expect(result).toEqual(expectedResult);
       expect(mockRepository.create).toHaveBeenCalledWith({
         totalAmount: 21.98,
+        currency: SupportedCurrency.USD,
         status: OrderStatus.PENDING,
         items: [
           {
@@ -72,10 +87,54 @@ describe('OrdersService', () => {
             quantity: 2,
             price: 10.99,
             subtotal: 21.98,
+            priceCurrency: SupportedCurrency.USD,
           },
         ],
         buyerId: 'user123',
       });
+    });
+
+    it('should calculate totals in requested payment currency', async () => {
+      mockPricingService.convertAmount.mockImplementation((amount, _from, to) =>
+        to === SupportedCurrency.XLM ? 50 : amount,
+      );
+      mockPricingService.multiplyAmount.mockImplementation((amount, quantity) => amount * quantity);
+      mockPricingService.addAmounts.mockImplementation((amounts) =>
+        amounts.reduce((sum, item) => sum + item, 0),
+      );
+
+      const createOrderDto = {
+        items: [{ productId: '1', quantity: 2 }],
+        buyerId: 'user123',
+        paymentCurrency: SupportedCurrency.XLM,
+      };
+
+      const expectedResult = {
+        id: 'generated-id',
+        totalAmount: 100,
+        currency: SupportedCurrency.XLM,
+        status: OrderStatus.PENDING,
+        items: [
+          {
+            productId: '1',
+            productName: 'Product 1',
+            quantity: 2,
+            price: 50,
+            subtotal: 100,
+            priceCurrency: SupportedCurrency.XLM,
+          },
+        ],
+        buyerId: 'user123',
+      };
+
+      mockRepository.create.mockReturnValue(expectedResult);
+      mockRepository.save.mockResolvedValue(expectedResult);
+
+      const result = await service.create(createOrderDto);
+
+      expect(result.currency).toBe(SupportedCurrency.XLM);
+      expect(mockPricingService.convertAmount).toHaveBeenCalled();
+      expect(mockPricingService.addAmounts).toHaveBeenCalled();
     });
   });
 

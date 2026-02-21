@@ -1,6 +1,7 @@
 
-import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { SupportedCurrency } from '../services/pricing.service';
 
 export class FilterProductDto {
   @IsOptional()
@@ -32,4 +33,8 @@ export class FilterProductDto {
   @Type(() => Number)
   @Min(0)
   offset = 0;
+
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  preferredCurrency?: SupportedCurrency;
 }

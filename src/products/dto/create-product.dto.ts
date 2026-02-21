@@ -6,7 +6,10 @@ import {
   IsPositive,
   IsUrl,
   ArrayNotEmpty,
+  IsEnum,
+  Max,
 } from 'class-validator';
+import { SupportedCurrency } from '../services/pricing.service';
 
 export class CreateProductDto {
   @IsString()
@@ -15,9 +18,25 @@ export class CreateProductDto {
   @IsString()
   category: string;
 
+  @IsOptional()
   @IsNumber()
   @IsPositive()
-  price: number;
+  @Max(1000000000)
+  price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Max(1000000000)
+  basePrice?: number;
+
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  currency?: SupportedCurrency;
+
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  baseCurrency?: SupportedCurrency;
 
   @IsOptional()
   @IsString()

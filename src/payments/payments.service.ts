@@ -12,8 +12,8 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { ConfigService } from '@nestjs/config';
 
 import { Payment } from './entities/payment.entity';
-import { Order } from 'src/orders/entities/order.entity';
-import { Wallet } from 'src/wallet/entities/wallet.entity';
+import { Order } from '../orders/entities/order.entity';
+import { Wallet } from '../wallet/entities/wallet.entity';
 import {
   CreatePaymentDto,
   PaymentStatus,
@@ -21,7 +21,7 @@ import {
   PaymentResponseDto,
   InitiatePaymentDto,
 } from './dto/payment.dto';
-import { OrderStatus } from 'src/orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/dto/create-order.dto';
 
 @Injectable()
 export class PaymentsService {
@@ -65,6 +65,15 @@ export class PaymentsService {
 
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException(`Order must be in PENDING status to initiate payment`);
+    }
+
+    const orderCurrency = order.currency ? String(order.currency) : undefined;
+    const paymentCurrency = String(initiatePaymentDto.currency);
+
+    if (orderCurrency && orderCurrency !== paymentCurrency) {
+      throw new BadRequestException(
+        `Payment currency ${initiatePaymentDto.currency} must match order currency ${order.currency}`,
+      );
     }
 
     // Get or create a payment record
@@ -294,6 +303,10 @@ export class PaymentsService {
     }
 
     // Verify asset/currency matches
+    if (payment.currency === PaymentCurrency.USD) {
+      return { isValid: true };
+    }
+
     if (transactionData.asset_code) {
       const assetCode = transactionData.asset_code.toUpperCase();
       if (assetCode !== payment.currency) {
@@ -302,6 +315,11 @@ export class PaymentsService {
           errorMessage: `Transaction asset ${assetCode} does not match payment currency ${payment.currency}`,
         };
       }
+    } else {
+      return {
+        isValid: false,
+        errorMessage: `Transaction asset is required for ${payment.currency} payments`,
+      };
     }
 
     // Verify transaction is not expired
