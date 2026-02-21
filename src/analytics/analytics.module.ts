@@ -13,8 +13,15 @@ import { User } from '../entities/user.entity';
 import { SellersAnalyticsController } from './sellers-analytics.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, Product, User])],
-  controllers: [AnalyticsController, SellerAnalyticsController],
+  imports: [
+    TypeOrmModule.forFeature([Order, Product, User]),
+    CacheModule.register({ ttl: 60 }),
+  ],
+  controllers: [
+    AnalyticsController,
+    SellerAnalyticsController,
+    SellersAnalyticsController,
+  ],
   providers: [
     AnalyticsService,
     UserAnalyticsService,
@@ -27,9 +34,5 @@ import { SellersAnalyticsController } from './sellers-analytics.controller';
     SellerAnalyticsService,
     AnalyticsGateway,
   ],
-  imports: [CacheModule.register({ ttl: 60 })],
-  controllers: [AnalyticsController, SellersAnalyticsController],
-  providers: [AnalyticsService, UserAnalyticsService, AnalyticsGateway],
-  exports: [AnalyticsService, UserAnalyticsService, AnalyticsGateway],
 })
 export class AnalyticsModule {}
