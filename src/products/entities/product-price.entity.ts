@@ -12,7 +12,19 @@ export class ProductPriceEntity {
   productId: string;
 
   @Column({ type: 'decimal', precision: 20, scale: 7 })
+  // Human-readable decimal in DB
   basePrice: number;
+
+  // Store minor units as integer (string in TS) for blockchain compatibility and deterministic math
+  @Column({ type: 'numeric', precision: 40, scale: 0 })
+  basePriceMinor: string;
+
+  // Snapshot of rates when price was set (USD-based rates)
+  @Column({ type: 'json', nullable: true })
+  rateSnapshot?: Record<string, string>;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  rateTimestamp?: Date;
 
   @Column({
     type: 'enum',
