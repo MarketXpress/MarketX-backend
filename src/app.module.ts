@@ -22,6 +22,9 @@ import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { MediaModule } from './media/media.module';
 import { ProductImage } from './media/entities/image.entity';
+import { CouponsModule } from './coupons/coupons.module';
+import { Coupon } from './coupons/entities/coupon.entity';
+import { CouponUsage } from './coupons/entities/coupon-usage.entity';
 
 @Module({
   imports: [
@@ -40,7 +43,7 @@ import { ProductImage } from './media/entities/image.entity';
       migrations: ['dist/migrations/*.js'],
       migrationsRun: false,
     }),
-    TypeOrmModule.forFeature([ProductImage]),
+    TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage]),
     PriceModule,
     MessagesModule,
     CommonModule,
@@ -52,6 +55,7 @@ import { ProductImage } from './media/entities/image.entity';
     VerificationModule,
     SubscriptionsModule,
     MediaModule,
+    CouponsModule,
   ],
   controllers: [AppController],
   providers: [
