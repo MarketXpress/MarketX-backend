@@ -22,6 +22,12 @@ import { UserVerification } from './verification/user-verification.entity';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { MediaModule } from './media/media.module';
+import { ProductImage } from './media/entities/image.entity';
+import { CouponsModule } from './coupons/coupons.module';
+import { Coupon } from './coupons/entities/coupon.entity';
+import { CouponUsage } from './coupons/entities/coupon-usage.entity';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
@@ -41,6 +47,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
       migrations: ['dist/migrations/*.js'],
       migrationsRun: false,
     }),
+    TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage]),
     PriceModule,
     ProductsModule,
     FraudModule,
@@ -53,6 +60,9 @@ import { AnalyticsModule } from './analytics/analytics.module';
     CustomI18nModule,
     VerificationModule,
     SubscriptionsModule,
+    MediaModule,
+    CouponsModule,
+    AnalyticsModule,
     AnalyticsModule,
   ],
   controllers: [AppController],
