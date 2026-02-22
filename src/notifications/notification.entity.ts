@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Users } from 'src/users/users.entity';
@@ -19,6 +21,7 @@ export enum NotificationType {
   SECURITY_ALERT = 'security_alert',
   PROMOTION = 'promotion',
   REMINDER = 'reminder',
+  PRICE_DROP = 'price_drop',
   ORDER_CREATED = 'order_created',
   ORDER_UPDATED = 'order_updated',
   ORDER_CANCELLED = 'order_cancelled',
@@ -169,16 +172,4 @@ export class NotificationEntity {
 
   @Column({ name: 'recipient_id' })
   recipientId: number;
-}
-function ManyToOne(
-  arg0: () => typeof Users,
-  arg1: { eager: boolean },
-): (target: NotificationEntity, propertyKey: 'recipient') => void {
-  throw new Error('Function not implemented.');
-}
-
-function JoinColumn(arg0: {
-  name: string;
-}): (target: NotificationEntity, propertyKey: 'recipient') => void {
-  throw new Error('Function not implemented.');
 }
