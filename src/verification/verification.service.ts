@@ -20,6 +20,7 @@ import { DocumentProcessorService } from '../documents/document-processor.servic
 import { DocumentStorageService } from '../documents/document-storage.service';
 import { EncryptionService } from '../common/services/encryption.service';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   SubmitVerificationDto,
   PersonalInfoDto,
@@ -353,6 +354,7 @@ export class VerificationService {
   /**
    * Check and update expired verifications
    */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async checkExpiredVerifications(): Promise<void> {
     this.logger.log('Checking for expired verifications');
 

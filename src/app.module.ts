@@ -19,6 +19,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { CustomI18nModule } from './i18n/i18n.module';
 import { PriceModule } from './price/price.module';
 import { UserVerification } from './verification/user-verification.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
@@ -59,6 +60,7 @@ import { WishlistsModule } from './wishlist/wishlists.module';
     PaymentsModule,
     ProductsModule,
     CustomI18nModule,
+    ScheduleModule.forRoot(),
     VerificationModule,
     SubscriptionsModule,
     ShippingModule,
