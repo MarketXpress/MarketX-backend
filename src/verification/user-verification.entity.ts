@@ -89,16 +89,18 @@ export class UserVerification {
       type: string;
       uploadedAt: Date;
       verified: boolean;
+      iv?: string;      // Encryption Initialization Vector
+      authTag?: string; // Encryption Auth Tag
     };
   };
 
   @ApiProperty({ description: 'Admin review notes' })
   @Column('text', { nullable: true })
-  adminNotes: string;
+  adminNotes: string | null;
 
   @ApiProperty({ description: 'Rejection reason' })
   @Column('text', { nullable: true })
-  rejectionReason: string;
+  rejectionReason: string | null;
 
   @ApiProperty({ description: 'Verification expiry date' })
   @Column({ nullable: true })
