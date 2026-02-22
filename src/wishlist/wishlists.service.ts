@@ -16,25 +16,8 @@ import {
   AddWishlistItemDto,
   UpdateWishlistItemDto,
 } from './dtos/wishlist.dto';
-
-/** Injected token — implement or swap with your own notification service */
-export const NOTIFICATION_SERVICE = 'NOTIFICATION_SERVICE';
-
-export interface INotificationService {
-  sendPriceDropAlert(
-    userId: string,
-    payload: {
-      wishlistId: string;
-      wishlistName: string;
-      productId: string;
-      productName: string;
-      oldPrice: number;
-      newPrice: number;
-      savings: number;
-      savingsPercent: number;
-    },
-  ): Promise<void>;
-}
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType, NotificationChannel, NotificationPriority } from '../notifications/notification.entity';
 
 const MAX_ITEMS_PER_WISHLIST = 100;
 
@@ -48,8 +31,7 @@ export class WishlistsService {
     @InjectRepository(WishlistItem)
     private readonly itemRepo: Repository<WishlistItem>,
     private readonly dataSource: DataSource,
-    // Optional: inject your notification service via token
-    // @Inject(NOTIFICATION_SERVICE) private readonly notificationService: INotificationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(userId: string, dto: CreateWishlistDto): Promise<Wishlist> {
@@ -194,7 +176,7 @@ export class WishlistsService {
    */
   async syncPrices(
     updates: Array<{ productId: string; newPrice: number; isAvailable: boolean }>,
-    notificationService?: INotificationService,
+    notificationService?: NotificationsService,
   ): Promise<void> {
     if (!updates.length) return;
 
@@ -262,21 +244,32 @@ export class WishlistsService {
     }
 
     // Fire notifications (non-blocking)
-    if (notificationService && notifications.length) {
+    if (notifications.length) {
+      const serviceToUse = notificationService || this.notificationsService;
       await Promise.allSettled(
-        notifications.map(({ userId, item, oldPrice, newPrice }) => {
+        notifications.map(async ({ userId, item, oldPrice, newPrice }) => {
           const savings = oldPrice - newPrice;
           const savingsPercent = Math.round((savings / oldPrice) * 100);
-          return notificationService.sendPriceDropAlert(userId, {
-            wishlistId: item.wishlistId,
-            wishlistName: item.wishlist?.name ?? '',
-            productId: item.productId,
-            productName: item.productName,
-            oldPrice,
-            newPrice,
-            savings,
-            savingsPercent,
-          });
+          
+          // Create notification using the actual notification service
+          await serviceToUse.createNotification({
+            userId,
+            title: `Price Drop Alert!`,
+            message: `${item.productName} has dropped from $${oldPrice.toFixed(2)} to $${newPrice.toFixed(2)} (${savingsPercent}% off)!`,
+            type: NotificationType.PRICE_DROP,
+            channel: NotificationChannel.IN_APP,
+            priority: NotificationPriority.MEDIUM,
+            metadata: {
+              wishlistId: item.wishlistId,
+              wishlistName: item.wishlist?.name ?? '',
+              productId: item.productId,
+              productName: item.productName,
+              oldPrice,
+              newPrice,
+              savings,
+              savingsPercent,
+            },
+          } as any);
         }),
       );
     }
