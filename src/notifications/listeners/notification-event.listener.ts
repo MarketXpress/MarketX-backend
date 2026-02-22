@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
-import { NotificationType } from '../entities/notification.entity';
+import { NotificationType } from '../notification.entity';
 import {
   OrderCreatedEvent,
   OrderUpdatedEvent,
@@ -31,7 +31,7 @@ export class NotificationEventListener {
         totalAmount: event.totalAmount,
         items: event.items,
       },
-    });
+    } as any);
   }
 
   @OnEvent('order.updated')
@@ -47,7 +47,7 @@ export class NotificationEventListener {
         status: event.status,
         previousStatus: event.previousStatus,
       },
-    });
+    } as any);
   }
 
   @OnEvent('order.cancelled')
@@ -62,7 +62,7 @@ export class NotificationEventListener {
         orderNumber: event.orderNumber,
         reason: event.reason,
       },
-    });
+    } as any);
   }
 
   @OnEvent('order.completed')
@@ -77,14 +77,14 @@ export class NotificationEventListener {
         orderNumber: event.orderNumber,
         totalAmount: event.totalAmount,
       },
-    });
+    } as any);
   }
 
   @OnEvent('payment.received')
   async handlePaymentReceived(event: PaymentReceivedEvent) {
     await this.notificationsService.createNotification({
       userId: event.userId,
-      type: NotificationType.PAYMENT_RECEIVED,
+      type: NotificationType.PAYMENT_SUCCESS,
       title: 'Payment Received',
       message: `Your payment of $${event.amount} has been received successfully via ${event.paymentMethod}`,
       metadata: {
@@ -93,7 +93,7 @@ export class NotificationEventListener {
         amount: event.amount,
         paymentMethod: event.paymentMethod,
       },
-    });
+    } as any);
   }
 
   @OnEvent('payment.failed')
@@ -109,14 +109,14 @@ export class NotificationEventListener {
         amount: event.amount,
         reason: event.reason,
       },
-    });
+    } as any);
   }
 
   @OnEvent('message.received')
   async handleMessageReceived(event: MessageReceivedEvent) {
     await this.notificationsService.createNotification({
       userId: event.recipientId,
-      type: NotificationType.MESSAGE_RECEIVED,
+      type: NotificationType.SYSTEM_ALERT, // Fallback type
       title: 'New Message',
       message: `You received a new message from ${event.senderName}`,
       metadata: {
@@ -126,6 +126,21 @@ export class NotificationEventListener {
         conversationId: event.conversationId,
         preview: event.content.substring(0, 50),
       },
-    });
+    } as any);
+  }
+
+  @OnEvent('auth.password_reset_requested')
+  async handlePasswordResetRequested(event: { email: string; name: string; resetUrl: string }) {
+    await this.notificationsService.createNotification({
+      userId: 'system',
+      type: NotificationType.PASSWORD_RESET,
+      title: 'Password Reset Request',
+      message: 'You have requested to reset your password.',
+      metadata: {
+        email: event.email,
+        name: event.name,
+        resetUrl: event.resetUrl,
+      },
+    } as any);
   }
 }

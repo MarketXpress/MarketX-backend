@@ -1,16 +1,18 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindManyOptions, Between, In, UpdateResult } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import {
   NotificationEntity,
   NotificationType,
   NotificationChannel,
   NotificationPriority,
   NotificationStatus,
-} from './notification.entity'; 
-import { NotificationPreferencesEntity } from './entities/notification-preferences.entity'; 
-
+} from './notification.entity';
+import { NotificationPreferencesEntity } from './notification-preferences.entity';
+import { Users } from '../users/users.entity';
 
 import {
   CreateNotificationDto as CreateNotificationDtoV1,
@@ -48,7 +50,11 @@ export class NotificationsService {
     @InjectRepository(NotificationPreferencesEntity)
     private readonly preferencesRepository: Repository<NotificationPreferencesEntity>,
 
+    @InjectRepository(Users)
+    private readonly userRepository: Repository<Users>,
+
     private readonly eventEmitter: EventEmitter2,
+    @Inject(InjectQueue('email')) private readonly emailQueue: Queue,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
   ) {}
 
@@ -86,7 +92,8 @@ export class NotificationsService {
   async createNotification(dto: CreateNotificationDto): Promise<NotificationEntity[] | NotificationEntity> {
     try {
       // Attempt to get preferences and determine enabled channels
-      const preferences = await this.getUserPreferences((dto as any).userId);
+      const userId = (dto as any).userId;
+      const preferences = await this.getUserPreferences(userId);
       const preferredChannels: NotificationChannel[] =
         (preferences.preferences && preferences.preferences[(dto as any).type]) || [];
 
@@ -119,7 +126,7 @@ export class NotificationsService {
       }
 
       if (notificationsToSave.length === 0) {
-        this.logger.log(`No notifications created for user ${(dto as any).userId} due to preferences.`);
+        this.logger.log(`No notifications created for user ${userId} due to preferences.`);
         return [];
       }
 
@@ -155,7 +162,7 @@ export class NotificationsService {
     try {
       switch (notification.channel) {
         case NotificationChannel.EMAIL:
-          await this.sendEmailNotification(notification);
+          await this.queueEmailNotification(notification);
           break;
         case NotificationChannel.IN_APP:
           await this.sendInAppNotification(notification);
@@ -181,11 +188,43 @@ export class NotificationsService {
     }
   }
 
-  private async sendEmailNotification(notification: NotificationEntity): Promise<void> {
-    // TODO: integrate real email provider (SendGrid/SES/etc)
-    this.logger.log(`(EMAIL) To user ${notification.userId}: ${notification.title}`);
-    // Optionally emit event for external worker
-    this.eventEmitter.emit('notification.send_email', notification);
+  private async queueEmailNotification(notification: NotificationEntity): Promise<void> {
+    // In a real scenario, we'd fetch the user's email here
+    let userEmail = (notification as any).metadata?.email;
+    
+    if (!userEmail) {
+      const user = await this.userRepository.findOne({ where: { id: notification.userId } as any });
+      userEmail = user?.email;
+    }
+    
+    if (!userEmail) {
+      this.logger.warn(`Cannot queue email for notification ${notification.id}: No email address found for user ${notification.userId}`);
+      return;
+    }
+
+    await this.emailQueue.add('send-email', {
+      to: userEmail,
+      subject: notification.title,
+      template: this.getTemplateForNotificationType(notification.type),
+      context: {
+        ...notification.metadata,
+        message: notification.message,
+      },
+    });
+
+    this.logger.log(`Email notification queued for user ${notification.userId} to ${userEmail}`);
+  }
+
+  private getTemplateForNotificationType(type: NotificationType): string {
+    switch (type) {
+      case NotificationType.ORDER_CREATED:
+        return 'order-confirmation';
+      case NotificationType.ORDER_UPDATED:
+        return 'shipping-update';
+      case NotificationType.SYSTEM_ALERT:
+      default:
+        return 'default'; // We might need a default template
+    }
   }
 
   private async sendInAppNotification(notification: NotificationEntity): Promise<void> {
@@ -509,7 +548,7 @@ export class NotificationsService {
     } as any);
 
     const total = notifications.length;
-    const unread = notifications.filter((n: any) => !(n.isRead ?? n.read)).length;
+    const unread = notifications.filter((n: any) => !((n as any).isRead ?? (n as any).read)).length;
     const read = total - unread;
 
     const byType = notifications.reduce((acc, n: any) => {

@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto, OrderStatus, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { PricingService, SupportedCurrency } from '../products/services/pricing.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OrderCreatedEvent, OrderUpdatedEvent } from '../notifications/events/order.events';
 
 @Injectable()
 export class OrdersService {
@@ -11,6 +13,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
     private readonly pricingService: PricingService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -67,7 +70,17 @@ export class OrdersService {
       buyerId: createOrderDto.buyerId,
     });
 
-    return await this.ordersRepository.save(order);
+    const savedOrder = await this.ordersRepository.save(order);
+
+    this.eventEmitter.emit('order.created', new OrderCreatedEvent(
+      savedOrder.id,
+      savedOrder.buyerId,
+      `ORD-${savedOrder.id.substring(0, 8)}`, // Simple order number
+      savedOrder.totalAmount,
+      savedOrder.items,
+    ));
+
+    return savedOrder;
   }
 
   async findAll(buyerId?: string): Promise<Order[]> {
@@ -95,6 +108,7 @@ export class OrdersService {
 
   async updateStatus(id: string, updateOrderStatusDto: UpdateOrderStatusDto): Promise<Order> {
     const order = await this.findOne(id);
+    const previousStatus = order.status;
     
     // Validate state transition
     if (!this.isValidStateTransition(order.status, updateOrderStatusDto.status)) {
@@ -120,7 +134,17 @@ export class OrdersService {
     order.status = updateOrderStatusDto.status;
     order.updatedAt = now;
 
-    return await this.ordersRepository.save(order);
+    const updatedOrder = await this.ordersRepository.save(order);
+
+    this.eventEmitter.emit('order.updated', new OrderUpdatedEvent(
+      updatedOrder.id,
+      updatedOrder.buyerId,
+      `ORD-${updatedOrder.id.substring(0, 8)}`,
+      updatedOrder.status,
+      previousStatus,
+    ));
+
+    return updatedOrder;
   }
 
   async cancelOrder(id: string, userId: string): Promise<Order> {

@@ -30,6 +30,8 @@ import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { WishlistsModule } from './wishlist/wishlists.module';
+import { BullModule } from '@nestjs/bull';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -65,7 +67,14 @@ import { WishlistsModule } from './wishlist/wishlists.module';
     MediaModule,
     CouponsModule,
     AnalyticsModule,
-    WishlistsModule
+    WishlistsModule,
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
+    }),
+    EmailModule
   ],
   controllers: [AppController],
   providers: [

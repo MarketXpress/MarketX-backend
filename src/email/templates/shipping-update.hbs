@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 80%; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { font-size: 24px; font-weight: bold; color: #27ae60; margin-bottom: 20px; text-align: center; }
+        .info { margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 4px; }
+        .footer { font-size: 12px; color: #777; margin-top: 30px; text-align: center; }
+        .button { background: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Your Order is on its way!</div>
+        <p>Hi {{name}},</p>
+        <p>Great news! Your order has been shipped and is on its way to you.</p>
+        
+        <div class="info">
+            <strong>Order ID:</strong> {{orderId}}<br>
+            <strong>Tracking Number:</strong> {{trackingNumber}}<br>
+            <strong>Carrier:</strong> {{carrier}}<br>
+        </div>
+
+        <p>You can track your package by clicking the button below:</p>
+        <p style="text-align: center;">
+            <a href="{{trackingUrl}}" class="button">Track Package</a>
+        </p>
+
+        <p>Best regards,<br>The MarketX Team</p>
+        
+        <div class="footer">
+            &copy; {{year}} MarketX Inc. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

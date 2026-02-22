@@ -19,6 +19,19 @@ export enum NotificationType {
   SECURITY_ALERT = 'security_alert',
   PROMOTION = 'promotion',
   REMINDER = 'reminder',
+  ORDER_CREATED = 'order_created',
+  ORDER_UPDATED = 'order_updated',
+  ORDER_CANCELLED = 'order_cancelled',
+  ORDER_COMPLETED = 'order_completed',
+  SHIPMENT_UPDATE = 'shipment_update',
+  PASSWORD_RESET = 'password_reset',
+}
+
+export enum NotificationStatus {
+  PENDING = 'pending',
+  SENT = 'sent',
+  FAILED = 'failed',
+  READ = 'read',
 }
 
 export enum NotificationChannel {
@@ -62,6 +75,25 @@ export class NotificationEntity {
   })
   @Column({ default: false })
   read: boolean;
+
+  @ApiProperty({
+    description: 'Alias for read status',
+    default: false,
+  })
+  @Column({ default: false })
+  isRead: boolean;
+
+  @ApiProperty({
+    description: 'Delivery status of the notification',
+    enum: NotificationStatus,
+    default: NotificationStatus.PENDING,
+  })
+  @Column({
+    type: 'enum',
+    enum: NotificationStatus,
+    default: NotificationStatus.PENDING,
+  })
+  status: NotificationStatus;
 
   @ApiProperty({ description: 'Type of notification', enum: NotificationType })
   @Column({
