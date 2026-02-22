@@ -1,6 +1,12 @@
 import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, Between, In, UpdateResult } from 'typeorm';
+import {
+  Repository,
+  FindManyOptions,
+  Between,
+  In,
+  UpdateResult,
+} from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -13,6 +19,7 @@ import {
 } from './notification.entity';
 import { NotificationPreferencesEntity } from './notification-preferences.entity';
 import { Users } from '../users/users.entity';
+import { I18nService } from '../i18n/i18n.service';
 
 import {
   CreateNotificationDto as CreateNotificationDtoV1,
@@ -55,14 +62,19 @@ export class NotificationsService {
 
     private readonly eventEmitter: EventEmitter2,
     @Inject(InjectQueue('email')) private readonly emailQueue: Queue,
+    private readonly i18nService: I18nService,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
   ) {}
 
   /**
    * Get or create default preferences for a user
    */
-  async getUserPreferences(userId: string): Promise<NotificationPreferencesEntity> {
-    let preferences = await this.preferencesRepository.findOne({ where: { userId } });
+  async getUserPreferences(
+    userId: string,
+  ): Promise<NotificationPreferencesEntity> {
+    let preferences = await this.preferencesRepository.findOne({
+      where: { userId },
+    });
 
     if (!preferences) {
       preferences = this.preferencesRepository.create({ userId });
@@ -75,13 +87,19 @@ export class NotificationsService {
   /**
    * Update preferences
    */
-  async updateUserPreferences(userId: string, dto: UpdatePreferencesDto): Promise<NotificationPreferencesEntity> {
+  async updateUserPreferences(
+    userId: string,
+    dto: UpdatePreferencesDto,
+  ): Promise<NotificationPreferencesEntity> {
     const preferences = await this.getUserPreferences(userId);
 
     if (dto.preferences) preferences.preferences = dto.preferences;
-    if (dto.emailEnabled !== undefined) preferences.emailEnabled = dto.emailEnabled;
-    if (dto.inAppEnabled !== undefined) preferences.inAppEnabled = dto.inAppEnabled;
-    if (dto.pushEnabled !== undefined) preferences.pushEnabled = dto.pushEnabled;
+    if (dto.emailEnabled !== undefined)
+      preferences.emailEnabled = dto.emailEnabled;
+    if (dto.inAppEnabled !== undefined)
+      preferences.inAppEnabled = dto.inAppEnabled;
+    if (dto.pushEnabled !== undefined)
+      preferences.pushEnabled = dto.pushEnabled;
 
     return this.preferencesRepository.save(preferences);
   }
@@ -89,13 +107,17 @@ export class NotificationsService {
   /**
    * Create a notification (respects user preferences, creates per-channel notifications and processes them)
    */
-  async createNotification(dto: CreateNotificationDto): Promise<NotificationEntity[] | NotificationEntity> {
+  async createNotification(
+    dto: CreateNotificationDto,
+  ): Promise<NotificationEntity[] | NotificationEntity> {
     try {
       // Attempt to get preferences and determine enabled channels
       const userId = (dto as any).userId;
       const preferences = await this.getUserPreferences(userId);
       const preferredChannels: NotificationChannel[] =
-        (preferences.preferences && preferences.preferences[(dto as any).type]) || [];
+        (preferences.preferences &&
+          preferences.preferences[(dto as any).type]) ||
+        [];
 
       // If DTO already specifies channel(s), prefer that
       const requestedChannel = (dto as any).channel;
@@ -104,29 +126,36 @@ export class NotificationsService {
           ? requestedChannel
           : [requestedChannel]
         : preferredChannels.length > 0
-        ? preferredChannels
-        : [NotificationChannel.IN_APP]; // default to IN_APP when nothing configured
+          ? preferredChannels
+          : [NotificationChannel.IN_APP]; // default to IN_APP when nothing configured
 
       const notificationsToSave: NotificationEntity[] = [];
 
       for (const channel of channelsToCreate) {
         // Respect global channel toggles
-        if (channel === NotificationChannel.EMAIL && !preferences.emailEnabled) continue;
-        if (channel === NotificationChannel.IN_APP && !preferences.inAppEnabled) continue;
-        if (channel === NotificationChannel.PUSH && !preferences.pushEnabled) continue;
+        if (channel === NotificationChannel.EMAIL && !preferences.emailEnabled)
+          continue;
+        if (channel === NotificationChannel.IN_APP && !preferences.inAppEnabled)
+          continue;
+        if (channel === NotificationChannel.PUSH && !preferences.pushEnabled)
+          continue;
 
         const notification = this.notificationRepository.create({
           ...(dto as any),
           channel,
           status: NotificationStatus.PENDING,
-          createdAt: (dto as any).createdAt ? new Date((dto as any).createdAt) : new Date(),
+          createdAt: (dto as any).createdAt
+            ? new Date((dto as any).createdAt)
+            : new Date(),
         } as Partial<NotificationEntity>);
 
         notificationsToSave.push(notification);
       }
 
       if (notificationsToSave.length === 0) {
-        this.logger.log(`No notifications created for user ${userId} due to preferences.`);
+        this.logger.log(
+          `No notifications created for user ${userId} due to preferences.`,
+        );
         return [];
       }
 
@@ -137,14 +166,21 @@ export class NotificationsService {
         this.eventEmitter.emit('notification.created', notification);
         // process but don't block the save. We catch errors to prevent unhandled rejections.
         this.processNotification(notification).catch((err) => {
-          this.logger.error(`Error processing notification ${notification.id}:`, err);
+          this.logger.error(
+            `Error processing notification ${notification.id}:`,
+            err,
+          );
         });
       }
 
       // Invalidate caches related to the user
       if (this.cacheManager && saved[0]) {
-        await this.cacheManager.invalidatePattern(`user:${saved[0].userId}:notifications:*`);
-        await this.cacheManager.invalidatePattern(`user:${saved[0].userId}:notifications:unread-count`);
+        await this.cacheManager.invalidatePattern(
+          `user:${saved[0].userId}:notifications:*`,
+        );
+        await this.cacheManager.invalidatePattern(
+          `user:${saved[0].userId}:notifications:unread-count`,
+        );
       }
 
       // if single channel created, return that; otherwise return list
@@ -158,7 +194,9 @@ export class NotificationsService {
   /**
    * Process one notification (send via appropriate channel)
    */
-  private async processNotification(notification: NotificationEntity): Promise<void> {
+  private async processNotification(
+    notification: NotificationEntity,
+  ): Promise<void> {
     try {
       switch (notification.channel) {
         case NotificationChannel.EMAIL:
@@ -171,34 +209,48 @@ export class NotificationsService {
           await this.sendPushNotification(notification);
           break;
         default:
-          this.logger.warn(`Unknown notification channel for ${notification.id}: ${notification.channel}`);
+          this.logger.warn(
+            `Unknown notification channel for ${notification.id}: ${notification.channel}`,
+          );
       }
 
       notification.status = NotificationStatus.SENT;
       notification.sentAt = new Date();
       await this.notificationRepository.save(notification);
     } catch (error) {
-      this.logger.error(`Failed to send ${notification.channel} notification:`, error);
+      this.logger.error(
+        `Failed to send ${notification.channel} notification:`,
+        error,
+      );
       notification.status = NotificationStatus.FAILED;
       try {
         await this.notificationRepository.save(notification);
       } catch (saveErr) {
-        this.logger.error('Failed to save failed notification status:', saveErr);
+        this.logger.error(
+          'Failed to save failed notification status:',
+          saveErr,
+        );
       }
     }
   }
 
-  private async queueEmailNotification(notification: NotificationEntity): Promise<void> {
+  private async queueEmailNotification(
+    notification: NotificationEntity,
+  ): Promise<void> {
     // In a real scenario, we'd fetch the user's email here
     let userEmail = (notification as any).metadata?.email;
-    
+
     if (!userEmail) {
-      const user = await this.userRepository.findOne({ where: { id: notification.userId } as any });
+      const user = await this.userRepository.findOne({
+        where: { id: notification.userId } as any,
+      });
       userEmail = user?.email;
     }
-    
+
     if (!userEmail) {
-      this.logger.warn(`Cannot queue email for notification ${notification.id}: No email address found for user ${notification.userId}`);
+      this.logger.warn(
+        `Cannot queue email for notification ${notification.id}: No email address found for user ${notification.userId}`,
+      );
       return;
     }
 
@@ -212,7 +264,9 @@ export class NotificationsService {
       },
     });
 
-    this.logger.log(`Email notification queued for user ${notification.userId} to ${userEmail}`);
+    this.logger.log(
+      `Email notification queued for user ${notification.userId} to ${userEmail}`,
+    );
   }
 
   private getTemplateForNotificationType(type: NotificationType): string {
@@ -227,20 +281,48 @@ export class NotificationsService {
     }
   }
 
-  private async sendInAppNotification(notification: NotificationEntity): Promise<void> {
-    // In-app items are already persisted to DB; emit for realtime delivery (websockets)
-    this.eventEmitter.emit('notification.in-app', { userId: notification.userId, notification });
-    this.logger.log(`In-app notification created for user ${notification.userId}`);
+  private async getUserLanguage(userId: string): Promise<string> {
+    const numericUserId = Number(userId);
+    if (Number.isNaN(numericUserId)) {
+      return 'en';
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: numericUserId },
+      select: ['language'],
+    } as any);
+
+    return (user as any)?.language || 'en';
   }
 
-  private async sendPushNotification(notification: NotificationEntity): Promise<void> {
+  private async sendInAppNotification(
+    notification: NotificationEntity,
+  ): Promise<void> {
+    // In-app items are already persisted to DB; emit for realtime delivery (websockets)
+    this.eventEmitter.emit('notification.in-app', {
+      userId: notification.userId,
+      notification,
+    });
+    this.logger.log(
+      `In-app notification created for user ${notification.userId}`,
+    );
+  }
+
+  private async sendPushNotification(
+    notification: NotificationEntity,
+  ): Promise<void> {
     // TODO: integrate with FCM/APNs
-    this.logger.log(`(PUSH) To user ${notification.userId}: ${notification.title}`);
+    this.logger.log(
+      `(PUSH) To user ${notification.userId}: ${notification.title}`,
+    );
     this.eventEmitter.emit('notification.send_push', {
       userId: notification.userId,
       title: notification.title,
       message: notification.message,
-      data: { notificationId: notification.id, relatedEntityId: (notification as any).relatedEntityId },
+      data: {
+        notificationId: notification.id,
+        relatedEntityId: (notification as any).relatedEntityId,
+      },
     });
   }
 
@@ -253,16 +335,32 @@ export class NotificationsService {
     amount: number,
     currency = 'USD',
   ): Promise<NotificationEntity | NotificationEntity[]> {
+    const preferredLanguage = await this.getUserLanguage(userId);
+    const title = await this.i18nService.translate(
+      'emails.transaction_received.title',
+      {
+        lang: preferredLanguage,
+        args: { amount: amount.toFixed(2), currency },
+      },
+    );
+    const message = await this.i18nService.translate(
+      'emails.transaction_received.message',
+      {
+        lang: preferredLanguage,
+        args: { amount: amount.toFixed(2), currency },
+      },
+    );
+
     const dto: Partial<CreateNotificationDto> = {
       userId,
-      title: 'Transaction Received',
-      message: `You received ${currency} ${amount.toFixed(2)}`,
+      title,
+      message,
       type: NotificationType.TRANSACTION_RECEIVED,
       channel: NotificationChannel.IN_APP,
       priority: NotificationPriority.HIGH,
       relatedEntityId: transactionId,
       relatedEntityType: 'transaction',
-      metadata: { amount, currency, transactionId },
+      metadata: { amount: amount.toFixed(2), currency, transactionId },
     } as any;
 
     const created = await this.createNotification(dto as CreateNotificationDto);
@@ -282,7 +380,10 @@ export class NotificationsService {
         userId,
         title: (created as NotificationEntity).title,
         message: (created as NotificationEntity).message,
-        data: { notificationId: (created as NotificationEntity).id, transactionId },
+        data: {
+          notificationId: (created as NotificationEntity).id,
+          transactionId,
+        },
       });
     }
 
@@ -308,15 +409,23 @@ export class NotificationsService {
 
     // If DTO specified channel filtering include it (default to IN_APP for listing in-app)
     if ((queryDto as any).channel) {
-      qb.andWhere('notification.channel = :channel', { channel: (queryDto as any).channel });
+      qb.andWhere('notification.channel = :channel', {
+        channel: (queryDto as any).channel,
+      });
     } else {
       // default to in-app for user-facing listing
-      qb.andWhere('notification.channel = :channel', { channel: NotificationChannel.IN_APP });
+      qb.andWhere('notification.channel = :channel', {
+        channel: NotificationChannel.IN_APP,
+      });
     }
 
     if (type) qb.andWhere('notification.type = :type', { type });
     if (status) qb.andWhere('notification.status = :status', { status });
-    if (isRead !== undefined) qb.andWhere('notification.isRead = :isRead OR notification.read = :isRead', { isRead });
+    if (isRead !== undefined)
+      qb.andWhere(
+        'notification.isRead = :isRead OR notification.read = :isRead',
+        { isRead },
+      );
 
     const [items, total] = await qb
       .orderBy(`notification.${sortBy}`, sortOrder)
@@ -366,7 +475,9 @@ export class NotificationsService {
    */
   async getUnreadCount(userId: string): Promise<number> {
     if (!this.cacheManager) {
-      return this.notificationRepository.count({ where: { userId, isRead: false, channel: NotificationChannel.IN_APP } });
+      return this.notificationRepository.count({
+        where: { userId, isRead: false, channel: NotificationChannel.IN_APP },
+      });
     }
 
     return this.cacheManager.getOrSet(
@@ -383,13 +494,21 @@ export class NotificationsService {
   /**
    * Mark a single notification as read (works with read or isRead fields)
    */
-  async markAsRead(userId: string, notificationId: string): Promise<NotificationEntity> {
-    const notification = await this.notificationRepository.findOne({ where: { id: notificationId, userId } });
+  async markAsRead(
+    userId: string,
+    notificationId: string,
+  ): Promise<NotificationEntity> {
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId, userId },
+    });
 
     if (!notification) throw new NotFoundException('Notification not found');
 
     // Support both schema variants
-    if ((notification as any).isRead === false || (notification as any).read === false) {
+    if (
+      (notification as any).isRead === false ||
+      (notification as any).read === false
+    ) {
       (notification as any).isRead = true;
       (notification as any).read = true;
       (notification as any).readAt = new Date();
@@ -398,8 +517,12 @@ export class NotificationsService {
       // emit event and invalidate cache
       this.eventEmitter.emit('notification.read', notification);
       if (this.cacheManager) {
-        await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
-        await this.cacheManager.invalidatePattern(`user:${userId}:notifications:unread-count`);
+        await this.cacheManager.invalidatePattern(
+          `user:${userId}:notifications:*`,
+        );
+        await this.cacheManager.invalidatePattern(
+          `user:${userId}:notifications:unread-count`,
+        );
       }
     }
 
@@ -409,17 +532,26 @@ export class NotificationsService {
   /**
    * Mark multiple notifications as read in DB
    */
-  async markMultipleAsRead(notificationIds: string[], userId: string): Promise<UpdateResult> {
+  async markMultipleAsRead(
+    notificationIds: string[],
+    userId: string,
+  ): Promise<UpdateResult> {
     const res = await this.notificationRepository.update(
       { id: In(notificationIds), userId, read: false },
       { read: true, isRead: true, readAt: new Date() } as any,
     );
 
-    this.logger.log(`Marked ${notificationIds.length} notifications as read for user ${userId}`);
+    this.logger.log(
+      `Marked ${notificationIds.length} notifications as read for user ${userId}`,
+    );
 
     if (this.cacheManager) {
-      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
-      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:unread-count`);
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:unread-count`,
+      );
     }
 
     return res;
@@ -440,8 +572,12 @@ export class NotificationsService {
     this.logger.log(`Marked all notifications as read for user ${userId}`);
 
     if (this.cacheManager) {
-      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
-      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:unread-count`);
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:unread-count`,
+      );
     }
   }
 
@@ -452,7 +588,9 @@ export class NotificationsService {
     await this.markAsRead(userId, notificationId);
 
     if (this.cacheManager) {
-      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
     }
 
     return { message: 'Notification marked as read' };
@@ -465,7 +603,9 @@ export class NotificationsService {
     await this.markAllAsReadInDb(userId);
 
     if (this.cacheManager) {
-      await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
     }
 
     return { message: 'All notifications marked as read' };
@@ -474,8 +614,13 @@ export class NotificationsService {
   /**
    * Get a single notification
    */
-  async getNotificationById(notificationId: string, userId: string): Promise<NotificationEntity> {
-    const notification = await this.notificationRepository.findOne({ where: { id: notificationId, userId } });
+  async getNotificationById(
+    notificationId: string,
+    userId: string,
+  ): Promise<NotificationEntity> {
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId, userId },
+    });
 
     if (!notification) throw new NotFoundException('Notification not found');
 
@@ -485,13 +630,20 @@ export class NotificationsService {
   /**
    * Update notification (partial)
    */
-  async updateNotification(notificationId: string, userId: string, updateDto: UpdateNotificationDto) {
+  async updateNotification(
+    notificationId: string,
+    userId: string,
+    updateDto: UpdateNotificationDto,
+  ) {
     const notification = await this.getNotificationById(notificationId, userId);
 
     Object.assign(notification, updateDto);
     const saved = await this.notificationRepository.save(notification);
 
-    if (this.cacheManager) await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+    if (this.cacheManager)
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
 
     return saved;
   }
@@ -499,39 +651,72 @@ export class NotificationsService {
   /**
    * Delete single notification
    */
-  async deleteNotification(notificationId: string, userId: string): Promise<void> {
-    const result = await this.notificationRepository.delete({ id: notificationId, userId });
-    if ((result as any).affected === 0) throw new NotFoundException('Notification not found');
+  async deleteNotification(
+    notificationId: string,
+    userId: string,
+  ): Promise<void> {
+    const result = await this.notificationRepository.delete({
+      id: notificationId,
+      userId,
+    });
+    if ((result as any).affected === 0)
+      throw new NotFoundException('Notification not found');
 
-    this.logger.log(`Deleted notification ${notificationId} for user ${userId}`);
-    if (this.cacheManager) await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+    this.logger.log(
+      `Deleted notification ${notificationId} for user ${userId}`,
+    );
+    if (this.cacheManager)
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
   }
 
   /**
    * Delete multiple notifications
    */
-  async deleteMultipleNotifications(notificationIds: string[], userId: string): Promise<void> {
-    await this.notificationRepository.delete({ id: In(notificationIds), userId });
-    this.logger.log(`Deleted ${notificationIds.length} notifications for user ${userId}`);
-    if (this.cacheManager) await this.cacheManager.invalidatePattern(`user:${userId}:notifications:*`);
+  async deleteMultipleNotifications(
+    notificationIds: string[],
+    userId: string,
+  ): Promise<void> {
+    await this.notificationRepository.delete({
+      id: In(notificationIds),
+      userId,
+    });
+    this.logger.log(
+      `Deleted ${notificationIds.length} notifications for user ${userId}`,
+    );
+    if (this.cacheManager)
+      await this.cacheManager.invalidatePattern(
+        `user:${userId}:notifications:*`,
+      );
   }
 
   /**
    * Send bulk notifications
    */
-  async sendBulkNotifications(notifications: CreateNotificationDto[]): Promise<NotificationEntity[]> {
-    const created = await this.notificationRepository.save(this.notificationRepository.create(notifications as any));
+  async sendBulkNotifications(
+    notifications: CreateNotificationDto[],
+  ): Promise<NotificationEntity[]> {
+    const created = await this.notificationRepository.save(
+      this.notificationRepository.create(notifications as any),
+    );
     created.forEach((n) => this.eventEmitter.emit('notification.created', n));
 
     // Process each notification (fire-and-forget)
     created.forEach((n) =>
-      this.processNotification(n).catch((err) => this.logger.error(`Failed processing bulk notification ${n.id}:`, err)),
+      this.processNotification(n).catch((err) =>
+        this.logger.error(`Failed processing bulk notification ${n.id}:`, err),
+      ),
     );
 
     // Invalidate caches per user (simple implementation)
     if (this.cacheManager) {
       const uniqueUsers = Array.from(new Set(created.map((c) => c.userId)));
-      await Promise.all(uniqueUsers.map((u) => this.cacheManager.invalidatePattern(`user:${u}:notifications:*`)));
+      await Promise.all(
+        uniqueUsers.map((u) =>
+          this.cacheManager.invalidatePattern(`user:${u}:notifications:*`),
+        ),
+      );
     }
 
     this.logger.log(`Created ${created.length} bulk notifications`);
@@ -548,20 +733,28 @@ export class NotificationsService {
     } as any);
 
     const total = notifications.length;
-    const unread = notifications.filter((n: any) => !((n as any).isRead ?? (n as any).read)).length;
+    const unread = notifications.filter(
+      (n: any) => !((n as any).isRead ?? (n as any).read),
+    ).length;
     const read = total - unread;
 
-    const byType = notifications.reduce((acc, n: any) => {
-      const t = n.type || 'unknown';
-      acc[t] = (acc[t] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const byType = notifications.reduce(
+      (acc, n: any) => {
+        const t = n.type || 'unknown';
+        acc[t] = (acc[t] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const byPriority = notifications.reduce((acc, n: any) => {
-      const p = n.priority || 'normal';
-      acc[p] = (acc[p] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const byPriority = notifications.reduce(
+      (acc, n: any) => {
+        const p = n.priority || 'normal';
+        acc[p] = (acc[p] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return { total, unread, read, byType, byPriority };
   }
