@@ -42,7 +42,7 @@ export class Users {
   @Column({ nullable: true })
   avatarUrl: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: 'en', length: 5 })
   language: string;
 
   @Column({ default: true })

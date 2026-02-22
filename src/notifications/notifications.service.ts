@@ -9,7 +9,9 @@ import {
   NotificationPriority,
   NotificationStatus,
 } from './notification.entity'; 
-import { NotificationPreferencesEntity } from './entities/notification-preferences.entity'; 
+import { NotificationPreferencesEntity } from './notification-preferences.entity'; 
+import { Users } from '../users/users.entity';
+import { I18nService } from '../i18n/i18n.service';
 
 
 import {
@@ -48,7 +50,11 @@ export class NotificationsService {
     @InjectRepository(NotificationPreferencesEntity)
     private readonly preferencesRepository: Repository<NotificationPreferencesEntity>,
 
+    @InjectRepository(Users)
+    private readonly usersRepository: Repository<Users>,
+
     private readonly eventEmitter: EventEmitter2,
+    private readonly i18nService: I18nService,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
   ) {}
 
@@ -182,10 +188,39 @@ export class NotificationsService {
   }
 
   private async sendEmailNotification(notification: NotificationEntity): Promise<void> {
+    const preferredLanguage = await this.getUserLanguage(notification.userId);
+    const localizedTitle = await this.i18nService.translate('emails.transaction_received.title', {
+      lang: preferredLanguage,
+      args: notification.metadata || {},
+    });
+    const localizedMessage = await this.i18nService.translate('emails.transaction_received.message', {
+      lang: preferredLanguage,
+      args: notification.metadata || {},
+    });
+
     // TODO: integrate real email provider (SendGrid/SES/etc)
-    this.logger.log(`(EMAIL) To user ${notification.userId}: ${notification.title}`);
+    this.logger.log(`(EMAIL) To user ${notification.userId}: ${localizedTitle}`);
     // Optionally emit event for external worker
-    this.eventEmitter.emit('notification.send_email', notification);
+    this.eventEmitter.emit('notification.send_email', {
+      ...notification,
+      title: localizedTitle,
+      message: localizedMessage,
+      language: preferredLanguage,
+    });
+  }
+
+  private async getUserLanguage(userId: string): Promise<string> {
+    const numericUserId = Number(userId);
+    if (Number.isNaN(numericUserId)) {
+      return 'en';
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: numericUserId },
+      select: ['language'],
+    });
+
+    return user?.language || 'en';
   }
 
   private async sendInAppNotification(notification: NotificationEntity): Promise<void> {
@@ -214,16 +249,26 @@ export class NotificationsService {
     amount: number,
     currency = 'USD',
   ): Promise<NotificationEntity | NotificationEntity[]> {
+    const preferredLanguage = await this.getUserLanguage(userId);
+    const title = await this.i18nService.translate('emails.transaction_received.title', {
+      lang: preferredLanguage,
+      args: { amount: amount.toFixed(2), currency },
+    });
+    const message = await this.i18nService.translate('emails.transaction_received.message', {
+      lang: preferredLanguage,
+      args: { amount: amount.toFixed(2), currency },
+    });
+
     const dto: Partial<CreateNotificationDto> = {
       userId,
-      title: 'Transaction Received',
-      message: `You received ${currency} ${amount.toFixed(2)}`,
+      title,
+      message,
       type: NotificationType.TRANSACTION_RECEIVED,
       channel: NotificationChannel.IN_APP,
       priority: NotificationPriority.HIGH,
       relatedEntityId: transactionId,
       relatedEntityType: 'transaction',
-      metadata: { amount, currency, transactionId },
+      metadata: { amount: amount.toFixed(2), currency, transactionId },
     } as any;
 
     const created = await this.createNotification(dto as CreateNotificationDto);
