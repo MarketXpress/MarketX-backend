@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto, OrderStatus, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { PricingService, SupportedCurrency } from '../products/services/pricing.service';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrdersService {
@@ -11,6 +12,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
     private readonly pricingService: PricingService,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -67,7 +69,20 @@ export class OrdersService {
       buyerId: createOrderDto.buyerId,
     });
 
-    return await this.ordersRepository.save(order);
+    // Save the order first
+    const savedOrder = await this.ordersRepository.save(order);
+
+    try {
+      // Reserve inventory for the order
+      await this.inventoryService.reserveForOrder(savedOrder);
+    } catch (error) {
+      // If inventory reservation fails, cancel the order
+      savedOrder.status = OrderStatus.CANCELLED;
+      await this.ordersRepository.save(savedOrder);
+      throw error; // Re-throw the error to notify the caller
+    }
+
+    return savedOrder;
   }
 
   async findAll(buyerId?: string): Promise<Order[]> {
@@ -96,29 +111,41 @@ export class OrdersService {
   async updateStatus(id: string, updateOrderStatusDto: UpdateOrderStatusDto): Promise<Order> {
     const order = await this.findOne(id);
     
-    // Validate state transition
-    if (!this.isValidStateTransition(order.status, updateOrderStatusDto.status)) {
-      throw new BadRequestException(
-        `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`
-      );
-    }
+    // Handle inventory based on status change
+    if (updateOrderStatusDto.status === OrderStatus.PAID) {
+      // Confirm the order and reduce inventory
+      await this.inventoryService.confirmOrder(order);
+      order.status = OrderStatus.PAID;
+    } else if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
+      // Cancel the order and release inventory
+      await this.inventoryService.cancelOrder(order);
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = new Date();
+    } else {
+      // Validate state transition for other statuses
+      if (!this.isValidStateTransition(order.status, updateOrderStatusDto.status)) {
+        throw new BadRequestException(
+          `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`
+        );
+      }
 
-    // Update timestamps based on status
-    const now = new Date();
-    switch (updateOrderStatusDto.status) {
-      case OrderStatus.CANCELLED:
-        order.cancelledAt = now;
-        break;
-      case OrderStatus.SHIPPED:
-        order.shippedAt = now;
-        break;
-      case OrderStatus.DELIVERED:
-        order.deliveredAt = now;
-        break;
-    }
+      // Update timestamps based on status
+      const now = new Date();
+      switch (updateOrderStatusDto.status) {
+        case OrderStatus.CANCELLED:
+          order.cancelledAt = now;
+          break;
+        case OrderStatus.SHIPPED:
+          order.shippedAt = now;
+          break;
+        case OrderStatus.DELIVERED:
+          order.deliveredAt = now;
+          break;
+      }
 
-    order.status = updateOrderStatusDto.status;
-    order.updatedAt = now;
+      order.status = updateOrderStatusDto.status;
+      order.updatedAt = now;
+    }
 
     return await this.ordersRepository.save(order);
   }
