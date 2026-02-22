@@ -19,6 +19,7 @@ export enum NotificationType {
   SECURITY_ALERT = 'security_alert',
   PROMOTION = 'promotion',
   REMINDER = 'reminder',
+  PRICE_DROP = 'price_drop',
 }
 
 export enum NotificationChannel {
