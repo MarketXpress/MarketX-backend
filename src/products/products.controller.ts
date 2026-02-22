@@ -58,6 +58,13 @@ export class ProductsController {
     return this.productsService.updatePrice(id, req.user?.id ?? 'seller-1', dto);
   }
 
+  @Get(':id/price-history')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get price change history for a product' })
+  getPriceHistory(@Param('id') id: string) {
+    return this.productsService.getPriceHistory(id);
+  }
+
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete product (owner only)' })
