@@ -6,6 +6,8 @@ export enum InventoryChangeType {
   RESERVATION = 'RESERVATION',
   RELEASE = 'RELEASE',
   BULK_UPDATE = 'BULK_UPDATE',
+  CANCELLATION = 'CANCELLATION',
+  REFUND = 'REFUND',
 }
 
 @Entity('inventory_history')
