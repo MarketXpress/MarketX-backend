@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -34,4 +35,10 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string;
+
+  @ApiProperty({ example: 'en', enum: ['en', 'es', 'fr'], required: false })
+  @IsOptional()
+  @IsString()
+  @IsIn(['en', 'es', 'fr'])
+  language?: string;
 }

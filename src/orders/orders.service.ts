@@ -11,7 +11,15 @@ import {
   OrderStatus,
   UpdateOrderStatusDto,
 } from './dto/create-order.dto';
-import { PricingService } from '../products/services/pricing.service';
+import {
+  PricingService,
+  SupportedCurrency,
+} from '../products/services/pricing.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  OrderCreatedEvent,
+  OrderUpdatedEvent,
+} from '../notifications/events/order.events';
 import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
@@ -113,24 +121,45 @@ export class OrdersService {
       );
     }
 
-    // Update timestamps based on status
-    const now = new Date();
-    switch (updateOrderStatusDto.status) {
-      case OrderStatus.CANCELLED:
-        order.cancelledAt = now;
-        break;
-      case OrderStatus.SHIPPED:
-        order.shippedAt = now;
-        break;
-      case OrderStatus.DELIVERED:
-        order.deliveredAt = now;
-        break;
+    const updatedOrder = await this.ordersRepository.save(order);
+
+    this.eventEmitter.emit(
+      'order.updated',
+      new OrderUpdatedEvent(
+        updatedOrder.id,
+        updatedOrder.buyerId,
+        `ORD-${updatedOrder.id.substring(0, 8)}`,
+        updatedOrder.status,
+        previousStatus,
+      ),
+    );
+
+    return updatedOrder;
+  }
+
+  async cancelOrder(id: string, userId: string): Promise<Order> {
+    const order = await this.findOne(id);
+
+    // Business rule: Only allow cancellation for pending/paid orders
+    if (
+      order.status !== OrderStatus.PENDING &&
+      order.status !== OrderStatus.PAID
+    ) {
+      throw new BadRequestException(
+        `Cannot cancel order with status ${order.status}. Only pending or paid orders can be cancelled.`,
+      );
     }
 
-    order.status = updateOrderStatusDto.status;
-    order.updatedAt = now;
+    // Business rule: Only the buyer can cancel their own order
+    if (order.buyerId !== userId) {
+      throw new BadRequestException('Only the buyer can cancel their order');
+    }
 
-    return await this.ordersRepository.save(order);
+    const updateOrderStatusDto: UpdateOrderStatusDto = {
+      status: OrderStatus.CANCELLED,
+    };
+
+    return this.updateStatus(id, updateOrderStatusDto);
   }
 
   private isValidStateTransition(

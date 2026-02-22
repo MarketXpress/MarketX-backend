@@ -56,7 +56,7 @@ export class UsersService {
       user.avatarUrl = updateProfileDto.avatarUrl;
     }
     if (updateProfileDto.language !== undefined) {
-      user.language = updateProfileDto.language;
+      user.language = updateProfileDto.language.toLowerCase();
     }
 
     // Save and return updated user

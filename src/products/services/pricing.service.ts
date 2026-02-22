@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { PriceService } from '../../price/price.service';
 
 export enum SupportedCurrency {
   XLM = 'XLM',
@@ -31,11 +32,26 @@ export class PricingService {
     [SupportedCurrency.USD]: '1000000000',
   };
 
-  private readonly usdRateByCurrency: Record<SupportedCurrency, string> = {
+  // Fallback rates used when no live PriceService is available
+  private readonly defaultRates: Record<SupportedCurrency, string> = {
     [SupportedCurrency.XLM]: '0.1200000',
-    [SupportedCurrency.USDC]: '1',
-    [SupportedCurrency.USD]: '1',
+    [SupportedCurrency.USDC]: '1.0000000',
+    [SupportedCurrency.USD]: '1.0000000',
   };
+
+  constructor(@Optional() private readonly priceService?: PriceService) {}
+
+  private getLiveRates(): Record<SupportedCurrency, string> {
+    if (this.priceService) {
+      const rates = this.priceService.getRates();
+      return {
+        [SupportedCurrency.XLM]: rates.XLM_USD.toFixed(7),
+        [SupportedCurrency.USDC]: rates.USDC_USD.toFixed(7),
+        [SupportedCurrency.USD]: '1.0000000',
+      };
+    }
+    return this.defaultRates;
+  }
 
   getCurrencyPrecision(currency: SupportedCurrency): number {
     return this.precisionByCurrency[currency];
@@ -201,8 +217,9 @@ export class PricingService {
     sourceCurrency: SupportedCurrency,
     targetCurrency: SupportedCurrency,
   ): bigint {
-    const sourceRate = this.parseDecimal(this.usdRateByCurrency[sourceCurrency]);
-    const targetRate = this.parseDecimal(this.usdRateByCurrency[targetCurrency]);
+    const rates = this.getLiveRates();
+    const sourceRate = this.parseDecimal(rates[sourceCurrency]);
+    const targetRate = this.parseDecimal(rates[targetCurrency]);
     const sourceScale = this.getCurrencyPrecision(sourceCurrency);
     const targetScale = this.getCurrencyPrecision(targetCurrency);
 
@@ -245,5 +262,62 @@ export class PricingService {
       return 1n;
     }
     return 10n ** BigInt(power);
+  }
+
+  // Public helpers for deterministic, precision-safe operations using strings
+  toMinorUnitsString(value: number | string, currency: SupportedCurrency): string {
+    if (typeof value === 'number') {
+      return this.toMinorUnits(value, currency).toString();
+    }
+
+    // assume a decimal string like '12.34'
+    return this.toMinorUnitsFromString(value, currency).toString();
+  }
+
+  fromMinorUnitsToDecimalString(amountMinor: bigint | string, currency: SupportedCurrency): string {
+    const n = typeof amountMinor === 'string' ? BigInt(amountMinor) : amountMinor;
+    const precision = this.getCurrencyPrecision(currency);
+    const negative = n < 0n;
+    const absolute = negative ? -n : n;
+    const base = this.pow10(precision);
+    const integer = absolute / base;
+    const fractional = absolute % base;
+    const fractionalString = precision > 0 ? fractional.toString().padStart(precision, '0') : '';
+    const value = precision > 0 ? `${integer.toString()}.${fractionalString}` : integer.toString();
+    return negative ? `-${value}` : value;
+  }
+
+  getRateSnapshot(): { rates: Record<SupportedCurrency, string>; timestamp: string } {
+    return { rates: this.getLiveRates(), timestamp: new Date().toISOString() };
+  }
+
+  calculateOrderTotal(
+    items: { price: string | number; currency: SupportedCurrency; quantity: number }[],
+    targetCurrency: SupportedCurrency,
+  ): string {
+    let totalMinor = 0n;
+    for (const item of items) {
+      const sourceMinor =
+        typeof item.price === 'number'
+          ? this.toMinorUnits(item.price, item.currency)
+          : this.toMinorUnitsFromString(item.price, item.currency);
+      const convertedMinor = this.convertMinorUnits(sourceMinor, item.currency, targetCurrency);
+      totalMinor += convertedMinor * BigInt(item.quantity);
+    }
+    return this.fromMinorUnitsToDecimalString(totalMinor, targetCurrency);
+  }
+
+  convertAmountToString(
+    amount: number | string,
+    sourceCurrency: SupportedCurrency,
+    targetCurrency: SupportedCurrency,
+  ): string {
+    const sourceMinor = typeof amount === 'number'
+      ? this.toMinorUnits(amount, sourceCurrency)
+      : this.toMinorUnitsFromString(amount, sourceCurrency);
+
+    const targetMinor = this.convertMinorUnits(sourceMinor, sourceCurrency, targetCurrency);
+
+    return this.fromMinorUnitsToDecimalString(targetMinor, targetCurrency);
   }
 }

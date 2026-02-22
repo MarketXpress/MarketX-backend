@@ -4,6 +4,7 @@ import {
   Get,
   Patch,
   UploadedFile,
+  UploadedFiles, // Added
   UseInterceptors,
   Body,
   Param,
@@ -14,6 +15,7 @@ import {
   Logger,
   BadRequestException,
   ForbiddenException,
+  NotFoundException, // Added
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -86,7 +88,7 @@ export class VerificationController {
   }
 
   @Post(':verificationId/documents')
-  @UseInterceptors(FilesInterceptor('files', 5))
+  @UseInterceptors(FilesInterceptor('files', 10)) // Increased limit to 10
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Upload verification documents',
@@ -117,7 +119,7 @@ export class VerificationController {
 
     return this.verificationService.uploadDocuments(
       userId,
-      verificationId,
+      Number(verificationId), // Ensure it's a number
       files,
     );
   }

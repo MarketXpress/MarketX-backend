@@ -15,6 +15,7 @@ import {
 } from './inventory-history.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Product } from '../entities/product.entity';
+import { Order } from '../orders/entities/order.entity';
 
 @Injectable()
 export class InventoryService {
@@ -56,6 +57,9 @@ export class InventoryService {
         note,
       });
       await manager.save(history);
+      if (listing.available <= 5) {
+        await this.notifyLowStock(listing);
+      }
       return listing;
     });
   }
@@ -89,6 +93,138 @@ export class InventoryService {
         results.push(listing);
       }
       return results;
+    });
+  }
+
+  /**
+   * Reserve inventory for an order during checkout
+   */
+  async reserveForOrder(order: Order) {
+    return this.connection.transaction(async manager => {
+      for (const item of order.items) {
+        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        if (!listing) {
+          throw new NotFoundException(`Listing ${item.productId} not found`);
+        }
+        if (listing.available < item.quantity) {
+          throw new BadRequestException(`Not enough inventory for ${item.productName}. Available: ${listing.available}, Requested: ${item.quantity}`);
+        }
+        
+        // Reserve the quantity
+        listing.reserved += item.quantity;
+        listing.available = listing.quantity - listing.reserved;
+        await manager.save(listing);
+        
+        // Log the reservation
+        const history = this.historyRepo.create({
+          listingId: item.productId,
+          userId: order.buyerId,
+          change: item.quantity,
+          type: InventoryChangeType.RESERVATION,
+          note: `Reserved for order ${order.id}`,
+        });
+        await manager.save(history);
+      }
+    });
+  }
+
+  /**
+   * Confirm inventory reservation when order is paid (convert reservation to purchase)
+   */
+  async confirmOrder(order: Order) {
+    return this.connection.transaction(async manager => {
+      for (const item of order.items) {
+        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        if (!listing) {
+          throw new NotFoundException(`Listing ${item.productId} not found`);
+        }
+        
+        // Reduce the available quantity (since it was already reserved)
+        listing.quantity -= item.quantity;
+        listing.reserved -= item.quantity;
+        if (listing.reserved < 0) listing.reserved = 0;
+        listing.available = listing.quantity - listing.reserved;
+        await manager.save(listing);
+        
+        // Log the purchase
+        const history = this.historyRepo.create({
+          listingId: item.productId,
+          userId: order.buyerId,
+          change: -item.quantity,
+          type: InventoryChangeType.PURCHASE,
+          note: `Order ${order.id} confirmed`,
+        });
+        await manager.save(history);
+        
+        // Check if low stock notification is needed
+        if (listing.available <= 5) {
+          await this.notifyLowStock(listing);
+        }
+      }
+    });
+  }
+
+  /**
+   * Release reserved inventory when order is cancelled
+   */
+  async cancelOrder(order: Order) {
+    return this.connection.transaction(async manager => {
+      for (const item of order.items) {
+        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        if (!listing) {
+          throw new NotFoundException(`Listing ${item.productId} not found`);
+        }
+        
+        // Release the reserved quantity
+        listing.reserved -= item.quantity;
+        if (listing.reserved < 0) listing.reserved = 0;
+        listing.available = listing.quantity - listing.reserved;
+        await manager.save(listing);
+        
+        // Log the release
+        const history = this.historyRepo.create({
+          listingId: item.productId,
+          userId: order.buyerId,
+          change: item.quantity,
+          type: InventoryChangeType.CANCELLATION,
+          note: `Order ${order.id} cancelled`,
+        });
+        await manager.save(history);
+      }
+    });
+  }
+
+  /**
+   * Restore inventory when order is refunded
+   */
+  async restoreInventoryFromRefund(order: Order) {
+    return this.connection.transaction(async manager => {
+      for (const item of order.items) {
+        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        if (!listing) {
+          throw new NotFoundException(`Listing ${item.productId} not found`);
+        }
+        
+        // Increase quantity (restore stock)
+        listing.quantity += item.quantity;
+        listing.available = listing.quantity - listing.reserved;
+        await manager.save(listing);
+        
+        // Log the restoration
+        const history = this.historyRepo.create({
+          listingId: item.productId,
+          userId: order.buyerId,
+          change: item.quantity,
+          type: InventoryChangeType.REFUND,
+          note: `Order ${order.id} refunded`,
+        });
+        await manager.save(history);
+        
+        // Check if low stock notification is needed
+        if (listing.available <= 5) {
+          await this.notifyLowStock(listing);
+        }
+      }
     });
   }
 

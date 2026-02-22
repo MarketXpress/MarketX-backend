@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common';
-import { I18nModule, HeaderResolver } from 'nestjs-i18n';
+import {
+  I18nModule,
+  HeaderResolver,
+  QueryResolver,
+  AcceptLanguageResolver,
+} from 'nestjs-i18n';
 import { join } from 'path';
 import { I18nService } from './i18n.service';
 
@@ -8,10 +13,14 @@ import { I18nService } from './i18n.service';
     I18nModule.forRoot({
       fallbackLanguage: 'en',
       loaderOptions: {
-        path: join(__dirname, '../../locales/'),
+        path: join(__dirname, 'translations/'),
         watch: true,
       },
-      resolvers: [{ use: HeaderResolver, options: ['accept-language'] }],
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        { use: HeaderResolver, options: ['x-language', 'x-lang'] },
+        AcceptLanguageResolver,
+      ],
     }),
   ],
   providers: [I18nService],

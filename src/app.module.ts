@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductsModule } from './products/products.module';
@@ -19,21 +20,27 @@ import { PaymentsModule } from './payments/payments.module';
 import { CustomI18nModule } from './i18n/i18n.module';
 import { PriceModule } from './price/price.module';
 import { UserVerification } from './verification/user-verification.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { ShippingModule } from './shipping/shipping.module';
 import { MediaModule } from './media/media.module';
 import { ProductImage } from './media/entities/image.entity';
 import { CouponsModule } from './coupons/coupons.module';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { WishlistsModule } from './wishlist/wishlists.module';
+import { BullModule } from '@nestjs/bull';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(), // Enable scheduling
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -57,11 +64,21 @@ import { AnalyticsModule } from './analytics/analytics.module';
     PaymentsModule,
     ProductsModule,
     CustomI18nModule,
+    ScheduleModule.forRoot(),
     VerificationModule,
     SubscriptionsModule,
+    ShippingModule,
     MediaModule,
     CouponsModule,
     AnalyticsModule,
+    WishlistsModule,
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
+    }),
+    EmailModule
   ],
   controllers: [AppController],
   providers: [

@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThan } from 'typeorm';
+import { Repository, Between, LessThan, In } from 'typeorm';
 import {
   VerificationType,
   VerificationStatus,
@@ -17,7 +17,10 @@ import {
 import { UserVerification } from './user-verification.entity';
 import { Users } from '../users/users.entity';
 import { DocumentProcessorService } from '../documents/document-processor.service';
+import { DocumentStorageService } from '../documents/document-storage.service';
+import { EncryptionService } from '../common/services/encryption.service';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   SubmitVerificationDto,
   PersonalInfoDto,
@@ -40,11 +43,12 @@ export class VerificationService {
     @InjectRepository(Users)
     private readonly usersRepo: Repository<Users>,
     private readonly documentProcessor: DocumentProcessorService,
+    private readonly documentStorage: DocumentStorageService, // Inject DocumentStorageService
     private readonly configService: ConfigService,
   ) {}
 
   /**
-   * Start or update verification process
+   * Start or update verification process (Multi-step)
    */
   async submitVerification(
     userId: number,
@@ -74,37 +78,42 @@ export class VerificationService {
         level: VerificationLevel.BASIC,
       });
 
-    // Update personal information
-    verification.personalInfo = dto.personalInfo;
-
-    // Update business information for seller verification
-    if (dto.verificationType === VerificationType.SELLER && dto.businessInfo) {
-      verification.businessInfo = dto.businessInfo;
-      verification.currentStep = VerificationStep.BUSINESS_VERIFICATION;
-    } else {
+    // Update personal information (Step 1)
+    if (dto.personalInfo) {
+      verification.personalInfo = dto.personalInfo;
       verification.currentStep = VerificationStep.DOCUMENT_UPLOAD;
     }
 
-    // Process documents if provided
+    // Update business information for seller verification (Step 2)
+    if (dto.verificationType === VerificationType.SELLER && dto.businessInfo) {
+      verification.businessInfo = dto.businessInfo;
+      verification.currentStep = VerificationStep.DOCUMENT_UPLOAD;
+    }
+
+    // Process documents if provided (Step 3)
     if (dto.documents && dto.documents.length > 0) {
-      verification.documents = {};
+      verification.documents = verification.documents || {};
       for (const doc of dto.documents) {
-        const processedDoc = await this.processDocument(doc);
-        verification.documents[doc.documentType] = processedDoc;
+        // This handles cases where documents are provided via DTO (e.g., external URLs)
+        verification.documents[doc.documentType] = {
+          url: doc.documentUrl,
+          type: doc.documentType,
+          uploadedAt: new Date(),
+          verified: false,
+        };
       }
       verification.currentStep = VerificationStep.ADMIN_REVIEW;
+      verification.status = VerificationStatus.UNDER_REVIEW;
     }
 
     const savedVerification = await this.verificationRepo.save(verification);
-
-    // Update user verification status
     await this.updateUserVerificationStatus(userId);
 
     return savedVerification;
   }
 
   /**
-   * Upload documents for verification
+   * Upload documents and encrypt them (Secure flow)
    */
   async uploadDocuments(
     userId: number,
@@ -112,7 +121,7 @@ export class VerificationService {
     files: Express.Multer.File[],
   ): Promise<UserVerification> {
     this.logger.log(
-      `User ${userId} uploading documents for verification ${verificationId}`,
+      `User ${userId} uploading secure documents for verification ${verificationId}`,
     );
 
     const verification = await this.verificationRepo.findOne({
@@ -125,20 +134,23 @@ export class VerificationService {
 
     if (verification.status === VerificationStatus.VERIFIED) {
       throw new BadRequestException(
-        'Cannot upload documents for verified verification',
+        'Cannot upload documents for a verified account',
       );
     }
 
-    // Process uploaded files
+    // Process uploaded files using DocumentStorageService (which now encrypts)
     const documents = verification.documents || {};
     for (const file of files) {
       const documentType = this.getDocumentTypeFromFilename(file.originalname);
-      const processedDoc = await this.documentProcessor.processDocument(file);
+      const metadata = await this.documentStorage.storeDocument(file);
+      
       documents[documentType] = {
-        url: processedDoc,
+        url: metadata.filename, // Store filename, we can generate URL or retrieve via service
         type: documentType,
-        uploadedAt: new Date(),
+        uploadedAt: metadata.uploadedAt,
         verified: false,
+        iv: metadata.iv!, // Assert non-null as it's generated by storeDocument
+        authTag: metadata.authTag!, // Assert non-null as it's generated by storeDocument
       };
     }
 
@@ -174,10 +186,10 @@ export class VerificationService {
 
     verification.status = dto.action;
     verification.reviewedBy = adminId;
-    verification.adminNotes = dto.adminNotes;
+    verification.adminNotes = dto.adminNotes ?? null;
 
     if (dto.action === VerificationStatus.REJECTED) {
-      verification.rejectionReason = dto.rejectionReason;
+      verification.rejectionReason = dto.rejectionReason ?? null;
       verification.retryCount += 1;
     } else if (dto.action === VerificationStatus.VERIFIED) {
       verification.verifiedAt = new Date();
@@ -210,29 +222,19 @@ export class VerificationService {
       `Admin ${adminId} performing bulk review on ${dto.verificationIds.length} verifications`,
     );
 
-    const verifications = await this.verificationRepo.findByIds(
-      dto.verificationIds,
-    );
+    const verifications = await this.verificationRepo.find({
+      where: { id: In(dto.verificationIds) },
+    });
 
-    const updatedVerifications = [];
+    const updatedVerifications: UserVerification[] = [];
     for (const verification of verifications) {
-      verification.status = dto.action;
-      verification.reviewedBy = adminId;
-      verification.adminNotes = dto.adminNotes;
-
-      if (dto.action === VerificationStatus.REJECTED) {
-        verification.rejectionReason = dto.rejectionReason;
-        verification.retryCount += 1;
-      } else if (dto.action === VerificationStatus.VERIFIED) {
-        verification.verifiedAt = new Date();
-        verification.level = VerificationLevel.VERIFIED_SELLER;
-        verification.expiresAt = new Date(
-          Date.now() + 365 * 24 * 60 * 60 * 1000,
-        ); // 1 year
-      }
-
-      updatedVerifications.push(await this.verificationRepo.save(verification));
-      await this.updateUserVerificationStatus(verification.userId);
+      const saved = await this.adminReview(adminId, {
+        verificationId: verification.id,
+        action: dto.action,
+        adminNotes: dto.adminNotes,
+        rejectionReason: dto.rejectionReason,
+      });
+      updatedVerifications.push(saved);
     }
 
     return updatedVerifications;
@@ -352,6 +354,7 @@ export class VerificationService {
   /**
    * Check and update expired verifications
    */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async checkExpiredVerifications(): Promise<void> {
     this.logger.log('Checking for expired verifications');
 
@@ -404,7 +407,7 @@ export class VerificationService {
       verificationLevel: highestLevel,
       isVerifiedSeller,
       trustScore,
-      verificationExpiryAt: this.getEarliestExpiryDate(verifications),
+      verificationExpiryAt: this.getEarliestExpiryDate(verifications) ?? undefined,
     });
   }
 
