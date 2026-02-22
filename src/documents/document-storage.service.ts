@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { EncryptionService } from '../common/services/encryption.service';
 
 export interface DocumentMetadata {
   originalName: string;
@@ -11,6 +12,8 @@ export interface DocumentMetadata {
   size: number;
   mimetype: string;
   uploadedAt: Date;
+  iv?: string;      // Added for encryption support
+  authTag?: string; // Added for encryption support
 }
 
 @Injectable()
@@ -18,22 +21,28 @@ export class DocumentStorageService {
   private readonly logger = new Logger(DocumentStorageService.name);
   private readonly uploadDir: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private encryptionService: EncryptionService, // Inject EncryptionService
+  ) {
     this.uploadDir = this.configService.get<string>('UPLOAD_DIR') || './uploads/verification-docs';
     this.ensureUploadDirectory();
   }
 
   /**
-   * Store uploaded document
+   * Store uploaded document (Encrypted)
    */
   async storeDocument(file: Express.Multer.File): Promise<DocumentMetadata> {
-    this.logger.log(`Storing document: ${file.originalname}`);
+    this.logger.log(`Storing encrypted document: ${file.originalname}`);
 
     const filename = this.generateFilename(file.originalname);
     const path = join(this.uploadDir, filename);
 
-    // Write file to disk
-    writeFileSync(path, file.buffer);
+    // Encrypt the file buffer
+    const { encryptedData, iv, authTag } = await this.encryptionService.encrypt(file.buffer);
+
+    // Write encrypted data to disk
+    writeFileSync(path, encryptedData);
 
     const metadata: DocumentMetadata = {
       originalName: file.originalname,
@@ -42,9 +51,11 @@ export class DocumentStorageService {
       size: file.size,
       mimetype: file.mimetype,
       uploadedAt: new Date(),
+      iv: iv.toString('hex'),
+      authTag: authTag.toString('hex'),
     };
 
-    this.logger.log(`Document stored successfully: ${filename}`);
+    this.logger.log(`Encrypted document stored successfully: ${filename}`);
     return metadata;
   }
 
@@ -54,6 +65,26 @@ export class DocumentStorageService {
   getDocumentUrl(filename: string): string {
     const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
     return `${baseUrl}/verification-docs/${filename}`;
+  }
+
+  /**
+   * Retrieve and decrypt document
+   */
+  async getDecryptedDocument(filename: string, iv: string, authTag: string): Promise<Buffer> {
+    this.logger.log(`Retrieving and decrypting document: ${filename}`);
+    const path = join(this.uploadDir, filename);
+
+    if (!existsSync(path)) {
+      throw new Error(`File not found: ${filename}`);
+    }
+
+    const encryptedData = readFileSync(path);
+    
+    return this.encryptionService.decrypt(
+      encryptedData,
+      Buffer.from(iv, 'hex'),
+      Buffer.from(authTag, 'hex'),
+    );
   }
 
   /**
