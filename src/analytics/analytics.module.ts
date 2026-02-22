@@ -3,36 +3,26 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
-import { UserAnalyticsService } from './user-analytics.service';
-import { SellerAnalyticsService } from './seller-analytics.service';
-import { SellerAnalyticsController } from './seller-analytics.controller';
 import { AnalyticsGateway } from './analytics.gateway';
 import { Order } from '../entities/order.entity';
 import { Product } from '../entities/product.entity';
 import { User } from '../entities/user.entity';
-import { SellersAnalyticsController } from './sellers-analytics.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, Product, User]),
-    CacheModule.register({ ttl: 60 }),
+    CacheModule.register({
+      ttl: 300, // 5 minutes default
+      max: 100, // maximum number of items in cache
+    }),
   ],
-  controllers: [
-    AnalyticsController,
-    SellerAnalyticsController,
-    SellersAnalyticsController,
-  ],
+  controllers: [AnalyticsController],
   providers: [
     AnalyticsService,
-    UserAnalyticsService,
-    SellerAnalyticsService,
     AnalyticsGateway,
   ],
   exports: [
     AnalyticsService,
-    UserAnalyticsService,
-    SellerAnalyticsService,
-    AnalyticsGateway,
   ],
 })
 export class AnalyticsModule {}
