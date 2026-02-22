@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
@@ -16,6 +17,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
+import { VerifiedSellerGuard } from '../verification/guards/verified-seller.guard';
 
 @ApiTags('Products')
 @Controller('products')
@@ -39,23 +41,26 @@ export class ProductsController {
 
   @Post()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create product (seller only)' })
+  @UseGuards(VerifiedSellerGuard)
+  @ApiOperation({ summary: 'Create product (verified seller only)' })
   create(@Req() req, @Body() dto: CreateProductDto) {
-    return this.productsService.create(req.user?.id ?? 'seller-1', dto);
+    return this.productsService.create(req.user.id.toString(), dto);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product (owner only)' })
+  @UseGuards(VerifiedSellerGuard)
+  @ApiOperation({ summary: 'Update product (verified owner only)' })
   update(@Param('id') id: string, @Req() req, @Body() dto: UpdateProductDto) {
-    return this.productsService.update(id, req.user?.id ?? 'seller-1', dto);
+    return this.productsService.update(id, req.user.id.toString(), dto);
   }
 
   @Patch(':id/price')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product price (owner only)' })
+  @UseGuards(VerifiedSellerGuard)
+  @ApiOperation({ summary: 'Update product price (verified owner only)' })
   updatePrice(@Param('id') id: string, @Req() req, @Body() dto: UpdatePriceDto) {
-    return this.productsService.updatePrice(id, req.user?.id ?? 'seller-1', dto);
+    return this.productsService.updatePrice(id, req.user.id.toString(), dto);
   }
 
   @Get(':id/price-history')
@@ -67,8 +72,9 @@ export class ProductsController {
 
   @Delete(':id')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete product (owner only)' })
+  @UseGuards(VerifiedSellerGuard)
+  @ApiOperation({ summary: 'Delete product (verified owner only)' })
   async remove(@Param('id') id: string, @Req() req) {
-    return this.productsService.remove(id, req.user?.id ?? 'seller-1');
+    return this.productsService.remove(id, req.user.id.toString());
   }
 }
