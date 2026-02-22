@@ -8,13 +8,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ProductImage, ImageVariants, ImageVariant } from './entities/image.entity';
+import {
+  ProductImage,
+  ImageFormat,
+  ImageVariants,
+} from './entities/image.entity';
 import { UploadImageDto } from './dto/upload-image.dto';
 import { ImageProcessingService } from './services/image-processing.service';
-import {
-  StorageProvider,
-  UploadResult,
-} from './interfaces/storage-provider.interface';
+import { StorageProvider } from './interfaces/storage-provider.interface';
+import * as crypto from 'crypto';
 
 export interface UploadedImageResult {
   id: string;
@@ -87,7 +89,7 @@ export class MediaService {
   }
 
   /**
-   * Upload a single image with processing
+   * Upload a single image with processing, validation, and duplicate prevention.
    */
   private async uploadSingleImage(
     productId: string,
@@ -95,21 +97,50 @@ export class MediaService {
     dto?: UploadImageDto,
     displayOrder: number = 0,
   ): Promise<UploadedImageResult> {
-    // Process image and generate variants
+    // 1. Requirement: Prevent duplicate uploads
+    const contentHash = this.computeContentHash(file.buffer);
+
+    // Check if this specific product already has an image with this content
+    // We store the hash in the storageKey or a metadata field to ensure idempotency
+    const existingImage = await this.imageRepository.findOne({
+      where: {
+        productId,
+        storageKey: Like(`%${contentHash}%`),
+      },
+    });
+
+    if (existingImage) {
+      this.logger.debug(
+        `Duplicate image detected for product ${productId}. Skipping processing.`,
+      );
+      return {
+        id: existingImage.id,
+        productId: existingImage.productId,
+        originalName: existingImage.originalName,
+        variants: existingImage.variants,
+        displayOrder: existingImage.displayOrder,
+        altText: existingImage.altText,
+      };
+    }
+
+    // 2. Requirement: Image Validation and Transformation (3 sizes)
+    // processImage internally validates size (5MB) and dimensions
     const processedVariants = await this.imageProcessingService.processImage(
       file.buffer,
       file.originalname,
     );
 
-    // Upload each variant to storage
+    // 3. Cloud Storage Integration
     const variants: Partial<ImageVariants> = {};
     const timestamp = Date.now();
     const sanitizedName = this.sanitizeFileName(file.originalname);
-    const baseKey = `products/${productId}/${timestamp}-${sanitizedName}`;
+    // Include the hash in the baseKey to ensure unique but deterministic paths
+    const baseKey = `products/${productId}/${timestamp}-${contentHash}-${sanitizedName}`;
 
     for (const [variantName, processed] of Object.entries(processedVariants)) {
       const variantKey = `${baseKey}/${variantName}.${processed.format}`;
 
+      // Upload optimized version to S3/CDN
       const uploadResult = await this.storage.upload(
         processed.buffer,
         variantKey,
@@ -118,6 +149,7 @@ export class MediaService {
           productId,
           variant: variantName,
           originalName: file.originalname,
+          contentHash, // Store hash in S3 metadata for extra safety
         },
       );
 
@@ -129,7 +161,7 @@ export class MediaService {
       };
     }
 
-    // Save to database
+    // 4. Requirement: Store image metadata in database
     const image = this.imageRepository.create({
       productId,
       originalName: file.originalname,
@@ -324,10 +356,25 @@ export class MediaService {
   }
 
   /**
-   * Get format from MIME type
+   * Get format from MIME type — returns the ImageFormat enum value
    */
-  private getFormatFromMimeType(mimeType: string): string {
-    const format = mimeType.split('/')[1];
-    return format === 'jpeg' ? 'jpg' : format;
+  private getFormatFromMimeType(mimeType: string): ImageFormat {
+    switch (mimeType) {
+      case 'image/jpeg':
+        return ImageFormat.JPEG;
+      case 'image/png':
+        return ImageFormat.PNG;
+      case 'image/webp':
+        return ImageFormat.WEBP;
+      default:
+        return ImageFormat.JPEG;
+    }
+  }
+
+  /**
+   * Compute SHA-256 hash of a file buffer for duplicate detection
+   */
+  private computeContentHash(buffer: Buffer): string {
+    return crypto.createHash('sha256').update(buffer).digest('hex');
   }
 }
