@@ -16,7 +16,7 @@ export class AppController {
     @Query('name') name: string = 'User',
   ): Promise<string> {
     const locale = req['locale'] || 'en';
-    return await this.i18nService.translate('greeting', {
+    return await this.i18nService.translate('app.greeting', {
       lang: locale,
       args: { name },
     });

@@ -4,9 +4,11 @@ import {
   ValidationError,
   ValidationPipe as NestValidationPipe,
 } from '@nestjs/common';
+import { I18nContext } from 'nestjs-i18n';
 
-function flattenValidationErrors(errors: ValidationError[]) {
+function flattenValidationErrors(errors: ValidationError[], lang = 'en') {
   const result: Array<{ field: string; message: string }> = [];
+  const i18n = I18nContext.current();
 
   const walk = (errs: ValidationError[], parentPath = '') => {
     for (const err of errs) {
@@ -15,7 +17,19 @@ function flattenValidationErrors(errors: ValidationError[]) {
         : err.property;
 
       if (err.constraints) {
-        for (const message of Object.values(err.constraints)) {
+        for (const [constraint, fallbackMessage] of Object.entries(
+          err.constraints,
+        )) {
+          const message =
+            (i18n?.t(`validation.${constraint}`, {
+              lang,
+              args: {
+                property: fieldPath,
+                value: err.value,
+                constraints: err.constraints,
+              },
+            }) as string) || fallbackMessage;
+
           result.push({ field: fieldPath, message });
         }
       }
@@ -42,10 +56,15 @@ export class AppValidationPipe extends NestValidationPipe {
       skipMissingProperties: false,
 
       exceptionFactory: (errors: ValidationError[]) => {
-        const details = flattenValidationErrors(errors);
+        const lang = I18nContext.current()?.lang || 'en';
+        const details = flattenValidationErrors(errors, lang);
+
         return new BadRequestException({
           error: 'VALIDATION_ERROR',
-          message: 'Input validation failed',
+          message:
+            (I18nContext.current()?.t('common.validation_failed', {
+              lang,
+            }) as string) || 'Input validation failed',
           details,
         });
       },

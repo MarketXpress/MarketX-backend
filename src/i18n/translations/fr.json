@@ -1,0 +1,28 @@
+{
+  "app": {
+    "greeting": "Bonjour, {{name}} !"
+  },
+  "common": {
+    "validation_failed": "La validation des données a échoué"
+  },
+  "errors": {
+    "internal_server_error": "Erreur interne du serveur"
+  },
+  "validation": {
+    "isEmail": "{{property}} doit être une adresse e-mail valide",
+    "isNotEmpty": "{{property}} ne doit pas être vide",
+    "isString": "{{property}} doit être une chaîne de caractères",
+    "isUrl": "{{property}} doit être une URL valide",
+    "isEnum": "{{property}} a une valeur invalide",
+    "minLength": "{{property}} doit contenir au moins {{constraints.0}} caractères",
+    "maxLength": "{{property}} doit contenir au maximum {{constraints.0}} caractères",
+    "min": "{{property}} ne doit pas être inférieur à {{constraints.0}}",
+    "max": "{{property}} ne doit pas être supérieur à {{constraints.0}}"
+  },
+  "emails": {
+    "transaction_received": {
+      "title": "Transaction reçue",
+      "message": "Vous avez reçu {{currency}} {{amount}}"
+    }
+  }
+}

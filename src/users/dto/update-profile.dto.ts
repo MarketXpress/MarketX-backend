@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsOptional,
   IsString,
   IsUrl,
@@ -45,5 +46,6 @@ export class UpdateProfileDto {
   })
   @IsOptional()
   @IsString()
+  @IsIn(['en', 'es', 'fr'])
   language?: string;
 }

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { LoggerService } from '../logger/logger.service';
+import { I18nContext } from 'nestjs-i18n';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -18,8 +19,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    const lang =
+      (request?.user as any)?.language ||
+      I18nContext.current()?.lang ||
+      request?.['locale'] ||
+      'en';
+
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Internal Server Error';
+    let message =
+      (I18nContext.current()?.t('errors.internal_server_error', {
+        lang,
+      }) as string) || 'Internal Server Error';
     let errorDetails: any = {};
 
     // Handle HttpException
