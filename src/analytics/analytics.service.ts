@@ -1,48 +1,62 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { Users } from '../users/users.entity';
-import { Transaction, TransactionStatus, TransactionType } from '../transactions/entities/transaction.entity';
-import { Listing } from '../listing/entities/listing.entity';
+import { Repository, Between, In } from 'typeorm';
+import { User } from '../entities/user.entity';
+import { Order, OrderStatus } from '../entities/order.entity';
+import { Product } from '../entities/product.entity';
 import { AnalyticsGateway } from './analytics.gateway';
+import {
+  AnalyticsQueryDto,
+  AnalyticsGranularity,
+  AnalyticsExportFormat,
+} from './dto/analytics-query.dto';
 import { Parser as Json2CsvParser } from 'json2csv';
 
 @Injectable()
 export class AnalyticsService {
+  private readonly logger = new Logger(AnalyticsService.name);
+
   constructor(
-    @InjectRepository(Users)
-    private readonly usersRepository: Repository<Users>,
-    @InjectRepository(Transaction)
-    private readonly transactionRepository: Repository<Transaction>,
-    @InjectRepository(Listing)
-    private readonly listingRepository: Repository<Listing>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
     private readonly analyticsGateway: AnalyticsGateway,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
+  /**
+   * Get platform-wide analytics (Admin)
+   */
   async getPlatformAnalytics(startDate?: string, endDate?: string) {
-    const dateFilter = startDate && endDate ? { createdAt: Between(new Date(startDate), new Date(endDate)) } : {};
+    const dateFilter =
+      startDate && endDate
+        ? { createdAt: Between(new Date(startDate), new Date(endDate)) }
+        : {};
 
-    // Active users: users who have logged in or performed actions recently (using updatedAt as proxy)
-    const activeUsers = await this.usersRepository.count({
-      where: startDate && endDate ? { updatedAt: Between(new Date(startDate), new Date(endDate)) } : {},
-    });
+    const [activeUsers, transactionCount, listings] = await Promise.all([
+      this.usersRepository.count({
+        where:
+          startDate && endDate
+            ? { updatedAt: Between(new Date(startDate), new Date(endDate)) }
+            : {},
+      }),
+      this.orderRepository.count({ where: { ...dateFilter } }),
+      this.productRepository.find({ where: { ...dateFilter } }),
+    ]);
 
-    // Transaction volume: total number and sum of transactions
-    const transactions = await this.transactionRepository.find({ where: { ...dateFilter } });
-    const transactionVolume = transactions.length;
-    const transactionSum = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
-
-    // Popular categories: count listings per category
-    const listings = await this.listingRepository.find({ where: { ...dateFilter } });
+    // Popular categories
     const categoryCount: Record<string, number> = {};
     listings.forEach((listing) => {
-      if (listing.category) {
-        categoryCount[listing.category] = (categoryCount[listing.category] || 0) + 1;
-      }
+      // Assuming product has category object with name or uses categoryId
+      const cat = listing.category?.name || 'Uncategorized';
+      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
     });
+
     const popularCategories = Object.entries(categoryCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -50,155 +64,201 @@ export class AnalyticsService {
 
     const result = {
       activeUsers,
-      transactionVolume,
-      transactionSum,
+      transactionVolume: transactionCount,
       popularCategories,
     };
+
     this.analyticsGateway.emitPlatformAnalyticsUpdate(result);
     return result;
   }
 
-  private mapGranularityToPg(granularity?: 'daily' | 'weekly' | 'monthly') {
-    if (granularity === 'weekly') return 'week';
-    if (granularity === 'monthly') return 'month';
-    return 'day';
-  }
-
-  async getSellerSalesAnalytics(sellerId: string, dto: { startDate?: string; endDate?: string; granularity?: 'daily' | 'weekly' | 'monthly'; export?: 'csv' | 'json'; limit?: number; }) {
-    const cacheKey = `seller_sales:${sellerId}:${dto.startDate || ''}:${dto.endDate || ''}:${dto.granularity || 'daily'}`;
+  /**
+   * Get seller sales analytics with metrics and time-based series
+   */
+  async getSellerSalesAnalytics(sellerId: string, dto: AnalyticsQueryDto) {
+    const { startDate, endDate, granularity, limit } = dto;
+    const cacheKey = `seller_sales:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}:${granularity}`;
+    
     const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached as any;
+    if (cached && !dto.export) return cached;
 
-    const pgGran = this.mapGranularityToPg(dto.granularity);
+    const queryBuilder = this.orderRepository.createQueryBuilder('order')
+      .where('order.sellerId = :sellerId', { sellerId })
+      .andWhere('order.status IN (:...statuses)', { 
+        statuses: [OrderStatus.COMPLETED, OrderStatus.DELIVERED] 
+      });
 
-    const qb = this.transactionRepository.createQueryBuilder('t')
-      .innerJoin(Listing, 'l', 'l.id = t.listing_id')
-      .where('l.userId = :sellerId', { sellerId })
-      .andWhere('t.type = :type', { type: TransactionType.PURCHASE })
-      .andWhere('t.status = :status', { status: TransactionStatus.COMPLETED });
-
-    if (dto.startDate && dto.endDate) {
-      qb.andWhere('t.created_at BETWEEN :start AND :end', { start: new Date(dto.startDate), end: new Date(dto.endDate) });
+    if (startDate && endDate) {
+      queryBuilder.andWhere('order.createdAt BETWEEN :start AND :end', { 
+        start: startDate, 
+        end: endDate 
+      });
     }
 
-    qb.select(`date_trunc('${pgGran}', t.created_at)`, 'period')
-      .addSelect('COUNT(*)', 'orders')
-      .addSelect('SUM(t.amount)', 'revenue')
+    // 1. Calculate General Metrics
+    const metricsResult = await queryBuilder
+      .select('SUM(order.totalAmount)', 'totalRevenue')
+      .addSelect('COUNT(order.id)', 'totalOrders')
+      .addSelect('SUM(order.discountAmount)', 'totalDiscounts')
+      .addSelect('SUM(order.shippingCost)', 'totalShipping')
+      .getRawOne();
+
+    const totalRevenue = Number(metricsResult.totalRevenue || 0);
+    const totalOrders = Number(metricsResult.totalOrders || 0);
+    const totalDiscounts = Number(metricsResult.totalDiscounts || 0);
+    const netRevenue = totalRevenue - totalDiscounts;
+
+    // 2. Time-based Series
+    const pgGran = this.mapGranularityToPg(granularity);
+    const series = await queryBuilder
+      .select(`DATE_TRUNC('${pgGran}', order.createdAt)`, 'period')
+      .addSelect('COUNT(order.id)', 'count')
+      .addSelect('SUM(order.totalAmount)', 'revenue')
       .groupBy('period')
-      .orderBy('period', 'ASC');
+      .orderBy('period', 'ASC')
+      .getRawMany();
 
-    const rows = await qb.getRawMany();
-
-    const totalRevenue = rows.reduce((s, r) => s + Number(r.revenue || 0), 0);
-    const totalOrders = rows.reduce((s, r) => s + Number(r.orders || 0), 0);
-
-    const data = rows.map((r) => ({ period: r.period, orders: Number(r.orders), revenue: Number(r.revenue) }));
-
-    let csv: string | undefined;
-    if (dto.export === 'csv') {
-      const parser = new Json2CsvParser({ fields: ['period', 'orders', 'revenue'] });
-      csv = parser.parse(data as any);
-    }
-
-    const result = { data: { totalRevenue, totalOrders, series: data }, csv };
-    await this.cacheManager.set(cacheKey, result, 60);
-    return result;
-  }
-
-  async getSellerProductPerformance(sellerId: string, dto: { startDate?: string; endDate?: string; limit?: number; export?: 'csv' | 'json' }) {
-    const cacheKey = `seller_products:${sellerId}:${dto.startDate || ''}:${dto.endDate || ''}:${dto.limit || 10}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached as any;
-
-    const qb = this.transactionRepository.createQueryBuilder('t')
-      .innerJoin(Listing, 'l', 'l.id = t.listing_id')
-      .where('l.userId = :sellerId', { sellerId })
-      .andWhere('t.type = :type', { type: TransactionType.PURCHASE })
-      .andWhere('t.status = :status', { status: TransactionStatus.COMPLETED });
-
-    if (dto.startDate && dto.endDate) {
-      qb.andWhere('t.created_at BETWEEN :start AND :end', { start: new Date(dto.startDate), end: new Date(dto.endDate) });
-    }
-
-    qb.select('l.id', 'listingId')
-      .addSelect('l.title', 'title')
-      .addSelect('COUNT(*)', 'unitsSold')
-      .addSelect('SUM(t.amount)', 'revenue')
-      .groupBy('l.id')
-      .addGroupBy('l.title')
-      .orderBy('revenue', 'DESC')
-      .limit(dto.limit || 10);
-
-    const rows = await qb.getRawMany();
-
-    const data = rows.map((r) => ({ listingId: r.listingId, title: r.title, unitsSold: Number(r.unitsSold), revenue: Number(r.revenue) }));
-
-    let csv: string | undefined;
-    if (dto.export === 'csv') {
-      const parser = new Json2CsvParser({ fields: ['listingId', 'title', 'unitsSold', 'revenue'] });
-      csv = parser.parse(data as any);
-    }
-
-    const result = { data, csv };
-    await this.cacheManager.set(cacheKey, result, 60);
-    return result;
-  }
-
-  async getSellerCustomerDemographics(sellerId: string, dto: { startDate?: string; endDate?: string; export?: 'csv' | 'json' }) {
-    const cacheKey = `seller_customers:${sellerId}:${dto.startDate || ''}:${dto.endDate || ''}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached as any;
-
-    const qb = this.transactionRepository.createQueryBuilder('t')
-      .innerJoin(Listing, 'l', 'l.id = t.listing_id')
-      .innerJoin(Users, 'u', 'u.id = t.buyer_id')
-      .where('l.userId = :sellerId', { sellerId })
-      .andWhere('t.type = :type', { type: TransactionType.PURCHASE })
-      .andWhere('t.status = :status', { status: TransactionStatus.COMPLETED });
-
-    if (dto.startDate && dto.endDate) {
-      qb.andWhere('t.created_at BETWEEN :start AND :end', { start: new Date(dto.startDate), end: new Date(dto.endDate) });
-    }
-
-    // Get unique customers and their purchase metrics
-    qb.select('u.id', 'customerId')
-      .addSelect('u.name', 'customerName')
-      .addSelect('COUNT(*)', 'purchaseCount')
-      .addSelect('SUM(t.amount)', 'totalSpent')
-      .addSelect('AVG(t.amount)', 'avgOrderValue')
-      .groupBy('u.id')
-      .addGroupBy('u.name')
-      .orderBy('totalSpent', 'DESC')
-      .limit(100);
-
-    const rows = await qb.getRawMany();
-
-    const data = rows.map((r) => ({
-      customerId: r.customerId,
-      customerName: r.customerName,
-      purchaseCount: Number(r.purchaseCount),
-      totalSpent: Number(r.totalSpent),
-      avgOrderValue: Number(r.avgOrderValue),
+    const formattedSeries = series.map(s => ({
+      period: s.period,
+      orders: Number(s.count),
+      revenue: Number(s.revenue),
     }));
 
-    const summary = {
-      totalUniqueCustomers: data.length,
-      totalCustomerRevenue: data.reduce((s, c) => s + Number(c.totalSpent), 0),
-      avgCustomerLifetimeValue: data.length > 0 ? data.reduce((s, c) => s + Number(c.totalSpent), 0) / data.length : 0,
-      repeatCustomers: data.filter((c) => Number(c.purchaseCount) > 1).length,
-      topCustomers: data.slice(0, 10),
+    const result = {
+      summary: {
+        totalRevenue,
+        totalOrders,
+        totalDiscounts,
+        netRevenue,
+        averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+      },
+      series: formattedSeries,
     };
 
-    let csv: string | undefined;
-    if (dto.export === 'csv') {
-      const parser = new Json2CsvParser({
-        fields: ['customerId', 'customerName', 'purchaseCount', 'totalSpent', 'avgOrderValue'],
-      });
-      csv = parser.parse(data as any);
+    if (dto.export === AnalyticsExportFormat.CSV) {
+      const parser = new Json2CsvParser({ fields: ['period', 'orders', 'revenue'] });
+      return { ...result, csv: parser.parse(formattedSeries) };
     }
 
-    const result = { data: summary, csv };
-    await this.cacheManager.set(cacheKey, result, 60);
+    await this.cacheManager.set(cacheKey, result, 300); // 5 min cache
     return result;
   }
-} 
+
+  /**
+   * Get product performance for a seller
+   */
+  async getSellerProductPerformance(sellerId: string, dto: AnalyticsQueryDto) {
+    const { startDate, endDate, limit } = dto;
+    const cacheKey = `seller_products:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}:${limit}`;
+
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached && !dto.export) return cached;
+
+    // We need to join with orders to get sales data per product
+    // Since items are jsonb in Order entity, we'll iterate or use a specialized query
+    // For performance and TypeORM limits, we'll fetch orders and aggregate
+    const orders = await this.orderRepository.find({
+      where: {
+        sellerId,
+        status: In([OrderStatus.COMPLETED, OrderStatus.DELIVERED]),
+        ...(startDate && endDate ? { createdAt: Between(startDate, endDate) } : {})
+      }
+    });
+
+    const productMap = new Map<string, { title: string, unitsSold: number, revenue: number, orders: number }>();
+
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        const existing = productMap.get(item.productId);
+        if (existing) {
+          existing.unitsSold += item.quantity;
+          existing.revenue += item.subtotal;
+          existing.orders += 1;
+        } else {
+          productMap.set(item.productId, {
+            title: item.productName,
+            unitsSold: item.quantity,
+            revenue: item.subtotal,
+            orders: 1
+          });
+        }
+      });
+    });
+
+    const performance = Array.from(productMap.entries())
+      .map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, limit);
+
+    if (dto.export === AnalyticsExportFormat.CSV) {
+      const parser = new Json2CsvParser({ fields: ['id', 'title', 'unitsSold', 'revenue', 'orders'] });
+      return { data: performance, csv: parser.parse(performance) };
+    }
+
+    await this.cacheManager.set(cacheKey, performance, 600);
+    return performance;
+  }
+
+  /**
+   * Get customer insights for a seller
+   */
+  async getSellerCustomerInsights(sellerId: string, dto: AnalyticsQueryDto) {
+    const { startDate, endDate } = dto;
+    const cacheKey = `seller_customers:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
+
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
+    const orders = await this.orderRepository.find({
+      where: {
+        sellerId,
+        status: In([OrderStatus.COMPLETED, OrderStatus.DELIVERED]),
+        ...(startDate && endDate ? { createdAt: Between(startDate, endDate) } : {})
+      },
+      relations: ['buyer']
+    });
+
+    const customerMap = new Map<string, { name: string, email: string, orderCount: number, totalSpent: number }>();
+
+    orders.forEach(order => {
+      const buyer = order.buyer;
+      if (!buyer) return;
+
+      const existing = customerMap.get(buyer.id);
+      if (existing) {
+        existing.orderCount += 1;
+        existing.totalSpent += Number(order.totalAmount);
+      } else {
+        customerMap.set(buyer.id, {
+          name: `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() || 'Unknown',
+          email: buyer.email,
+          orderCount: 1,
+          totalSpent: Number(order.totalAmount)
+        });
+      }
+    });
+
+    const customers = Array.from(customerMap.values());
+    const repeatCustomers = customers.filter(c => c.orderCount > 1).length;
+
+    const result = {
+      totalUniqueCustomers: customers.length,
+      repeatCustomers,
+      topCustomers: customers.sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 10),
+      summary: {
+        averageSpentPerCustomer: customers.length > 0 
+          ? customers.reduce((s, c) => s + c.totalSpent, 0) / customers.length 
+          : 0
+      }
+    };
+
+    await this.cacheManager.set(cacheKey, result, 1800);
+    return result;
+  }
+
+  private mapGranularityToPg(granularity?: AnalyticsGranularity) {
+    if (granularity === AnalyticsGranularity.WEEKLY) return 'week';
+    if (granularity === AnalyticsGranularity.MONTHLY) return 'month';
+    return 'day';
+  }
+}
