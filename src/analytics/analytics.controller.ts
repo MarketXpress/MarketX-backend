@@ -1,29 +1,79 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
-import { UserAnalyticsService } from './user-analytics.service';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  HttpStatus,
+  Res,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
+import { CurrentUser } from '../Authentication/current-user.decorator';
 import { AnalyticsService } from './analytics.service';
+import { AnalyticsQueryDto, AnalyticsExportFormat } from './dto/analytics-query.dto';
+import { Response } from 'express';
 
-@Controller('analytics')
+@ApiTags('Analytics')
+@Controller('sellers/analytics')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class AnalyticsController {
-  constructor(
-    private readonly userAnalyticsService: UserAnalyticsService,
-    private readonly analyticsService: AnalyticsService,
-  ) {}
+  constructor(private readonly analyticsService: AnalyticsService) {}
 
-  @Get('platform')
-  async getPlatformAnalytics(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+  @Get('sales')
+  @ApiOperation({ summary: 'Get seller sales metrics and revenue tracking' })
+  @ApiResponse({ status: 200, description: 'Sales metrics and time-series data' })
+  async getSalesAnalytics(
+    @CurrentUser() user: any,
+    @Query() query: AnalyticsQueryDto,
+    @Res() res: Response,
   ) {
-    return this.analyticsService.getPlatformAnalytics(startDate, endDate);
+    const sellerId = user.id.toString();
+    const result = await this.analyticsService.getSellerSalesAnalytics(sellerId, query);
+
+    if (query.export === AnalyticsExportFormat.CSV && result.csv) {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="sales-analytics-${new Date().toISOString().split('T')[0]}.csv"`,
+      );
+      return res.status(HttpStatus.OK).send(result.csv);
+    }
+
+    return res.status(HttpStatus.OK).json(result);
   }
 
-  @Get('user/:userId')
-  async getUserAnalytics(
-    @Param('userId') userId: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+  @Get('products')
+  @ApiOperation({ summary: 'Get best-selling products and performance metrics' })
+  @ApiResponse({ status: 200, description: 'Product performance data' })
+  async getProductAnalytics(
+    @CurrentUser() user: any,
+    @Query() query: AnalyticsQueryDto,
+    @Res() res: Response,
   ) {
-    // Fetch all user analytics
-    return this.userAnalyticsService.getUserAnalytics(userId, startDate, endDate);
+    const sellerId = user.id.toString();
+    const result = await this.analyticsService.getSellerProductPerformance(sellerId, query);
+
+    if (query.export === AnalyticsExportFormat.CSV && result.csv) {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="product-performance-${new Date().toISOString().split('T')[0]}.csv"`,
+      );
+      return res.status(HttpStatus.OK).send(result.csv);
+    }
+
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('customers')
+  @ApiOperation({ summary: 'Get customer insights and demographics' })
+  @ApiResponse({ status: 200, description: 'Customer demographics and behavior' })
+  async getCustomerInsights(
+    @CurrentUser() user: any,
+    @Query() query: AnalyticsQueryDto,
+  ) {
+    const sellerId = user.id.toString();
+    return this.analyticsService.getSellerCustomerInsights(sellerId, query);
   }
 }

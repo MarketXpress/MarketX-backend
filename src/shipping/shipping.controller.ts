@@ -44,7 +44,7 @@ export class ShippingController {
     return shipment;
   }
 
-  @Get('shipments/tracking/:trackingNumber')
+  @Get('shipments/:trackingNumber')
   @ApiOperation({ summary: 'Look up shipment by tracking number' })
   @ApiResponse({
     status: 200,

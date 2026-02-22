@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductsModule } from './products/products.module';
@@ -19,6 +20,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { CustomI18nModule } from './i18n/i18n.module';
 import { PriceModule } from './price/price.module';
 import { UserVerification } from './verification/user-verification.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 import { VerificationModule } from './verification/verification.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
@@ -38,6 +40,7 @@ import { EmailModule } from './email/email.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(), // Enable scheduling
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -61,6 +64,7 @@ import { EmailModule } from './email/email.module';
     PaymentsModule,
     ProductsModule,
     CustomI18nModule,
+    ScheduleModule.forRoot(),
     VerificationModule,
     SubscriptionsModule,
     ShippingModule,
