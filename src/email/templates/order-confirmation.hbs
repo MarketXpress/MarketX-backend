@@ -1,36 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { width: 80%; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-        .header { font-size: 24px; font-weight: bold; color: #2c3e50; margin-bottom: 20px; text-align: center; }
-        .order-info { margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 4px; }
-        .footer { font-size: 12px; color: #777; margin-top: 30px; text-align: center; }
-        .button { background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmed</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f4f6f9; font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; }
+    .wrapper { width: 100%; background: #f4f6f9; padding: 40px 0; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 40px 30px; text-align: center; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 15px; }
+    .checkmark { font-size: 48px; display: block; margin-bottom: 12px; }
+    .body { padding: 36px 40px; }
+    .greeting { font-size: 16px; color: #444; margin-bottom: 24px; line-height: 1.5; }
+    .info-card { background: #f8f9fc; border-radius: 8px; padding: 20px 24px; margin-bottom: 28px; border-left: 4px solid #667eea; }
+    .info-card p { margin: 4px 0; font-size: 14px; color: #555; }
+    .info-card strong { color: #222; }
+    table.items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table.items th { background: #f0f2f7; text-align: left; padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.items td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; color: #444; }
+    table.items tr:last-child td { border-bottom: none; }
+    .total-row td { font-weight: 700; font-size: 16px; color: #222; padding-top: 14px; border-top: 2px solid #e0e0e0; }
+    .cta { text-align: center; margin: 32px 0; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+    .footer { background: #f8f9fc; padding: 24px 40px; text-align: center; border-top: 1px solid #eee; }
+    .footer p { font-size: 12px; color: #999; margin: 4px 0; line-height: 1.5; }
+  </style>
 </head>
 <body>
+  <div class="wrapper">
     <div class="container">
-        <div class="header">Order Confirmed!</div>
-        <p>Hi {{name}},</p>
-        <p>Thank you for your order! We're getting it ready for you.</p>
-        
-        <div class="order-info">
-            <strong>Order ID:</strong> {{orderId}}<br>
-            <strong>Total:</strong> {{currency}} {{total}}<br>
+      <div class="header">
+        <span class="checkmark">✅</span>
+        <h1>Order Confirmed!</h1>
+        <p>Your order has been received and is being processed.</p>
+      </div>
+      <div class="body">
+        <p class="greeting">Hi <strong>{{name}}</strong>,<br />Thank you for your order! We're getting everything ready for you.</p>
+
+        <div class="info-card">
+          <p><strong>Order Number:</strong> #{{orderNumber}}</p>
+          <p><strong>Order ID:</strong> {{orderId}}</p>
         </div>
 
-        <p>You can track your order status by clicking the button below:</p>
-        <p style="text-align: center;">
-            <a href="{{trackingUrl}}" class="button">View Order Status</a>
+        <table class="items">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each items}}
+            <tr>
+              <td>{{this.productName}}</td>
+              <td>{{this.quantity}}</td>
+              <td>{{../currency}} {{this.price}}</td>
+              <td>{{../currency}} {{this.subtotal}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="3">Total</td>
+              <td>{{currency}} {{total}}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="cta">
+          <a href="{{trackingUrl}}" class="btn">View Your Order</a>
+        </div>
+
+        <p style="font-size:14px;color:#666;line-height:1.6;">
+          We'll notify you when your order ships. If you have any questions, reply to this email or visit our support centre.
         </p>
-
-        <p>Best regards,<br>The MarketX Team</p>
-        
-        <div class="footer">
-            &copy; {{year}} MarketX Inc. All rights reserved.
-        </div>
+        <p style="font-size:14px;color:#666;">Best regards,<br /><strong>The MarketX Team</strong></p>
+      </div>
+      <div class="footer">
+        <p>You received this email because you placed an order on MarketX.</p>
+        <p>&copy; {{year}} MarketX Inc. All rights reserved.</p>
+      </div>
     </div>
+  </div>
 </body>
 </html>

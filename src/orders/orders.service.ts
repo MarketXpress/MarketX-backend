@@ -30,7 +30,7 @@ export class OrdersService {
     private readonly pricingService: PricingService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryService: InventoryService,
-  ) {}
+  ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     // In a real application, you would fetch product details from a database
@@ -169,9 +169,6 @@ export class OrdersService {
       // Update timestamps based on status
       const now = new Date();
       switch (updateOrderStatusDto.status) {
-        case OrderStatus.CANCELLED:
-          order.cancelledAt = now;
-          break;
         case OrderStatus.SHIPPED:
           order.shippedAt = now;
           break;

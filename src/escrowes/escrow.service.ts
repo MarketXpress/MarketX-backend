@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as StellarSdk from 'stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import { EscrowEntity, EscrowStatus } from './entities/escrow.entity';
 import {
   CreateEscrowDto,
@@ -12,14 +12,14 @@ import {
 
 @Injectable()
 export class EscrowService {
-  private stellarServer: StellarSdk.Server;
+  private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
   private escrowRepository: Repository<EscrowEntity>;
 
   constructor() {
     // Initialize Stellar SDK for testnet
-    this.stellarServer = new StellarSdk.Server('https://horizon-testnet.stellar.org');
-    this.networkPassphrase = StellarSdk.Networks.TESTNET_NETWORK_PASSPHRASE;
+    this.stellarServer = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
+    this.networkPassphrase = StellarSdk.Networks.TESTNET;
     // InjectRepository should be handled outside the service class
     // this.escrowRepository = escrowRepository;
   }
@@ -53,7 +53,7 @@ export class EscrowService {
         status: EscrowStatus.PENDING,
       };
 
-      const savedEscrow = await this.saveEscrow(escrow);
+      const savedEscrow = await this.saveEscrow(escrow as any);
 
       // Build lock transaction: buyer funds escrow account
       const lockTx = await this.buildLockTransaction(
@@ -188,7 +188,7 @@ export class EscrowService {
     fromPublicKey: string,
     toPublicKey: string,
     amount: number,
-  ): Promise<StellarSdk.Transaction> {
+  ): Promise<any> {
     const sourceAccount = await this.stellarServer.loadAccount(fromPublicKey);
 
     const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
@@ -212,7 +212,7 @@ export class EscrowService {
     fromPublicKey: string,
     toPublicKey: string,
     amount: number,
-  ): Promise<StellarSdk.Transaction> {
+  ): Promise<any> {
     const sourceAccount = await this.stellarServer.loadAccount(fromPublicKey);
 
     const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
@@ -236,7 +236,7 @@ export class EscrowService {
     fromPublicKey: string,
     toPublicKey: string,
     amount: number,
-  ): Promise<StellarSdk.Transaction> {
+  ): Promise<any> {
     const sourceAccount = await this.stellarServer.loadAccount(fromPublicKey);
 
     const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
@@ -257,7 +257,7 @@ export class EscrowService {
   }
 
   private async submitTransaction(
-    transaction: StellarSdk.Transaction,
+    transaction: any,
   ): Promise<string> {
     // Note: Transaction must be signed before submission
     // This should be done in the controller after getting the signing key

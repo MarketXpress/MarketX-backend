@@ -18,7 +18,7 @@ import { Response } from 'express';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(private readonly analyticsService: AnalyticsService) { }
 
   @Get('sales')
   @ApiOperation({ summary: 'Get seller sales metrics and revenue tracking' })
@@ -29,7 +29,7 @@ export class AnalyticsController {
     @Res() res: Response,
   ) {
     const sellerId = user.id.toString();
-    const result = await this.analyticsService.getSellerSalesAnalytics(sellerId, query);
+    const result = await this.analyticsService.getSellerSalesAnalytics(sellerId, query) as any;
 
     if (query.export === AnalyticsExportFormat.CSV && result.csv) {
       res.setHeader('Content-Type', 'text/csv');
@@ -52,7 +52,7 @@ export class AnalyticsController {
     @Res() res: Response,
   ) {
     const sellerId = user.id.toString();
-    const result = await this.analyticsService.getSellerProductPerformance(sellerId, query);
+    const result = await this.analyticsService.getSellerProductPerformance(sellerId, query) as any;
 
     if (query.export === AnalyticsExportFormat.CSV && result.csv) {
       res.setHeader('Content-Type', 'text/csv');
