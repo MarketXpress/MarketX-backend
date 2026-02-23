@@ -32,6 +32,9 @@ import { WishlistsModule } from './wishlist/wishlists.module';
 import { EmailModule } from './email/email.module';
 import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
 import { JobsModule } from './job-processing/jobs.module';
+import { RecommendationsModule } from './recommendation/recommendation.module';
+import { RefundsModule } from './refunds/refunds.module';
+import { ListingsModule } from './listing/listing.module';
 
 // ── Entities registered at root (shared / no dedicated module) ─────────────
 import { ProductImage } from './media/entities/image.entity';
@@ -99,6 +102,9 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
 
     FeatureFlagsModule,
     JobsModule,
+    RecommendationsModule,
+    RefundsModule,
+    ListingsModule,
   ],
   controllers: [AppController],
   providers: [
