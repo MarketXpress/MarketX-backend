@@ -34,6 +34,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { WishlistsModule } from './wishlist/wishlists.module';
 import { BullModule } from '@nestjs/bull';
 import { EmailModule } from './email/email.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { EmailModule } from './email/email.module';
     MessagesModule,
     CommonModule,
     LoggerModule,
+    BackupModule,
     HealthModule,
     PaymentsModule,
     ProductsModule,
