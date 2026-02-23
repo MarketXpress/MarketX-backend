@@ -503,9 +503,7 @@ export class SubscriptionsService {
     return features;
   }
 
-  /**
-   * Get available features for a tier
-   */
+
   private getAvailableFeatures(tierLimits: any): string[] {
     const features: string[] = [];
     Object.entries(tierLimits).forEach(([feature, value]) => {
