@@ -1,84 +1,132 @@
+/* eslint-disable prettier/prettier */
 import {
-  Body,
   Controller,
   Get,
-  Param,
-  Patch,
   Post,
+  Body,
+  Param,
   Query,
-  Req,
   UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
-import { RequestRefundDto } from './dto/request-refund.dto';
-import { ApproveRefundDto } from './dto/approve-refund.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import {
+  CreateReturnRequestDto,
+  ReviewReturnRequestDto,
+  ProcessRefundDto,
+  QueryReturnRequestsDto,
+} from './dto/refund.dto';
+import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
-import { RefundStatus } from './entities/refund.entity';
 
-@Controller()
+@Controller('refunds')
 @UseGuards(JwtAuthGuard)
 export class RefundsController {
   constructor(private readonly refundsService: RefundsService) {}
 
-  // POST /orders/:id/refund — buyer submits return request
-  @Post('orders/:id/refund')
-  requestRefund(
-    @Param('id') orderId: string,
-    @Body() dto: RequestRefundDto,
-    @Req() req: any,
-  ) {
-    return this.refundsService.requestRefund(orderId, req.user.id, dto);
+  /**
+   * Create a new return request (buyer)
+   * POST /refunds/returns
+   */
+  @Post('returns')
+  @HttpCode(HttpStatus.CREATED)
+  async createReturnRequest(@Body() dto: CreateReturnRequestDto) {
+    return this.refundsService.createReturnRequest(dto);
   }
 
-  // GET /orders/:id/refunds — buyer/admin views refunds for an order
-  @Get('orders/:id/refunds')
-  getRefundsByOrder(@Param('id') orderId: string) {
-    return this.refundsService.findByOrder(orderId);
+  /**
+   * Get return requests (buyer, seller, admin)
+   * GET /refunds/returns
+   */
+  @Get('returns')
+  async getReturnRequests(@Query() query: QueryReturnRequestsDto) {
+    return this.refundsService.getReturnRequests(query);
   }
 
-  // GET /refunds/me — buyer views their own refund history
-  @Get('refunds/me')
-  getMyRefunds(@Req() req: any, @Query('status') status?: RefundStatus) {
-    return this.refundsService.findAll({ buyerId: req.user.id, status });
+  /**
+   * Get a specific return request
+   * GET /refunds/returns/:id
+   */
+  @Get('returns/:id')
+  async getReturnRequest(@Param('id') id: string) {
+    return this.refundsService.getReturnRequest(id);
   }
 
-  // GET /refunds/:id — view single refund
-  @Get('refunds/:id')
-  getRefund(@Param('id') id: string) {
-    return this.refundsService.findOne(id);
-  }
-
-  // PATCH /admin/refunds/:id/approve — admin approves
-  @Patch('admin/refunds/:id/approve')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  approveRefund(
+  /**
+   * Cancel a return request (buyer only)
+   * POST /refunds/returns/:id/cancel
+   */
+  @Post('returns/:id/cancel')
+  @HttpCode(HttpStatus.OK)
+  async cancelReturnRequest(
     @Param('id') id: string,
-    @Body() dto: ApproveRefundDto,
-    @Req() req: any,
+    @Request() req: any,
   ) {
-    return this.refundsService.approveRefund(id, req.user.id, dto);
+    return this.refundsService.cancelReturnRequest(id, req.user.id);
   }
 
-  // PATCH /admin/refunds/:id/reject — admin rejects
-  @Patch('admin/refunds/:id/reject')
+  /**
+   * Review a return request (admin only)
+   * POST /refunds/returns/:id/review
+   */
+  @Post('returns/:id/review')
   @UseGuards(RolesGuard)
   @Roles('admin')
-  rejectRefund(
+  @HttpCode(HttpStatus.OK)
+  async reviewReturnRequest(
     @Param('id') id: string,
-    @Body('adminNotes') adminNotes: string,
-    @Req() req: any,
+    @Body() dto: ReviewReturnRequestDto,
+    @Request() req: any,
   ) {
-    return this.refundsService.rejectRefund(id, req.user.id, adminNotes);
+    return this.refundsService.reviewReturnRequest(
+      id,
+      dto,
+      req.user.id,
+    );
   }
 
-  // GET /admin/refunds — admin views all refunds
-  @Get('admin/refunds')
+  /**
+   * Process refund (admin only)
+   * POST /refunds/process
+   */
+  @Post('process')
   @UseGuards(RolesGuard)
   @Roles('admin')
-  getAllRefunds(@Query('status') status?: RefundStatus) {
-    return this.refundsService.findAll({ status });
+  @HttpCode(HttpStatus.CREATED)
+  async processRefund(@Body() dto: ProcessRefundDto) {
+    return this.refundsService.processRefund(dto);
+  }
+
+  /**
+   * Get refund history for an order
+   * GET /refunds/orders/:orderId/history
+   */
+  @Get('orders/:orderId/history')
+  async getRefundHistoryByOrder(
+    @Param('orderId') orderId: string,
+  ) {
+    return this.refundsService.getRefundHistoryByOrder(
+      orderId,
+    );
+  }
+
+  /**
+   * Get all refund history (admin only)
+   * GET /refunds/history
+   */
+  @Get('history')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async getAllRefundHistory(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.refundsService.getAllRefundHistory(
+      limit ? parseInt(limit) : 50,
+      offset ? parseInt(offset) : 0,
+    );
   }
 }

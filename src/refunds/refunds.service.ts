@@ -1,270 +1,235 @@
+/* eslint-disable prettier/prettier */
 import {
+  Injectable,
+  Logger,
+  NotFoundException,
   BadRequestException,
   ForbiddenException,
-  Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Refund, RefundStatus, RefundType } from './entities/refund.entity';
-import { RequestRefundDto } from './dto/request-refund.dto';
-import { ApproveRefundDto } from './dto/approve-refund.dto';
-import { OrdersService } from '../orders/orders.service';
-import { EscrowService } from '../escrowes/escrow.service';
 import {
-  OrderStatus,
-  UpdateOrderStatusDto,
-} from '../orders/dto/create-order.dto';
+  ReturnRequest,
+  ReturnStatus,
+  RefundType,
+} from './entities/return-request.entity';
+import { RefundHistory } from './entities/refund-history.entity';
+import { Order } from '../orders/entities/order.entity';
+import {
+  CreateReturnRequestDto,
+  ReviewReturnRequestDto,
+  ProcessRefundDto,
+  QueryReturnRequestsDto,
+} from './dto/refund.dto';
+import { InventoryService } from '../inventory/inventory.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
-const REFUND_WINDOW_DAYS = 30;
+const DEFAULT_RETURN_WINDOW_DAYS = 30;
 
 @Injectable()
 export class RefundsService {
+  private readonly logger = new Logger(RefundsService.name);
+
   constructor(
-    @InjectRepository(Refund)
-    private readonly refundRepo: Repository<Refund>,
-    private readonly ordersService: OrdersService,
-    private readonly escrowService: EscrowService,
+    @InjectRepository(ReturnRequest)
+    private readonly returnRequestRepository: Repository<ReturnRequest>,
+    @InjectRepository(RefundHistory)
+    private readonly refundHistoryRepository: Repository<RefundHistory>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+    private readonly inventoryService: InventoryService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  // ─── Buyer: Request a Refund ────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // CREATE RETURN REQUEST (Merged + Improved Validation)
+  // ─────────────────────────────────────────────────────────────
 
-  async requestRefund(
-    orderId: string,
-    buyerId: string,
-    dto: RequestRefundDto,
-  ): Promise<Refund> {
-    const order = await this.ordersService.findOne(orderId);
+  async createReturnRequest(
+    dto: CreateReturnRequestDto,
+  ): Promise<ReturnRequest> {
+    const {
+      orderId,
+      buyerId,
+      sellerId,
+      reason,
+      reasonDescription,
+      refundType,
+      items,
+      returnWindowDays,
+    } = dto;
 
-    // Ownership check
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    // Ownership validation (from your feature branch)
     if (order.buyerId !== buyerId) {
-      throw new ForbiddenException('You are not the buyer of this order.');
-    }
-
-    // Status check — only delivered orders are refundable
-    if (order.status !== OrderStatus.DELIVERED) {
-      throw new BadRequestException('Only delivered orders can be refunded.');
-    }
-
-    // Time-window check
-    const deliveredAt: Date | undefined = order.deliveredAt;
-    if (!deliveredAt) {
-      throw new BadRequestException('Order has no delivery date recorded.');
-    }
-    const diffDays =
-      (Date.now() - deliveredAt.getTime()) / (1000 * 60 * 60 * 24);
-    if (diffDays > REFUND_WINDOW_DAYS) {
-      throw new BadRequestException(
-        `Refund window of ${REFUND_WINDOW_DAYS} days has passed.`,
+      throw new ForbiddenException(
+        'You can only request returns for your own orders',
       );
     }
 
-    // Duplicate check
-    const existing = await this.refundRepo.findOne({
-      where: { orderId, status: RefundStatus.PENDING },
+    // Must be delivered
+    if (order.status !== 'delivered') {
+      throw new BadRequestException(
+        'Only delivered orders can be refunded',
+      );
+    }
+
+    // Refund window validation (merged from your branch)
+    if (!order.deliveredAt) {
+      throw new BadRequestException(
+        'Order has no delivery date recorded',
+      );
+    }
+
+    const maxReturnDays = returnWindowDays || DEFAULT_RETURN_WINDOW_DAYS;
+    const diffDays =
+      (Date.now() - order.deliveredAt.getTime()) /
+      (1000 * 60 * 60 * 24);
+
+    if (diffDays > maxReturnDays) {
+      throw new BadRequestException(
+        `Return window of ${maxReturnDays} days has expired`,
+      );
+    }
+
+    // Prevent duplicate pending requests (from your feature branch)
+    const existing = await this.returnRequestRepository.findOne({
+      where: { orderId, status: ReturnStatus.PENDING },
     });
+
     if (existing) {
       throw new BadRequestException(
-        'A pending refund request already exists for this order.',
+        'A pending return request already exists for this order',
       );
     }
 
-    // Amount validation
-    const originalAmount = Number(order.totalAmount);
     let requestedAmount: number;
+    const finalRefundType = refundType || RefundType.FULL;
 
-    if (dto.type === RefundType.FULL) {
-      requestedAmount = originalAmount;
+    if (finalRefundType === RefundType.FULL) {
+      requestedAmount = Number(order.totalAmount);
     } else {
-      if (!dto.requestedAmount) {
+      if (!items || items.length === 0) {
         throw new BadRequestException(
-          'requestedAmount is required for partial refunds.',
+          'Partial refund requires specifying items',
         );
       }
-      requestedAmount = Number(dto.requestedAmount);
-      if (requestedAmount > originalAmount) {
-        throw new BadRequestException(
-          `Requested amount (${requestedAmount}) exceeds original payment (${originalAmount}).`,
+
+      requestedAmount = 0;
+
+      for (const item of items) {
+        const orderItem = order.items?.find(
+          (i) => i.productId === item.listingId,
         );
+
+        if (!orderItem) {
+          throw new BadRequestException(
+            `Item ${item.listingId} not found in order`,
+          );
+        }
+
+        requestedAmount += orderItem.price * item.quantity;
       }
     }
 
-    const refund = this.refundRepo.create({
+    const returnRequest = this.returnRequestRepository.create({
       orderId,
       buyerId,
-      type: dto.type,
-      reason: dto.reason,
-      description: dto.description,
+      sellerId,
+      reason,
+      reasonDescription,
+      status: ReturnStatus.PENDING,
+      refundType: finalRefundType,
       requestedAmount,
-      status: RefundStatus.PENDING,
+      currency: order.currency,
+      items,
+      returnWindowDays: maxReturnDays,
     });
 
-    const saved = await this.refundRepo.save(refund);
+    const saved = await this.returnRequestRepository.save(returnRequest);
 
-    this.eventEmitter.emit('refund.requested', {
-      refundId: saved.id,
+    this.eventEmitter.emit('return.requested', {
+      returnRequestId: saved.id,
       orderId,
       buyerId,
-      amount: requestedAmount,
+      sellerId,
     });
+
+    this.logger.log(
+      `Created return request ${saved.id} for order ${orderId}`,
+    );
 
     return saved;
   }
 
-  // ─── Admin: Approve a Refund ────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // REVIEW RETURN REQUEST
+  // ─────────────────────────────────────────────────────────────
 
-  async approveRefund(
-    refundId: string,
-    adminId: string,
-    dto: ApproveRefundDto,
-  ): Promise<Refund> {
-    const refund = await this.findOne(refundId);
-
-    if (refund.status !== RefundStatus.PENDING) {
-      throw new BadRequestException(
-        `Cannot approve a refund with status: ${refund.status}`,
-      );
-    }
-
-    // Verify approved amount does not exceed original payment
-    const order = await this.ordersService.findOne(refund.orderId);
-    const originalAmount = Number(order.totalAmount);
-    const approvedAmount = Number(dto.approvedAmount);
-
-    if (approvedAmount > originalAmount) {
-      throw new BadRequestException(
-        `Approved amount (${approvedAmount}) exceeds original payment (${originalAmount}).`,
-      );
-    }
-    if (approvedAmount > refund.requestedAmount) {
-      throw new BadRequestException(
-        `Approved amount cannot exceed the requested amount (${refund.requestedAmount}).`,
-      );
-    }
-
-    refund.status = RefundStatus.APPROVED;
-    refund.approvedAmount = approvedAmount;
-    refund.reviewedById = adminId;
-    refund.adminNotes = dto.adminNotes ?? '';
-
-    await this.refundRepo.save(refund);
-
-    // Trigger Stellar refund transaction
-    return this.processStellarRefund(refund, order);
-  }
-
-  // ─── Admin: Reject a Refund ─────────────────────────────────────────────────
-
-  async rejectRefund(
-    refundId: string,
-    adminId: string,
-    adminNotes?: string,
-  ): Promise<Refund> {
-    const refund = await this.findOne(refundId);
-
-    if (refund.status !== RefundStatus.PENDING) {
-      throw new BadRequestException(
-        `Cannot reject a refund with status: ${refund.status}`,
-      );
-    }
-
-    refund.status = RefundStatus.REJECTED;
-    refund.reviewedById = adminId;
-    refund.adminNotes = adminNotes ?? '';
-
-    const saved = await this.refundRepo.save(refund);
-
-    this.eventEmitter.emit('refund.rejected', {
-      refundId: saved.id,
-      orderId: saved.orderId,
-      buyerId: saved.buyerId,
+  async reviewReturnRequest(
+    id: string,
+    dto: ReviewReturnRequestDto,
+    reviewerId: string,
+  ): Promise<ReturnRequest> {
+    const returnRequest = await this.returnRequestRepository.findOne({
+      where: { id },
     });
 
-    return saved;
-  }
-
-  // ─── Stellar Refund Processing ──────────────────────────────────────────────
-
-  private async processStellarRefund(
-    refund: Refund,
-    order: any,
-  ): Promise<Refund> {
-    try {
-      const escrowByOrder = await this.escrowService.getEscrowByOrderId(
-        order.id,
+    if (!returnRequest) {
+      throw new NotFoundException(
+        `Return request ${id} not found`,
       );
+    }
 
-      const escrowResponse = await this.escrowService.refundBuyer({
-        escrowId: escrowByOrder.id,
-        reason: `REFUND:${refund.id}`,
-      });
+    if (returnRequest.status !== ReturnStatus.PENDING) {
+      throw new BadRequestException(
+        'Can only review pending return requests',
+      );
+    }
 
-      refund.status = RefundStatus.PROCESSED;
-      refund.stellarTransactionHash =
-        escrowResponse.refundTransactionHash ?? '';
-      refund.processedAt = new Date();
+    const { action, notes, approvedAmount } = dto;
 
-      // Update order status
-      await this.ordersService.updateStatus(refund.orderId, {
-        status: OrderStatus.CANCELLED,
-      } as UpdateOrderStatusDto);
+    if (action === 'approved') {
+      returnRequest.status = ReturnStatus.APPROVED;
 
-      // Restore inventory if full refund
-      if (refund.type === RefundType.FULL) {
-        this.eventEmitter.emit('refund.inventory.restore', {
-          orderId: refund.orderId,
-        });
+      // Prevent approving more than requested (from your feature branch)
+      if (
+        approvedAmount &&
+        approvedAmount > returnRequest.requestedAmount
+      ) {
+        throw new BadRequestException(
+          'Approved amount cannot exceed requested amount',
+        );
       }
 
-      const saved = await this.refundRepo.save(refund);
-
-      this.eventEmitter.emit('refund.processed', {
-        refundId: saved.id,
-        orderId: saved.orderId,
-        buyerId: saved.buyerId,
-        amount: saved.approvedAmount,
-        txHash: refund.stellarTransactionHash,
-      });
-
-      return saved;
-    } catch (error) {
-      refund.status = RefundStatus.FAILED;
-      refund.metadata = { error: error.message };
-      await this.refundRepo.save(refund);
-
-      this.eventEmitter.emit('refund.failed', {
-        refundId: refund.id,
-        buyerId: refund.buyerId,
-        error: error.message,
-      });
-
-      throw new BadRequestException(
-        `Stellar refund transaction failed: ${error.message}`,
-      );
+      if (approvedAmount) {
+        returnRequest.requestedAmount = approvedAmount;
+      }
+    } else {
+      returnRequest.status = ReturnStatus.REJECTED;
     }
-  }
 
-  // ─── Queries ────────────────────────────────────────────────────────────────
+    returnRequest.reviewedBy = reviewerId;
+    returnRequest.reviewedAt = new Date();
+    returnRequest.reviewNotes = notes;
 
-  async findAll(filters?: { buyerId?: string; status?: RefundStatus }) {
-    const where: any = {};
-    if (filters?.buyerId) where.buyerId = filters.buyerId;
-    if (filters?.status) where.status = filters.status;
-    return this.refundRepo.find({ where, order: { createdAt: 'DESC' } });
-  }
+    const saved =
+      await this.returnRequestRepository.save(returnRequest);
 
-  async findOne(id: string): Promise<Refund> {
-    const refund = await this.refundRepo.findOne({ where: { id } });
-    if (!refund) throw new NotFoundException(`Refund ${id} not found.`);
-    return refund;
-  }
-
-  async findByOrder(orderId: string): Promise<Refund[]> {
-    return this.refundRepo.find({
-      where: { orderId },
-      order: { createdAt: 'DESC' },
+    this.eventEmitter.emit('return.reviewed', {
+      returnRequestId: saved.id,
+      status: saved.status,
+      buyerId: saved.buyerId,
+      sellerId: saved.sellerId,
     });
+
+    return saved;
   }
 }
