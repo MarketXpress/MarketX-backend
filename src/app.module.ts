@@ -2,7 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@nestjs/schedule';  
+import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
 
 import { AppController } from './app.controller';
@@ -12,7 +12,7 @@ import { AppService } from './app.service';
 import { CommonModule } from './common/common.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { HealthModule } from './health/health.module';
-import { RedisCacheModule } from './redis-caching/redis-cache.module'; // @Global
+import { RedisCacheModule } from './redis-caching/redis-cache.module';
 import { BackupModule } from './backup/backup.module';
 
 // ── Features ───────────────────────────────────────────────────────────────
@@ -30,8 +30,7 @@ import { CouponsModule } from './coupons/coupons.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { WishlistsModule } from './wishlist/wishlists.module';
 import { EmailModule } from './email/email.module';
-import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
-import { JobsModule } from './job-processing/jobs.module';
+import { RefundsModule } from './refunds/refunds.module';
 
 // ── Entities registered at root (shared / no dedicated module) ─────────────
 import { ProductImage } from './media/entities/image.entity';
@@ -49,7 +48,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
   imports: [
     // ── Core config ──────────────────────────────────────────────────────
     ConfigModule.forRoot({ isGlobal: true }),
-    ScheduleModule.forRoot(), // ← registered exactly once
+    ScheduleModule.forRoot(),
 
     // ── Database ─────────────────────────────────────────────────────────
     TypeOrmModule.forRoot({
@@ -66,7 +65,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     }),
     TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage]),
 
-    // ── Queue (global Redis config; individual queues registered in JobsModule) ──
+    // ── Queue ─────────────────────────────────────────────────────────────
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
@@ -74,14 +73,14 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
       },
     }),
 
-    // ── Infrastructure (order matters — cache must come before feature flags) ──
-    RedisCacheModule,    // @Global — CacheModule + RedisCacheService available everywhere
+    // ── Infrastructure ────────────────────────────────────────────────────
+    RedisCacheModule,
     LoggerModule,
     CommonModule,
     HealthModule,
     BackupModule,
 
-   
+    // ── Features ──────────────────────────────────────────────────────────
     PriceModule,
     ProductsModule,
     FraudModule,
@@ -96,9 +95,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     AnalyticsModule,
     WishlistsModule,
     EmailModule,
-
-    FeatureFlagsModule,
-    JobsModule,
+    RefundsModule,
   ],
   controllers: [AppController],
   providers: [
