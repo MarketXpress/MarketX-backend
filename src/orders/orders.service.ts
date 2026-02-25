@@ -28,6 +28,9 @@ export class OrdersService {
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
     private readonly pricingService: PricingService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly inventoryService: InventoryService,
+  ) { }
     private dataSource: DataSource,
     private inventoryService: InventoryService,
   ) {}
@@ -111,6 +114,38 @@ export class OrdersService {
     updateOrderStatusDto: UpdateOrderStatusDto,
   ): Promise<Order> {
     const order = await this.findOne(id);
+    const previousStatus = order.status;
+
+    // Handle inventory based on status change
+    if (updateOrderStatusDto.status === OrderStatus.PAID) {
+      // Confirm the order and reduce inventory
+      await this.inventoryService.confirmOrder(order);
+      order.status = OrderStatus.PAID;
+    } else if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
+      // Cancel the order and release inventory
+      await this.inventoryService.cancelOrder(order);
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = new Date();
+    } else {
+      // Validate state transition for other statuses
+      if (
+        !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
+      ) {
+        throw new BadRequestException(
+          `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
+        );
+      }
+
+      // Update timestamps based on status
+      const now = new Date();
+      switch (updateOrderStatusDto.status) {
+        case OrderStatus.SHIPPED:
+          order.shippedAt = now;
+          break;
+        case OrderStatus.DELIVERED:
+          order.deliveredAt = now;
+          break;
+      }
 
     // Validate state transition
     if (

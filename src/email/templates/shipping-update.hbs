@@ -1,37 +1,169 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your Order Has Shipped</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { width: 80%; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-        .header { font-size: 24px; font-weight: bold; color: #27ae60; margin-bottom: 20px; text-align: center; }
-        .info { margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 4px; }
-        .footer { font-size: 12px; color: #777; margin-top: 30px; text-align: center; }
-        .button { background: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f4f6f9;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #333;
+        }
+
+        .wrapper {
+            width: 100%;
+            background: #f4f6f9;
+            padding: 40px 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            padding: 40px 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            margin: 8px 0 0;
+            font-size: 15px;
+        }
+
+        .icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .body {
+            padding: 36px 40px;
+        }
+
+        .greeting {
+            font-size: 16px;
+            color: #444;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .tracking-card {
+            background: #f0faf6;
+            border-radius: 8px;
+            padding: 22px 26px;
+            margin-bottom: 28px;
+            border-left: 4px solid #11998e;
+        }
+
+        .tracking-card .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #d9f0e8;
+            font-size: 14px;
+        }
+
+        .tracking-card .row:last-child {
+            border-bottom: none;
+        }
+
+        .tracking-card .label {
+            color: #666;
+        }
+
+        .tracking-card .value {
+            color: #222;
+            font-weight: 600;
+        }
+
+        .cta {
+            text-align: center;
+            margin: 28px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 14px 36px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .footer {
+            background: #f8f9fc;
+            padding: 24px 40px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+
+        .footer p {
+            font-size: 12px;
+            color: #999;
+            margin: 4px 0;
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="header">Your Order is on its way!</div>
-        <p>Hi {{name}},</p>
-        <p>Great news! Your order has been shipped and is on its way to you.</p>
-        
-        <div class="info">
-            <strong>Order ID:</strong> {{orderId}}<br>
-            <strong>Tracking Number:</strong> {{trackingNumber}}<br>
-            <strong>Carrier:</strong> {{carrier}}<br>
-        </div>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <span class="icon">📦</span>
+                <h1>Your Order is On Its Way!</h1>
+                <p>Great news — your package has been shipped.</p>
+            </div>
+            <div class="body">
+                <p class="greeting">Hi <strong>{{name}}</strong>,<br />Your order is on its way to you!</p>
 
-        <p>You can track your package by clicking the button below:</p>
-        <p style="text-align: center;">
-            <a href="{{trackingUrl}}" class="button">Track Package</a>
-        </p>
+                <div class="tracking-card">
+                    <div class="row"><span class="label">Order Number</span><span class="value">#{{orderNumber}}</span>
+                    </div>
+                    <div class="row"><span class="label">Carrier</span><span class="value">{{carrier}}</span></div>
+                    <div class="row"><span class="label">Tracking Number</span><span
+                            class="value">{{trackingNumber}}</span></div>
+                    {{#if estimatedDelivery}}
+                    <div class="row"><span class="label">Estimated Delivery</span><span
+                            class="value">{{estimatedDelivery}}</span></div>
+                    {{/if}}
+                </div>
 
-        <p>Best regards,<br>The MarketX Team</p>
-        
-        <div class="footer">
-            &copy; {{year}} MarketX Inc. All rights reserved.
+                <div class="cta">
+                    <a href="{{trackingUrl}}" class="btn">Track My Package</a>
+                </div>
+
+                <p style="font-size:14px;color:#666;line-height:1.7;">
+                    Please allow a few hours for the tracking information to update with the carrier.
+                    If you have any issues with your delivery, contact our support team.
+                </p>
+                <p style="font-size:14px;color:#666;">Best regards,<br /><strong>The MarketX Team</strong></p>
+            </div>
+            <div class="footer">
+                <p>You received this email because you placed an order on MarketX.</p>
+                <p>&copy; {{year}} MarketX Inc. All rights reserved.</p>
+            </div>
         </div>
     </div>
 </body>
+
 </html>

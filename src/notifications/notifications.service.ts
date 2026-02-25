@@ -64,7 +64,7 @@ export class NotificationsService {
     @Inject(InjectQueue('email')) private readonly emailQueue: Queue,
     private readonly i18nService: I18nService,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
-  ) {}
+  ) { }
 
   /**
    * Get or create default preferences for a user
@@ -710,11 +710,12 @@ export class NotificationsService {
     );
 
     // Invalidate caches per user (simple implementation)
-    if (this.cacheManager) {
+    const cacheManager = this.cacheManager;
+    if (cacheManager) {
       const uniqueUsers = Array.from(new Set(created.map((c) => c.userId)));
       await Promise.all(
         uniqueUsers.map((u) =>
-          this.cacheManager.invalidatePattern(`user:${u}:notifications:*`),
+          cacheManager.invalidatePattern(`user:${u}:notifications:*`),
         ),
       );
     }

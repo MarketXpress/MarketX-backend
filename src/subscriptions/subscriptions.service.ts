@@ -24,7 +24,9 @@ import {
   getAllActiveTiers,
   canUpgrade,
   getUpgradePath,
+  getTierLimits,
 } from './config/subscription-tiers.config';
+import { SubscriptionTierConfig } from './enums/subscription.enums';
 
 export interface CreateSubscriptionDto {
   tier: SubscriptionTier;
@@ -63,7 +65,7 @@ export class SubscriptionsService {
     @InjectRepository(Listing)
     private readonly listingRepo: Repository<Listing>,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   /**
    * Create new subscription
@@ -85,7 +87,7 @@ export class SubscriptionsService {
       throw new BadRequestException('User already has an active subscription');
     }
 
-    const tierConfig = getTierFromConfig(dto.tier);
+    const tierConfig = getTierConfig(dto.tier);
     if (!tierConfig || !tierConfig.isActive) {
       throw new BadRequestException('Invalid subscription tier');
     }
@@ -144,7 +146,7 @@ export class SubscriptionsService {
       throw new BadRequestException('Cannot downgrade to lower tier');
     }
 
-    const tierConfig = getTierFromConfig(dto.targetTier);
+    const tierConfig = getTierConfig(dto.targetTier);
     if (!tierConfig || !tierConfig.isActive) {
       throw new BadRequestException('Invalid target subscription tier');
     }
@@ -187,7 +189,7 @@ export class SubscriptionsService {
     }
 
     subscription.status = SubscriptionStatus.CANCELLED;
-    subscription.cancellationReason = reason;
+    subscription.cancellationReason = reason || null;
     subscription.cancelledAt = new Date();
     subscription.autoRenew = false;
 
@@ -215,9 +217,11 @@ export class SubscriptionsService {
     );
 
     // Get current usage from database
-    const currentListings = await this.listingRepo.count({ where: { userId } });
+    const currentListings = await this.listingRepo.count({
+      where: { userId: String(userId) },
+    });
     const featuredListings = await this.listingRepo.count({
-      where: { userId, isFeatured: true },
+      where: { userId: String(userId), isFeatured: true },
     });
 
     const usedFeatures = this.getUsedFeatures(
@@ -260,7 +264,7 @@ export class SubscriptionsService {
     const currentUsage = await this.getCurrentUsage(
       userId,
       feature,
-      subscription,
+      subscription || undefined,
     );
 
     return currentUsage + count <= limit;
@@ -269,12 +273,12 @@ export class SubscriptionsService {
   /**
    * Get available upgrade paths
    */
-  async getUpgradePaths(userId: number): Promise<SubscriptionTierConfig[]> {
+  async getUpgradePaths(userId: number): Promise<SubscriptionTier[]> {
     const subscription = await this.getActiveSubscription(userId);
     const currentTier = subscription?.tier || SubscriptionTier.FREE;
 
     const upgradeTiers = getUpgradePath(currentTier);
-    return upgradeTiers.map((tier) => getTierFromConfig(tier)).filter(Boolean);
+    return upgradeTiers;
   }
 
   /**
@@ -304,7 +308,7 @@ export class SubscriptionsService {
       return subscription;
     }
 
-    const tierConfig = getTierFromConfig(subscription.tier);
+    const tierConfig = getTierConfig(subscription.tier);
     const now = new Date();
     const endsAt = this.calculateEndDate(now, subscription.billingCycle);
 
@@ -476,11 +480,14 @@ export class SubscriptionsService {
     feature: SubscriptionFeature,
     subscription?: Subscription,
   ): Promise<number> {
+
     switch (feature) {
       case SubscriptionFeature.MAX_LISTINGS:
-        return this.listingRepo.count({ where: { userId } });
+        return this.listingRepo.count({ where: { userId: String(userId) } });
       case SubscriptionFeature.FEATURED_LISTINGS:
-        return this.listingRepo.count({ where: { userId, isFeatured: true } });
+        return this.listingRepo.count({
+          where: { userId: String(userId), isFeatured: true },
+        });
       default:
         return 0;
     }
@@ -490,7 +497,7 @@ export class SubscriptionsService {
    * Get used features for a tier
    */
   private getUsedFeatures(tier: SubscriptionTier): string[] {
-    const tierConfig = getTierFromConfig(tier);
+    const tierConfig = getTierConfig(tier);
     if (!tierConfig) return [];
 
     const features: string[] = [];
