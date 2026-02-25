@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import {
@@ -31,89 +31,59 @@ export class OrdersService {
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryService: InventoryService,
   ) { }
+    private dataSource: DataSource,
+    private inventoryService: InventoryService,
+  ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    // In a real application, you would fetch product details from a database
-    // For now, we'll simulate calculating the total
+    return await this.dataSource.transaction(async (manager) => {
+      const order = manager.create(Order, {
+        ...createOrderDto,
+        status: OrderStatus.PENDING,
+        items: createOrderDto.items,
+      });
 
-    // Simulate fetching product prices (in a real app, you'd query the products service)
-    const simulatedProductPrices: Record<
-      string,
-      { price: number; currency: SupportedCurrency }
-    > = {
-      '1': { price: 10.99, currency: SupportedCurrency.USD },
-      '2': { price: 24.99, currency: SupportedCurrency.USD },
-      '3': { price: 5.49, currency: SupportedCurrency.USD },
-    };
+      const savedOrder = await manager.save(order);
 
-    const paymentCurrency =
-      createOrderDto.paymentCurrency ?? SupportedCurrency.USD;
-    const subtotals: number[] = [];
+      for (const item of savedOrder.items) {
+        await this.inventoryService.reserveInventory(
+          item.productId,
+          savedOrder.buyerId,
+          item.quantity,
+          manager,
+        );
+      }
 
-    const itemsWithDetails = createOrderDto.items.map((item) => {
-      const productPricing = simulatedProductPrices[item.productId] || {
-        price: 0,
-        currency: SupportedCurrency.USD,
-      };
-      const convertedPrice = this.pricingService.convertAmount(
-        productPricing.price,
-        productPricing.currency,
-        paymentCurrency,
-      );
-      const subtotal = this.pricingService.multiplyAmount(
-        convertedPrice,
-        item.quantity,
-        paymentCurrency,
-      );
-      subtotals.push(subtotal);
-
-      return {
-        productId: item.productId,
-        productName: `Product ${item.productId}`, // In real app, fetch from product service
-        quantity: item.quantity,
-        price: convertedPrice,
-        subtotal,
-        priceCurrency: paymentCurrency,
-      };
+      return savedOrder;
     });
+  }
 
-    const totalAmount = this.pricingService.addAmounts(
-      subtotals,
-      paymentCurrency,
-    );
+  async cancelOrder(id: string, userId: string): Promise<Order> {
+    return await this.dataSource.transaction(async (manager) => {
+      const order = await manager.findOne(Order, { where: { id } });
 
-    const order = this.ordersRepository.create({
-      totalAmount,
-      currency: paymentCurrency,
-      status: OrderStatus.PENDING,
-      items: itemsWithDetails,
-      buyerId: createOrderDto.buyerId,
+      if (!order || order.buyerId !== userId) {
+        throw new BadRequestException('Order not found or unauthorized');
+      }
+
+      if (order.status === OrderStatus.CANCELLED) {
+        throw new BadRequestException('Order is already cancelled');
+      }
+
+      // Requirement: Restore inventory on order cancellation
+      for (const item of order.items) {
+        await this.inventoryService.releaseInventory(
+          item.productId,
+          userId,
+          item.quantity,
+          manager,
+        );
+      }
+
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = new Date();
+      return await manager.save(order);
     });
-
-    const savedOrder = await this.ordersRepository.save(order);
-
-    try {
-      // Reserve inventory for the order
-      await this.inventoryService.reserveForOrder(savedOrder);
-    } catch (error) {
-      // If inventory reservation fails, cancel the order
-      savedOrder.status = OrderStatus.CANCELLED;
-      await this.ordersRepository.save(savedOrder);
-      throw error;
-    }
-
-    this.eventEmitter.emit(
-      'order.created',
-      new OrderCreatedEvent(
-        savedOrder.id,
-        savedOrder.buyerId,
-        `ORD-${savedOrder.id.substring(0, 8)}`, // Simple order number
-        savedOrder.totalAmount,
-        savedOrder.items,
-      ),
-    );
-
-    return savedOrder;
   }
 
   async findAll(buyerId?: string): Promise<Order[]> {
@@ -177,8 +147,13 @@ export class OrdersService {
           break;
       }
 
-      order.status = updateOrderStatusDto.status;
-      order.updatedAt = now;
+    // Validate state transition
+    if (
+      !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
+    ) {
+      throw new BadRequestException(
+        `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
+      );
     }
 
     const updatedOrder = await this.ordersRepository.save(order);

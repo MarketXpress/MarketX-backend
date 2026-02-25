@@ -9,7 +9,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
-import { Product, ProductPriceHistoryEntry } from './interfaces/product.interface';
+import {
+  Product,
+  ProductPriceHistoryEntry,
+} from './interfaces/product.interface';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { PricingService, SupportedCurrency } from './services/pricing.service';
 import { ProductPriceEntity } from './entities/product-price.entity';
@@ -29,7 +32,8 @@ export class ProductsService {
 
   async create(sellerId: string, dto: CreateProductDto): Promise<Product> {
     const basePrice = dto.basePrice ?? dto.price;
-    const baseCurrency = dto.baseCurrency ?? dto.currency ?? SupportedCurrency.USD;
+    const baseCurrency =
+      dto.baseCurrency ?? dto.currency ?? SupportedCurrency.USD;
 
     if (basePrice === undefined) {
       throw new BadRequestException('Price is required.');
@@ -103,11 +107,13 @@ export class ProductsService {
 
     return this.products
       .map((product) => this.toDisplayProduct(product, preferredCurrency))
-      .filter((product) =>
-        (!search || product.name.toLowerCase().includes(search.toLowerCase())) &&
-        (!category || product.category === category) &&
-        (minPrice === undefined || product.convertedPrice >= minPrice) &&
-        (maxPrice === undefined || product.convertedPrice <= maxPrice),
+      .filter(
+        (product) =>
+          (!search ||
+            product.name.toLowerCase().includes(search.toLowerCase())) &&
+          (!category || product.category === category) &&
+          (minPrice === undefined || product.convertedPrice >= minPrice) &&
+          (maxPrice === undefined || product.convertedPrice <= maxPrice),
       )
       .slice(offset, offset + limit);
   }
@@ -127,12 +133,12 @@ export class ProductsService {
       throw new ForbiddenException('Not allowed to update this product');
     }
 
-    const { basePrice, baseCurrency, price, currency, ...rest } = dto as UpdateProductDto & {
-      basePrice?: number;
-      baseCurrency?: SupportedCurrency;
-      price?: number;
-      currency?: SupportedCurrency;
-    };
+    const { basePrice, baseCurrency, price, currency, ...rest } =
+      dto as UpdateProductDto & {
+        basePrice?: number;
+        baseCurrency?: SupportedCurrency;
+        currency?: SupportedCurrency;
+      };
 
     if (
       basePrice !== undefined ||
@@ -239,11 +245,14 @@ export class ProductsService {
       console.error(`Failed to delete images for product ${id}:`, error);
     }
 
-    this.products = this.products.filter(p => p.id !== id);
+    this.products = this.products.filter((p) => p.id !== id);
     return { deleted: true };
   }
 
-  private toDisplayProduct(product: Product, preferredCurrency?: SupportedCurrency) {
+  private toDisplayProduct(
+    product: Product,
+    preferredCurrency?: SupportedCurrency,
+  ) {
     const displayCurrency = preferredCurrency ?? product.baseCurrency;
     const convertedPriceString = this.pricingService.convertAmountToString(
       product.basePrice,
