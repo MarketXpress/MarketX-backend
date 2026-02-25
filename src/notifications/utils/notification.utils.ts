@@ -15,6 +15,13 @@ export class NotificationUtils {
       [NotificationType.SECURITY_ALERT]: 'Security Alert',
       [NotificationType.PROMOTION]: 'Special Offer',
       [NotificationType.REMINDER]: 'Reminder',
+      [NotificationType.PRICE_DROP]: 'Price Drop',
+      [NotificationType.ORDER_CREATED]: 'Order Created',
+      [NotificationType.ORDER_UPDATED]: 'Order Updated',
+      [NotificationType.ORDER_CANCELLED]: 'Order Cancelled',
+      [NotificationType.ORDER_COMPLETED]: 'Order Completed',
+      [NotificationType.SHIPMENT_UPDATE]: 'Shipment Update',
+      [NotificationType.PASSWORD_RESET]: 'Password Reset',
     };
 
     return titleMap[type] || 'Notification';
@@ -49,8 +56,8 @@ export class NotificationUtils {
       return NotificationPriority.HIGH;
     }
 
-    if (type === NotificationType.TRANSACTION_RECEIVED || 
-        type === NotificationType.PAYMENT_SUCCESS) {
+    if (type === NotificationType.TRANSACTION_RECEIVED ||
+      type === NotificationType.PAYMENT_SUCCESS) {
       return NotificationPriority.MEDIUM;
     }
 
@@ -77,8 +84,8 @@ export class NotificationUtils {
     if (!userPreferences) return true;
 
     // Check if notification type is allowed
-    if (userPreferences.allowedTypes && 
-        !userPreferences.allowedTypes.includes(notification.type)) {
+    if (userPreferences.allowedTypes &&
+      !userPreferences.allowedTypes.includes(notification.type)) {
       return false;
     }
 

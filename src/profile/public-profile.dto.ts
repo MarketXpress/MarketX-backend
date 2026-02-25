@@ -41,5 +41,13 @@ export class PublicProfileDto {
 
   @Expose()
   @ApiProperty()
+  verificationLevel: string;
+
+  @Expose()
+  @ApiProperty()
+  trustScore: number;
+
+  @Expose()
+  @ApiProperty()
   createdAt: Date;
 }

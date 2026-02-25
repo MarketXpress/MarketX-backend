@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to MarketX!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f4f6f9;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #333;
+        }
+
+        .wrapper {
+            width: 100%;
+            background: #f4f6f9;
+            padding: 40px 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 48px 40px 36px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            margin: 10px 0 0;
+            font-size: 16px;
+        }
+
+        .wave {
+            font-size: 56px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .body {
+            padding: 40px 40px 32px;
+        }
+
+        .greeting {
+            font-size: 17px;
+            color: #444;
+            line-height: 1.7;
+            margin-bottom: 28px;
+        }
+
+        .features {
+            display: block;
+            margin-bottom: 28px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .feature-icon {
+            font-size: 22px;
+            margin-right: 14px;
+            flex-shrink: 0;
+        }
+
+        .feature-text strong {
+            display: block;
+            color: #222;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .feature-text span {
+            font-size: 13px;
+            color: #777;
+        }
+
+        .cta {
+            text-align: center;
+            margin: 32px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 15px 40px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .footer {
+            background: #f8f9fc;
+            padding: 24px 40px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+
+        .footer p {
+            font-size: 12px;
+            color: #999;
+            margin: 4px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <span class="wave">👋</span>
+                <h1>Welcome to MarketX!</h1>
+                <p>Your marketplace account is ready to go.</p>
+            </div>
+            <div class="body">
+                <p class="greeting">
+                    Hi <strong>{{name}}</strong>, we're thrilled to have you!<br />
+                    Your account has been created and you can start buying and selling right away.
+                </p>
+
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">🛒</span>
+                        <div class="feature-text">
+                            <strong>Buy with Confidence</strong>
+                            <span>Browse thousands of listings with buyer protection on every purchase.</span>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💰</span>
+                        <div class="feature-text">
+                            <strong>Sell Your Items</strong>
+                            <span>List your products in minutes and reach buyers globally.</span>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🔒</span>
+                        <div class="feature-text">
+                            <strong>Secure Payments</strong>
+                            <span>Every transaction is protected by our secure escrow system.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cta">
+                    <a href="{{loginUrl}}" class="btn">Get Started →</a>
+                </div>
+
+                <p style="font-size:14px;color:#666;text-align:center;line-height:1.7;">
+                    Have questions? We're always here to help.<br />
+                    Reply to this email or visit our Help Centre.
+                </p>
+            </div>
+            <div class="footer">
+                <p>You received this email because you signed up at MarketX.</p>
+                <p>&copy; {{year}} MarketX Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

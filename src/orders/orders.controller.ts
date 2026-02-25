@@ -1,11 +1,18 @@
 import { Controller, Get, Post, Body, Patch, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
+import { ApplyCouponDto, ApplyCouponResponseDto } from '../coupons/dto/apply-coupon.dto';
+import { CouponsService } from '../coupons/coupons.service';
 
+@ApiTags('Orders')
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly couponsService: CouponsService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -49,5 +56,27 @@ export class OrdersController {
     // Emit event: OrderCancelled
     console.log(`Event emitted: OrderCancelled - Order ID: ${order.id}`);
     return order;
+  }
+
+  /**
+   * Apply a coupon to an order
+   * POST /orders/apply-coupon
+   */
+  @Post('apply-coupon')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Apply a coupon to an order',
+    description: 'Validate and apply a coupon code to calculate discount',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Coupon applied successfully',
+    type: ApplyCouponResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid coupon or order' })
+  async applyCoupon(
+    @Body() applyCouponDto: ApplyCouponDto,
+  ): Promise<ApplyCouponResponseDto> {
+    return this.couponsService.validateAndApplyCoupon(applyCouponDto);
   }
 }

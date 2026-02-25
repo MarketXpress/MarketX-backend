@@ -3,6 +3,7 @@ import { User } from './entities/user.entity';
 import { Product } from './entities/product.entity';
 import { Order } from './entities/order.entity';
 import { Transaction } from './entities/transaction.entity';
+import { FraudAlert } from './fraud/entities/fraud-alert.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -13,7 +14,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DATABASE_NAME,
   synchronize: false,
   logging: false,
-  entities: [User, Product, Order, Transaction],
+  entities: [User, Product, Order, Transaction, FraudAlert],
   migrations: ['src/migrations/*.ts'],
   subscribers: [],
 });

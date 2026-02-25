@@ -1,126 +1,128 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import axios from 'axios';
-import { PriceCache } from './interfaces/price-cache.interface';
 import { SupportedCurrency } from './dto/conversion.dto';
 
-@Injectable()
-export class PriceService {
-  private readonly logger = new Logger(PriceService.name);
+interface RateCache {
+  XLM_USD: number;
+  USDC_USD: number;
+  XLM_USDC: number;
+  cachedAt: Date;
+  source: 'live' | 'fallback';
+}
 
-  private cache: PriceCache = {
-    XLM_USD: 0,
-    USDC_USD: 1,
-    lastUpdated: new Date(0),
+@Injectable()
+export class PriceService implements OnModuleInit {
+  private readonly logger = new Logger(PriceService.name);
+  private cache: RateCache | null = null;
+  private lastKnownRates: RateCache | null = null;
+
+  // Fallback hardcoded rates used only if no live/cached data ever loads
+  private readonly FALLBACK_RATES = {
+    XLM_USD: 0.11,
+    USDC_USD: 1.0,
+    XLM_USDC: 0.11,
   };
 
-  private readonly TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly COINGECKO_URL =
+    'https://api.coingecko.com/api/v3/simple/price';
 
-  constructor() {
-    this.updateRates(); // initial load
+  constructor(private readonly configService: ConfigService) {}
+
+  async onModuleInit() {
+    await this.refreshRates();
   }
 
-  // =========================
-  // Scheduled update (5 mins)
-  // =========================
-  @Cron('*/5 * * * *')
-  async handleCron() {
-    await this.updateRates();
-  }
-
-  // =========================
-  // Fetch from CoinGecko
-  // =========================
-  async updateRates() {
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async refreshRates(): Promise<void> {
     try {
-      const response = await axios.get(
-        'https://api.coingecko.com/api/v3/simple/price',
-        {
-          params: {
-            ids: 'stellar,usd-coin',
-            vs_currencies: 'usd',
-          },
+      this.logger.log('Fetching latest crypto rates from CoinGecko...');
+
+      const apiKey = this.configService.get<string>('COINGECKO_API_KEY');
+      const headers: Record<string, string> = apiKey
+        ? { 'x-cg-demo-api-key': apiKey }
+        : {};
+
+      const { data } = await axios.get<Record<string, { usd: number }>>(this.COINGECKO_URL, {
+        headers,
+        params: {
+          ids: 'stellar,usd-coin',
+          vs_currencies: 'usd',
         },
-      );
+        timeout: 10000,
+      });
 
-      const data = response.data;
+      const xlmUsd: number = data['stellar']['usd'];
+      const usdcUsd: number = data['usd-coin']['usd'];
 
-      this.cache = {
-        XLM_USD: data.stellar.usd,
-        USDC_USD: data['usd-coin'].usd,
-        lastUpdated: new Date(),
+      const rates: RateCache = {
+        XLM_USD: xlmUsd,
+        USDC_USD: usdcUsd,
+        XLM_USDC: xlmUsd / usdcUsd,
+        cachedAt: new Date(),
+        source: 'live',
       };
 
-      this.logger.log('Price rates updated successfully');
+      this.cache = rates;
+      this.lastKnownRates = rates;
+      this.logger.log(
+        `Rates updated — XLM: $${xlmUsd}, USDC: $${usdcUsd}`,
+      );
     } catch (error) {
       this.logger.error(
-        'Failed to update price rates. Using last known rates.',
+        `Failed to fetch rates: ${error.message}. Using fallback.`,
       );
+      this.useFallback();
     }
   }
 
-  // =========================
-  // Get Current Rates
-  // =========================
-  async getRates() {
-    const now = Date.now();
-
-    if (now - this.cache.lastUpdated.getTime() > this.TTL) {
-      await this.updateRates();
+  private useFallback(): void {
+    if (this.lastKnownRates) {
+      this.cache = { ...this.lastKnownRates, source: 'fallback' };
+      this.logger.warn('Using last known rates as fallback');
+    } else {
+      this.cache = {
+        ...this.FALLBACK_RATES,
+        cachedAt: new Date(),
+        source: 'fallback',
+      };
+      this.logger.warn('Using hardcoded fallback rates — no live data ever loaded');
     }
-
-    return this.cache;
   }
 
-  // =========================
-  // Conversion Logic
-  // =========================
-  async convert(
-    from: SupportedCurrency,
-    to: SupportedCurrency,
-    amount: number,
-  ) {
-    const rates = await this.getRates();
+  getRates(): RateCache {
+    if (!this.cache) {
+      this.useFallback();
+    }
+    return this.cache!;
+  }
 
-    const usdValue = this.toUSD(from, amount, rates);
-    const converted = this.fromUSD(to, usdValue, rates);
+  convert(from: SupportedCurrency, to: SupportedCurrency, amount: number) {
+    const rates = this.getRates();
+
+    if (from === to) {
+      return { result: amount, rate: 1, ...rates };
+    }
+
+    // Convert everything through USD as the base
+    const toUsd: Record<SupportedCurrency, number> = {
+      [SupportedCurrency.USD]: 1,
+      [SupportedCurrency.XLM]: rates.XLM_USD,
+      [SupportedCurrency.USDC]: rates.USDC_USD,
+    };
+
+    const fromUsd = toUsd[from];
+    const toUsdRate = toUsd[to];
+
+    const rate = fromUsd / toUsdRate;
+    const result = amount * rate;
 
     return {
-      from,
-      to,
-      originalAmount: amount,
-      convertedAmount: converted,
-      rateTimestamp: rates.lastUpdated,
+      result: parseFloat(result.toFixed(6)),
+      rate: parseFloat(rate.toFixed(6)),
+      cachedAt: rates.cachedAt,
+      source: rates.source,
     };
-  }
-
-  private toUSD(
-    currency: SupportedCurrency,
-    amount: number,
-    rates: PriceCache,
-  ): number {
-    switch (currency) {
-      case SupportedCurrency.XLM:
-        return amount * rates.XLM_USD;
-      case SupportedCurrency.USDC:
-        return amount * rates.USDC_USD;
-      case SupportedCurrency.USD:
-        return amount;
-    }
-  }
-
-  private fromUSD(
-    currency: SupportedCurrency,
-    usdAmount: number,
-    rates: PriceCache,
-  ): number {
-    switch (currency) {
-      case SupportedCurrency.XLM:
-        return usdAmount / rates.XLM_USD;
-      case SupportedCurrency.USDC:
-        return usdAmount / rates.USDC_USD;
-      case SupportedCurrency.USD:
-        return usdAmount;
-    }
   }
 }

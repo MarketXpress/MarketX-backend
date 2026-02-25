@@ -1,0 +1,28 @@
+{
+  "app": {
+    "greeting": "Hello, {{name}}!"
+  },
+  "common": {
+    "validation_failed": "Input validation failed"
+  },
+  "errors": {
+    "internal_server_error": "Internal Server Error"
+  },
+  "validation": {
+    "isEmail": "{{property}} must be a valid email address",
+    "isNotEmpty": "{{property}} should not be empty",
+    "isString": "{{property}} must be a string",
+    "isUrl": "{{property}} must be a valid URL",
+    "isEnum": "{{property}} has an invalid value",
+    "minLength": "{{property}} must be at least {{constraints.0}} characters",
+    "maxLength": "{{property}} must be shorter than or equal to {{constraints.0}} characters",
+    "min": "{{property}} must not be less than {{constraints.0}}",
+    "max": "{{property}} must not be greater than {{constraints.0}}"
+  },
+  "emails": {
+    "transaction_received": {
+      "title": "Transaction Received",
+      "message": "You received {{currency}} {{amount}}"
+    }
+  }
+}

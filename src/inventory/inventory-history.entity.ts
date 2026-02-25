@@ -1,4 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+} from 'typeorm';
 
 export enum InventoryChangeType {
   PURCHASE = 'PURCHASE',
@@ -6,6 +11,8 @@ export enum InventoryChangeType {
   RESERVATION = 'RESERVATION',
   RELEASE = 'RELEASE',
   BULK_UPDATE = 'BULK_UPDATE',
+  CANCELLATION = 'CANCELLATION',
+  REFUND = 'REFUND',
 }
 
 @Entity('inventory_history')
@@ -30,4 +37,4 @@ export class InventoryHistory {
 
   @CreateDateColumn()
   createdAt: Date;
-} 
+}

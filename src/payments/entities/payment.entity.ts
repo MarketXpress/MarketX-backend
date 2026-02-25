@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Order } from 'src/orders/entities/order.entity';
+import { Order } from '../../orders/entities/order.entity';
 import { PaymentStatus, PaymentCurrency } from '../dto/payment.dto';
 
 @Entity()
