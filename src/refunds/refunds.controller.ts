@@ -20,8 +20,10 @@ import {
 } from './dto/refund.dto';
 import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
 import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../decorators/roles.decorator';
 
 @Controller('refunds')
+@UseGuards(JwtAuthGuard)
 export class RefundsController {
   constructor(private readonly refundsService: RefundsService) {}
 
@@ -30,18 +32,16 @@ export class RefundsController {
    * POST /refunds/returns
    */
   @Post('returns')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async createReturnRequest(@Body() dto: CreateReturnRequestDto) {
     return this.refundsService.createReturnRequest(dto);
   }
 
   /**
-   * Get return requests (buyer, seller, or admin)
+   * Get return requests (buyer, seller, admin)
    * GET /refunds/returns
    */
   @Get('returns')
-  @UseGuards(JwtAuthGuard)
   async getReturnRequests(@Query() query: QueryReturnRequestsDto) {
     return this.refundsService.getReturnRequests(query);
   }
@@ -51,7 +51,6 @@ export class RefundsController {
    * GET /refunds/returns/:id
    */
   @Get('returns/:id')
-  @UseGuards(JwtAuthGuard)
   async getReturnRequest(@Param('id') id: string) {
     return this.refundsService.getReturnRequest(id);
   }
@@ -61,7 +60,6 @@ export class RefundsController {
    * POST /refunds/returns/:id/cancel
    */
   @Post('returns/:id/cancel')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async cancelReturnRequest(
     @Param('id') id: string,
@@ -71,26 +69,32 @@ export class RefundsController {
   }
 
   /**
-   * Review a return request (admin/seller)
+   * Review a return request (admin only)
    * POST /refunds/returns/:id/review
    */
   @Post('returns/:id/review')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   @HttpCode(HttpStatus.OK)
   async reviewReturnRequest(
     @Param('id') id: string,
     @Body() dto: ReviewReturnRequestDto,
     @Request() req: any,
   ) {
-    return this.refundsService.reviewReturnRequest(id, dto, req.user.id);
+    return this.refundsService.reviewReturnRequest(
+      id,
+      dto,
+      req.user.id,
+    );
   }
 
   /**
-   * Process a refund (admin only)
+   * Process refund (admin only)
    * POST /refunds/process
    */
   @Post('process')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   @HttpCode(HttpStatus.CREATED)
   async processRefund(@Body() dto: ProcessRefundDto) {
     return this.refundsService.processRefund(dto);
@@ -101,9 +105,12 @@ export class RefundsController {
    * GET /refunds/orders/:orderId/history
    */
   @Get('orders/:orderId/history')
-  @UseGuards(JwtAuthGuard)
-  async getRefundHistoryByOrder(@Param('orderId') orderId: string) {
-    return this.refundsService.getRefundHistoryByOrder(orderId);
+  async getRefundHistoryByOrder(
+    @Param('orderId') orderId: string,
+  ) {
+    return this.refundsService.getRefundHistoryByOrder(
+      orderId,
+    );
   }
 
   /**
@@ -111,7 +118,8 @@ export class RefundsController {
    * GET /refunds/history
    */
   @Get('history')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   async getAllRefundHistory(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
