@@ -201,8 +201,8 @@ export class RefundsService {
 
       // Prevent approving more than requested (from your feature branch)
       if (
-        approvedAmount &&
-        approvedAmount > returnRequest.requestedAmount
+        approvedAmount !== undefined &&
+        approvedAmount > (returnRequest.requestedAmount || 0)
       ) {
         throw new BadRequestException(
           'Approved amount cannot exceed requested amount',

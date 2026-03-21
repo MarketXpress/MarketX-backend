@@ -8,7 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
-import { User } from '../../users/entities/user.entity';
+import { User } from '../../profile/user.entity';
 
 export enum RefundStatus {
   PENDING = 'PENDING',

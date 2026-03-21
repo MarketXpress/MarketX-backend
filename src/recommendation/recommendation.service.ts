@@ -359,7 +359,7 @@ export class RecommendationsService {
       .select('ph.listingId')
       .distinct(true)
       .where('ph.userId = :userId', { userId })
-      .getRaw();
+      .getRawMany();
 
     const userPurchasedIds = userPurchased.map((p: any) => p.listingId);
 
@@ -417,7 +417,7 @@ export class RecommendationsService {
       .createQueryBuilder('ph')
       .select('ph.userId')
       .distinct(true)
-      .getRaw();
+      .getRawMany();
 
     const userIds = users.map((u: any) => u.userId);
 

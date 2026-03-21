@@ -28,7 +28,7 @@ describe('RateLimitService', () => {
     service = module.get<RateLimitService>(RateLimitService);
     
     // Get the mocked Redis instance
-    mockRedis = require('ioredis').mocked();
+    mockRedis = new Redis() as jest.Mocked<any>;
     mockRedis.pipeline = jest.fn().mockReturnValue({
       zremrangebyscore: jest.fn().mockReturnThis(),
       zcard: jest.fn().mockReturnThis(),

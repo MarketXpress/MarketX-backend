@@ -27,12 +27,10 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
+    private dataSource: DataSource,
     private readonly pricingService: PricingService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryService: InventoryService,
-  ) { }
-    private dataSource: DataSource,
-    private inventoryService: InventoryService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -116,27 +114,22 @@ export class OrdersService {
     const order = await this.findOne(id);
     const previousStatus = order.status;
 
+    // Validate state transition
+    if (
+      !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
+    ) {
+      throw new BadRequestException(
+        `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
+      );
+    }
+
     // Handle inventory based on status change
     if (updateOrderStatusDto.status === OrderStatus.PAID) {
-      // Confirm the order and reduce inventory
       await this.inventoryService.confirmOrder(order);
-      order.status = OrderStatus.PAID;
     } else if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
-      // Cancel the order and release inventory
       await this.inventoryService.cancelOrder(order);
-      order.status = OrderStatus.CANCELLED;
       order.cancelledAt = new Date();
     } else {
-      // Validate state transition for other statuses
-      if (
-        !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
-      ) {
-        throw new BadRequestException(
-          `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
-        );
-      }
-
-      // Update timestamps based on status
       const now = new Date();
       switch (updateOrderStatusDto.status) {
         case OrderStatus.SHIPPED:
@@ -146,15 +139,8 @@ export class OrdersService {
           order.deliveredAt = now;
           break;
       }
-
-    // Validate state transition
-    if (
-      !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
-    ) {
-      throw new BadRequestException(
-        `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
-      );
     }
+    order.status = updateOrderStatusDto.status;
 
     const updatedOrder = await this.ordersRepository.save(order);
 
@@ -172,30 +158,7 @@ export class OrdersService {
     return updatedOrder;
   }
 
-  async cancelOrder(id: string, userId: string): Promise<Order> {
-    const order = await this.findOne(id);
 
-    // Business rule: Only allow cancellation for pending/paid orders
-    if (
-      order.status !== OrderStatus.PENDING &&
-      order.status !== OrderStatus.PAID
-    ) {
-      throw new BadRequestException(
-        `Cannot cancel order with status ${order.status}. Only pending or paid orders can be cancelled.`,
-      );
-    }
-
-    // Business rule: Only the buyer can cancel their own order
-    if (order.buyerId !== userId) {
-      throw new BadRequestException('Only the buyer can cancel their order');
-    }
-
-    const updateOrderStatusDto: UpdateOrderStatusDto = {
-      status: OrderStatus.CANCELLED,
-    };
-
-    return this.updateStatus(id, updateOrderStatusDto);
-  }
 
   private isValidStateTransition(
     currentStatus: OrderStatus,
