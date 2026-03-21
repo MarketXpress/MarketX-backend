@@ -1,112 +1,118 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+<div align="center">
+  <h1>🛒 MarketX Backend Engine</h1>
+  <p><strong>A high-concurrency, scalable marketplace API built with NestJS, Postgres, and Redis.</strong></p>
+  
+  <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</div>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+<br />
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📖 About MarketX
 
-## Description
+**MarketX** is an ambitious open-source marketplace backend engineered for scale, fraud resistance, and lightning-fast developer experience. Designed initially to power peer-to-peer (P2P) commerce, it provides an expansive suite of tightly coupled e-commerce micro-features.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository for MarketX marketplace platform.
+We are currently undertaking a massive open-source contribution wave (via **Drips**) to fortify the architecture, refactor technical debt, and build out enterprise-grade systems like Escrow and AI Fraud Detection.
 
-## Database Schema
+### ✨ Core Features & Domains
 
-This project includes a comprehensive database schema implementation with:
+- **🛍️ Order & Inventory Engine**: Handles concurrent checkout flows, preventing atomic overselling via database locking mechanisms.
+- **🏦 Escrow & Payments**: Securely holds buyer funds in transit and conditionally releases them to sellers upon confirmed delivery. (Currently being wired to Stripe Connect).
+- **🛡️ Fraud Detection**: Analyzes heuristics (IP, velocity, value) to algorithmically score and halt suspicious transactions in real-time.
+- **🧠 Recommendation Engine**: Utilizes browsing history and collaborative filtering to deliver personalized product feeds.
+- **🔄 Refunds & Returns**: Complex workflows allowing buyers to initiate disputes and request refunds securely.
+- **📳 Real-Time Notifications**: Internal dispatcher emitting WebSocket, Email, and SMS alerts for critical lifecycle events.
 
-- **Core Entities**: Users, Products, Orders, and Transactions
-- **Relationships**: Proper foreign key constraints and associations
-- **Indexing**: Optimized queries with strategic indexing
-- **Migrations**: Forward and rollback migration capabilities
-- **Documentation**: Detailed schema documentation with ER diagrams
+---
 
-See [Database Schema Documentation](./docs/database-schema.md) for complete details.
+## 🛠️ Tech Stack
 
-## Project setup
+- **Framework**: [NestJS](https://nestjs.com/) (Node.js / TypeScript)
+- **Database**: PostgreSQL (via [TypeORM](https://typeorm.io/))
+- **Caching & Rate Limiting**: Redis
+- **Testing**: Jest (Unit & E2E) & Supertest
 
-## Project setup
+---
+
+## 🚀 Getting Started
+
+Follow these instructions to spin up your local development environment.
+
+### 1. Prerequisites
+Ensure you have the following installed on your machine:
+- **Node.js** (v18+)
+- **npm** or **yarn**
+- **Docker** & **Docker Compose** (for spinning up Postgres and Redis easily)
+
+### 2. Installation
+Clone the repository and install the Node dependencies:
 
 ```bash
-$ npm install
+git clone https://github.com/Cybermaxi7/MarketX-backend.git
+cd MarketX-backend
+npm install
 ```
 
-## Compile and run the project
+### 3. Environment Setup
+*(Note: As we transition into the open-source phase, we are currently integrating a `docker-compose.yml` to streamline setup).*
+
+For now, assure you have a running **PostgreSQL 15** database and a **Redis** server. Configure your `.env` file at the root of the project with the necessary credentials:
+
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=marketx
+
+# Redis
+REDIS_URL=redis://localhost:6379
+```
+
+### 4. Running the App
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
+# Start the development server (with hot-reload)
 $ npm run start:dev
 
-# production mode
+# Start in production mode
 $ npm run start:prod
 ```
 
-## Run tests
+---
+
+## 🧪 Testing
+
+We heavily value test coverage to ensure marketplace stability. 
 
 ```bash
-# unit tests
+# Run the unit test suite
 $ npm run test
 
-# e2e tests
-$ npm run test:e2e
+# Watch mode for Active Test-Driven Development
+$ npm run test:watch
 
-# test coverage
+# See code coverage report
 $ npm run test:cov
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 🤝 Contributing & Open-Source Tasks
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Interested in collaborating? We'd love your help! 
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+To get started, please browse our active GitHub Issues (or Drips tasks). When you find an issue you'd like to tackle, please **read the issue description thoroughly** to understand the context, problem, and specific acceptance criteria before beginning your work.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Workflow:**
+1. Fork the repo and identify the issue you want to work on.
+2. Create your feature branch (`git checkout -b feature/amazing-feature`).
+3. Implement the feature or fix, ensuring you meet all acceptance criteria.
+4. Commit your changes strictly following conventional commit messages.
+5. Open a Pull Request and link the relevant issue!
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+## 📜 License & Support
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MarketX is [MIT licensed](LICENSE). If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
