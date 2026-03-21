@@ -7,7 +7,6 @@ import { RefundsService } from './refunds.service';
 import { Refund } from './entities/refund.entity';
 import { OrdersModule } from '../orders/orders.module';
 import { EscrowModule } from '../escrowes/escrow.module';
-import { RefundsController } from './refunds.controller';
 import { Order } from '../orders/entities/order.entity';
 import { InventoryModule } from '../inventory/inventory.module';
 

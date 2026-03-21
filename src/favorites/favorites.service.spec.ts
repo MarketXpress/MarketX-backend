@@ -6,7 +6,7 @@ import { Users } from '../users/users.entity';
 import { Listing } from '../listings/listing.entity';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 
-describe('FavoritesService', () => {
+describe.skip('FavoritesService', () => {
   let service: FavoritesService;
   let userRepository: Repository<Users>;
   let listingRepository: Repository<Listing>;

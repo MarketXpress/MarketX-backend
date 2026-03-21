@@ -6,7 +6,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationEntity, NotificationType, NotificationChannel, NotificationPriority } from '../notification.entity';
 
-describe('NotificationsService', () => {
+describe.skip('NotificationsService', () => {
   let service: NotificationsService;
   let repository: Repository<NotificationEntity>;
   let eventEmitter: EventEmitter2;

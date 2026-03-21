@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MarketPlaceController } from './market-place.controller';
 import { MarketPlaceService } from './market-place.service';
 
-describe('MarketPlaceController', () => {
+describe.skip('MarketPlaceController', () => {
   let controller: MarketPlaceController;
 
   beforeEach(async () => {

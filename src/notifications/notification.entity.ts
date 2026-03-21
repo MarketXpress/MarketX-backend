@@ -9,7 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Users } from 'src/users/users.entity';
+import { Users } from '../users/users.entity';
 
 export enum NotificationType {
   TRANSACTION_RECEIVED = 'transaction_received',

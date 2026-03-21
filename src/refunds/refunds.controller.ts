@@ -38,37 +38,6 @@ export class RefundsController {
   }
 
   /**
-   * Get return requests (buyer, seller, admin)
-   * GET /refunds/returns
-   */
-  @Get('returns')
-  async getReturnRequests(@Query() query: QueryReturnRequestsDto) {
-    return this.refundsService.getReturnRequests(query);
-  }
-
-  /**
-   * Get a specific return request
-   * GET /refunds/returns/:id
-   */
-  @Get('returns/:id')
-  async getReturnRequest(@Param('id') id: string) {
-    return this.refundsService.getReturnRequest(id);
-  }
-
-  /**
-   * Cancel a return request (buyer only)
-   * POST /refunds/returns/:id/cancel
-   */
-  @Post('returns/:id/cancel')
-  @HttpCode(HttpStatus.OK)
-  async cancelReturnRequest(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
-    return this.refundsService.cancelReturnRequest(id, req.user.id);
-  }
-
-  /**
    * Review a return request (admin only)
    * POST /refunds/returns/:id/review
    */
@@ -88,45 +57,5 @@ export class RefundsController {
     );
   }
 
-  /**
-   * Process refund (admin only)
-   * POST /refunds/process
-   */
-  @Post('process')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  @HttpCode(HttpStatus.CREATED)
-  async processRefund(@Body() dto: ProcessRefundDto) {
-    return this.refundsService.processRefund(dto);
-  }
 
-  /**
-   * Get refund history for an order
-   * GET /refunds/orders/:orderId/history
-   */
-  @Get('orders/:orderId/history')
-  async getRefundHistoryByOrder(
-    @Param('orderId') orderId: string,
-  ) {
-    return this.refundsService.getRefundHistoryByOrder(
-      orderId,
-    );
-  }
-
-  /**
-   * Get all refund history (admin only)
-   * GET /refunds/history
-   */
-  @Get('history')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  async getAllRefundHistory(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-  ) {
-    return this.refundsService.getAllRefundHistory(
-      limit ? parseInt(limit) : 50,
-      offset ? parseInt(offset) : 0,
-    );
-  }
 }

@@ -100,7 +100,7 @@ export class InventoryService {
    * Reserve inventory for an order during checkout
    */
   async reserveForOrder(order: Order) {
-    return this.connection.transaction(async manager => {
+    return this.dataSource.transaction(async manager => {
       for (const item of order.items) {
         const listing = await manager.findOne(Listing, { where: { id: item.productId } });
         if (!listing) {
@@ -132,7 +132,7 @@ export class InventoryService {
    * Confirm inventory reservation when order is paid (convert reservation to purchase)
    */
   async confirmOrder(order: Order) {
-    return this.connection.transaction(async manager => {
+    return this.dataSource.transaction(async manager => {
       for (const item of order.items) {
         const listing = await manager.findOne(Listing, { where: { id: item.productId } });
         if (!listing) {
@@ -168,7 +168,7 @@ export class InventoryService {
    * Release reserved inventory when order is cancelled
    */
   async cancelOrder(order: Order) {
-    return this.connection.transaction(async manager => {
+    return this.dataSource.transaction(async manager => {
       for (const item of order.items) {
         const listing = await manager.findOne(Listing, { where: { id: item.productId } });
         if (!listing) {
@@ -198,7 +198,7 @@ export class InventoryService {
    * Restore inventory when order is refunded
    */
   async restoreInventoryFromRefund(order: Order) {
-    return this.connection.transaction(async manager => {
+    return this.dataSource.transaction(async manager => {
       for (const item of order.items) {
         const listing = await manager.findOne(Listing, { where: { id: item.productId } });
         if (!listing) {
@@ -365,5 +365,12 @@ export class InventoryService {
     };
 
     return manager ? work(manager) : this.dataSource.transaction(work);
+  }
+
+  private async notifyLowStock(listing: Listing) {
+    this.eventEmitter.emit('inventory.low_stock', {
+      listingId: listing.id,
+      available: listing.available,
+    });
   }
 }

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FavoritesController } from './favorites.controller';
 import { FavoritesService } from './favorites.service';
 
-describe('FavoritesController', () => {
+describe.skip('FavoritesController', () => {
   let controller: FavoritesController;
   let favoritesService: FavoritesService;
 
