@@ -15,53 +15,59 @@ import {
   RefundEscrowDto,
   EscrowResponseDto,
 } from './dto/escrow-transaction.dto';
+import { ReleasePartialDto } from './dto/release-partial.dto';
 
 @Controller('escrow')
 export class EscrowController {
-  constructor(private readonly escrowService: EscrowService) { }
+  constructor(private readonly escrowService: EscrowService) {}
 
   /**
-   * POST /escrow
-   * Create escrow transaction
-   * Requires: buyerSecretKey in body to sign the lock transaction
+   * =========================
+   * CREATE ESCROW
+   * =========================
    */
   @Post()
   @HttpCode(201)
-  async createEscrow(dto: CreateEscrowDto & { buyerSecretKey: string }): Promise<EscrowResponseDto> {
+  async createEscrow(
+    @Body() dto: CreateEscrowDto & { buyerSecretKey: string },
+  ): Promise<EscrowResponseDto> {
     try {
-      // Create initial escrow record
-      const escrow = await this.escrowService.createEscrow(dto);
-
-      // Sign the lock transaction with buyer's secret key
       if (!dto.buyerSecretKey) {
         throw new BadRequestException('buyerSecretKey is required');
       }
 
-      const buyerKeypair = StellarSdk.Keypair.fromSecret(dto.buyerSecretKey);
+      const buyerKeypair = StellarSdk.Keypair.fromSecret(
+        dto.buyerSecretKey,
+      );
+
       if (buyerKeypair.publicKey() !== dto.buyerPublicKey) {
-        throw new BadRequestException('Secret key does not match public key');
+        throw new BadRequestException(
+          'Secret key does not match public key',
+        );
       }
 
-      return escrow;
+      return await this.escrowService.createEscrow(dto);
     } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
   /**
-   * POST /escrow/:id/release
-   * Release funds to seller
-   * Requires: sellerSecretKey in body to sign the release transaction
+   * =========================
+   * FULL RELEASE
+   * =========================
    */
   @Post(':id/release')
   @HttpCode(200)
-  async releaseFunds(escrowId: string, dto: ReleaseEscrowDto & { sellerSecretKey: string }): Promise<EscrowResponseDto> {
+  async releaseFunds(
+    @Param('id') escrowId: string,
+    @Body() dto: ReleaseEscrowDto & { sellerSecretKey: string },
+  ): Promise<EscrowResponseDto> {
     try {
       if (!dto.sellerSecretKey) {
         throw new BadRequestException('sellerSecretKey is required');
       }
 
-      // Validate seller secret key
       StellarSdk.Keypair.fromSecret(dto.sellerSecretKey);
 
       return await this.escrowService.releaseFunds({
@@ -74,19 +80,49 @@ export class EscrowController {
   }
 
   /**
-   * POST /escrow/:id/refund
-   * Refund funds back to buyer
-   * Requires: buyerSecretKey in body to sign the refund transaction
+   * =========================
+   * 🔥 PARTIAL RELEASE (NEW)
+   * =========================
+   */
+  @Post(':id/release-partial')
+  @HttpCode(200)
+  async releasePartial(
+    @Param('id') escrowId: string,
+    @Body() dto: ReleasePartialDto & { sellerSecretKey: string },
+  ): Promise<EscrowResponseDto> {
+    try {
+      if (!dto.sellerSecretKey) {
+        throw new BadRequestException('sellerSecretKey is required');
+      }
+
+      // Validate seller key
+      StellarSdk.Keypair.fromSecret(dto.sellerSecretKey);
+
+      return await this.escrowService.releasePartial(
+        escrowId,
+        dto.releasedAmount,
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  /**
+   * =========================
+   * REFUND
+   * =========================
    */
   @Post(':id/refund')
   @HttpCode(200)
-  async refundBuyer(escrowId: string, dto: RefundEscrowDto & { buyerSecretKey: string }): Promise<EscrowResponseDto> {
+  async refundBuyer(
+    @Param('id') escrowId: string,
+    @Body() dto: RefundEscrowDto & { buyerSecretKey: string },
+  ): Promise<EscrowResponseDto> {
     try {
       if (!dto.buyerSecretKey) {
         throw new BadRequestException('buyerSecretKey is required');
       }
 
-      // Validate buyer secret key
       StellarSdk.Keypair.fromSecret(dto.buyerSecretKey);
 
       return await this.escrowService.refundBuyer({
@@ -99,20 +135,26 @@ export class EscrowController {
   }
 
   /**
-   * GET /escrow/:id
-   * Get escrow details
+   * =========================
+   * GET ESCROW BY ID
+   * =========================
    */
   @Get(':id')
-  async getEscrow(escrowId: string): Promise<EscrowResponseDto> {
+  async getEscrow(
+    @Param('id') escrowId: string,
+  ): Promise<EscrowResponseDto> {
     return this.escrowService.getEscrow(escrowId);
   }
 
   /**
-   * GET /escrow/order/:orderId
-   * Get escrow by order ID
+   * =========================
+   * GET BY ORDER ID
+   * =========================
    */
   @Get('order/:orderId')
-  async getEscrowByOrderId(orderId: string): Promise<EscrowResponseDto> {
+  async getEscrowByOrderId(
+    @Param('orderId') orderId: string,
+  ): Promise<EscrowResponseDto> {
     return this.escrowService.getEscrowByOrderId(orderId);
   }
 }
