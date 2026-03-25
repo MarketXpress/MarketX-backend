@@ -2,11 +2,22 @@ import { Controller, Post, Body, UnauthorizedException, UseGuards } from '@nestj
 import { AuthService } from './auth.service';
 import { StrictRateLimit } from '../decorators/rate-limit.decorator';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { RefreshTokenGuard } from './common/guards/refresh-token.guard';
+
 
 @Controller('auth')
-@UseGuards(RateLimitGuard)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private authService: AuthService) {}
+
+  @UseGuards(RefreshTokenGuard)
+  @Post('refresh')
+  async refresh(@Req() req: any, @Body('email') email: string) {
+    // The Guard attaches { userId, refreshToken } to req.user 
+    // based on the RefreshTokenStrategy validate() method.
+    const { userId, refreshToken } = req.user;
+    
+    return this.authService.refreshTokens(userId, email, refreshToken);
+  }
 
   @Post('login')
   @StrictRateLimit({
