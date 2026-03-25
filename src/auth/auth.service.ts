@@ -1,15 +1,19 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { crypto } from 'crypto'; // Built-in Node module
+import { authenticator } from 'otplib';
+import * as qrcode from 'qrcode';
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly redisService: RedisService, // Inject your Redis provider here
+    private readonly redisService: RedisService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -78,6 +82,20 @@ export class AuthService {
     }
   }
 
+  async enable2FA(userId: string) {
+    const secret = authenticator.generateSecret();
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { twoFASecret: secret, twoFAEnabled: true },
+    });
+
+    const otpauth = authenticator.keyuri(userId, 'YourAppName', secret);
+    const qrCodeDataURL = await qrcode.toDataURL(otpauth);
+
+    return { qrCodeDataURL, otpauth };
+  }
+
   async forgotPassword(email: string): Promise<void> {
     const resetUrl = `https://marketx.com/reset-password?token=mock-token-${Date.now()}`;
     
@@ -86,5 +104,17 @@ export class AuthService {
       name: 'User',
       resetUrl,
     });
+  }
+
+    async verify2FA(userId: string, code: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.twoFAEnabled || !user.twoFASecret) {
+      throw new BadRequestException('2FA not enabled for this user');
+    }
+
+    const isValid = authenticator.verify({ token: code, secret: user.twoFASecret });
+    if (!isValid) throw new BadRequestException('Invalid 2FA code');
+
+    return true;
   }
 }
