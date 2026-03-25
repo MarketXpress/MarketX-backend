@@ -1,16 +1,17 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppValidationPipe } from './common/pipes/validation.pipe';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './common/logger/logger.service';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
 import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
 import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
 import * as express from 'express';
 import { join } from 'path';
+import { DynamicThrottlerGuard } from './common/guards/dynamic-throttler.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -27,24 +28,6 @@ async function bootstrap() {
     credentials: CORS_CONFIG.credentials,
     maxAge: CORS_CONFIG.maxAge,
   });
-
-  // Parse request size limits
-  const parseSize = (size: string): string | number => {
-    const units = {
-      b: 1,
-      kb: 1024,
-      mb: 1024 * 1024,
-      gb: 1024 * 1024 * 1024,
-    };
-
-    const match = size.match(/^(\d+)(kb|mb|gb|b)?$/i);
-    if (!match) return '10mb';
-
-    const amount = parseInt(match[1], 10);
-    const unit = (match[2] || 'b').toLowerCase();
-
-    return amount * (units[unit as keyof typeof units] || 1);
-  };
 
   // Apply JSON request size limit
   app.use(
@@ -68,10 +51,13 @@ async function bootstrap() {
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // Apply global logging middleware
-  app.use(new RequestResponseMiddleware(loggerService).use.bind(new RequestResponseMiddleware(loggerService)));
+  app.use(
+    new RequestResponseMiddleware(loggerService).use.bind(
+      new RequestResponseMiddleware(loggerService),
+    ),
+  );
 
   // Global validation pipe
-
   app.useGlobalPipes(new AppValidationPipe());
 
   // Apply global exception filter
@@ -82,6 +68,10 @@ async function bootstrap() {
 
   // Apply locale middleware
   app.use(LocaleMiddleware.prototype.use);
+
+  // Apply global rate limiting guard (dynamic limits via Redis)
+  const reflector = app.get(Reflector);
+  app.useGlobalGuards(new DynamicThrottlerGuard(reflector));
 
   // Start the application
   const port = process.env.PORT ?? 3000;
@@ -105,5 +95,3 @@ bootstrap().catch((error) => {
   console.error('Failed to start application:', error);
   process.exit(1);
 });
-
-
