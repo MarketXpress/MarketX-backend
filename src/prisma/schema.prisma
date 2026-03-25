@@ -1,0 +1,11 @@
+model Escrow {
+  id             String   @id @default(uuid())
+  amount         Int
+  status         String
+  releasedAmount Int?     // new
+  refundedAmount Int?     // new
+  sellerId       String
+  buyerId        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
