@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Wallet } from './entities/wallet.entity';
 import { WalletKeyAudit } from './entities/wallet-key-audit.entity';
 import * as StellarSdk from '@stellar/stellar-sdk';
@@ -9,12 +10,15 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
+
   constructor(
     @InjectRepository(Wallet)
     private walletRepository: Repository<Wallet>,
     private configService: ConfigService,
     @InjectRepository(WalletKeyAudit)
     private walletKeyAuditRepository: Repository<WalletKeyAudit>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   generateKeyPair(): { publicKey: string; secretKey: string } {
@@ -142,6 +146,254 @@ export class WalletService {
       }
       throw new Error(`Failed to fetch wallet balance: ${error.message}`);
     }
+  }
+
+  /**
+   * Request a withdrawal from user's wallet
+   * Emits audit events for compliance tracking
+   */
+  async requestWithdrawal(
+    userId: string,
+    amount: number,
+    destination: string,
+    ipAddress: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean; transactionId: string }> {
+    try {
+      if (amount <= 0) {
+        throw new BadRequestException('Withdrawal amount must be positive');
+      }
+
+      const wallet = await this.findByUserId(userId);
+      if (!wallet) {
+        throw new BadRequestException('Wallet not found for user');
+      }
+
+      // Validate destination address format
+      if (!this.isValidStellarAddress(destination)) {
+        throw new BadRequestException('Invalid destination address');
+      }
+
+      // Check balance
+      const { balance } = await this.getWalletBalance(userId);
+      if (parseFloat(balance) < amount) {
+        // Emit audit event for failed withdrawal attempt
+        this.eventEmitter.emit('wallet.withdrawal_requested', {
+          actionType: 'WITHDRAWAL',
+          userId,
+          ipAddress,
+          userAgent,
+          status: 'FAILURE',
+          errorMessage: 'Insufficient balance',
+          resourceType: 'wallet',
+          resourceId: wallet.id,
+          statePreviousValue: { balance: parseFloat(balance) },
+          stateNewValue: { balance: parseFloat(balance) - amount },
+          metadata: {
+            amount,
+            destination,
+            currency: 'XLM',
+            reason: 'insufficient_balance',
+          },
+        });
+
+        throw new BadRequestException('Insufficient balance for withdrawal');
+      }
+
+      // Generate transaction ID
+      const transactionId = `withdrawal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Emit audit event for successful withdrawal request
+      this.eventEmitter.emit('wallet.withdrawal_requested', {
+        actionType: 'WITHDRAWAL',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        resourceType: 'wallet',
+        resourceId: wallet.id,
+        statePreviousValue: { balance: parseFloat(balance), withdrawn: false },
+        stateNewValue: { balance: parseFloat(balance) - amount, withdrawn: true },
+        metadata: {
+          amount,
+          destination,
+          currency: 'XLM',
+          transactionId,
+          requestedAt: new Date(),
+        },
+      });
+
+      this.logger.log(
+        `Withdrawal requested: ${amount} XLM from ${userId} to ${destination}`,
+      );
+
+      return { success: true, transactionId };
+    } catch (error) {
+      this.logger.error(`Withdrawal request failed: ${error.message}`, error.stack);
+
+      // Emit audit event for error
+      this.eventEmitter.emit('wallet.withdrawal_requested', {
+        actionType: 'WITHDRAWAL',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'FAILURE',
+        errorMessage: error.message,
+        resourceType: 'wallet',
+        resourceId: userId,
+        metadata: {
+          amount,
+          destination,
+          reason: 'system_error',
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Complete a withdrawal transaction
+   * Emits audit event upon completion for compliance tracking
+   */
+  async completeWithdrawal(
+    userId: string,
+    transactionHash: string,
+    amount: number,
+    destination: string,
+    ipAddress: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean }> {
+    try {
+      if (!transactionHash) {
+        throw new BadRequestException('Transaction hash is required');
+      }
+
+      const wallet = await this.findByUserId(userId);
+      if (!wallet) {
+        throw new BadRequestException('Wallet not found for user');
+      }
+
+      // Emit audit event for withdrawal completion
+      this.eventEmitter.emit('wallet.withdrawal_completed', {
+        actionType: 'WITHDRAWAL',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        resourceType: 'wallet',
+        resourceId: wallet.id,
+        metadata: {
+          amount,
+          destination,
+          transactionHash,
+          currency: 'XLM',
+          completedAt: new Date(),
+        },
+      });
+
+      this.logger.log(
+        `Withdrawal completed: ${amount} XLM, transaction hash: ${transactionHash}`,
+      );
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Withdrawal completion failed: ${error.message}`, error.stack);
+
+      // Emit audit event for error
+      this.eventEmitter.emit('wallet.withdrawal_completed', {
+        actionType: 'WITHDRAWAL',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'FAILURE',
+        errorMessage: error.message,
+        resourceType: 'wallet',
+        resourceId: userId,
+        metadata: {
+          amount,
+          destination,
+          transactionHash,
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Request a deposit to user's wallet
+   * Emits audit events for compliance tracking
+   */
+  async requestDeposit(
+    userId: string,
+    amount: number,
+    ipAddress: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean; transactionId: string }> {
+    try {
+      if (amount <= 0) {
+        throw new BadRequestException('Deposit amount must be positive');
+      }
+
+      const wallet = await this.findByUserId(userId);
+      if (!wallet) {
+        throw new BadRequestException('Wallet not found for user');
+      }
+
+      const balanceBefore = await this.getWalletBalance(userId);
+      const transactionId = `deposit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Emit audit event for deposit
+      this.eventEmitter.emit('wallet.deposit_requested', {
+        actionType: 'DEPOSIT',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        resourceType: 'wallet',
+        resourceId: wallet.id,
+        statePreviousValue: { balance: parseFloat(balanceBefore.balance) },
+        stateNewValue: { balance: parseFloat(balanceBefore.balance) + amount },
+        metadata: {
+          amount,
+          currency: 'XLM',
+          transactionId,
+          requestedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`Deposit requested: ${amount} XLM to wallet ${userId}`);
+
+      return { success: true, transactionId };
+    } catch (error) {
+      this.logger.error(`Deposit request failed: ${error.message}`, error.stack);
+
+      this.eventEmitter.emit('wallet.deposit_requested', {
+        actionType: 'DEPOSIT',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'FAILURE',
+        errorMessage: error.message,
+        resourceType: 'wallet',
+        resourceId: userId,
+        metadata: {
+          amount,
+          reason: 'system_error',
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Validate Stellar address format
+   */
+  private isValidStellarAddress(address: string): boolean {
+    // Stellar public key starts with 'G' and is 56 characters long
+    return /^G[A-Z2-7]{55}$/.test(address);
   }
 }
 

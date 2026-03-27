@@ -8,7 +8,10 @@ export enum AuditActionType {
   LOGIN = 'LOGIN',
   LOGOUT = 'LOGOUT',
   PASSWORD_CHANGE = 'PASSWORD_CHANGE',
+  EMAIL_CHANGE = 'EMAIL_CHANGE',
   PERMISSION_CHANGE = 'PERMISSION_CHANGE',
+  WITHDRAWAL = 'WITHDRAWAL',
+  DEPOSIT = 'DEPOSIT',
   SYSTEM = 'SYSTEM',
 }
 
@@ -62,6 +65,18 @@ export class AuditLog {
 
   @Column({ type: 'int', nullable: true })
   responseTime: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  statePreviousValue: Record<string, any>;
+
+  @Column({ type: 'jsonb', nullable: true })
+  stateNewValue: Record<string, any>;
+
+  @Column({ type: 'jsonb', nullable: true })
+  stateDiff: Record<string, { previous: any; new: any }>;
+
+  @Column({ nullable: true })
+  changedFields: string;
 
   @CreateDateColumn()
   createdAt: Date;
