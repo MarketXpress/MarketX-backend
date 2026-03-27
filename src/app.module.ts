@@ -37,6 +37,7 @@ import { JobsModule } from './job-processing/jobs.module';
 import { RecommendationsModule } from './recommendation/recommendation.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ListingsModule } from './listing/listing.module';
+import { SearchModule } from './search/search.module';
 
 // ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
@@ -121,6 +122,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RecommendationsModule,
     RefundsModule,
     ListingsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [

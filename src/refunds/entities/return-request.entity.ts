@@ -131,4 +131,8 @@ export class ReturnRequest {
   // Days allowed for return (default 30 days from delivery)
   @Column({ type: 'int', default: 30 })
   returnWindowDays: number;
+
+  // Evidence hash (IPFS CID) for dispute resolution
+  @Column({ type: 'bytea', nullable: true })
+  evidenceHash?: Buffer;
 }
