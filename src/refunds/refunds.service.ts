@@ -57,6 +57,7 @@ export class RefundsService {
       refundType,
       items,
       returnWindowDays,
+      evidenceHash,
     } = dto;
 
     const order = await this.orderRepository.findOne({
@@ -151,6 +152,7 @@ export class RefundsService {
       currency: order.currency,
       items,
       returnWindowDays: maxReturnDays,
+      evidenceHash: evidenceHash ? Buffer.from(evidenceHash) : undefined,
     });
 
     const saved = await this.returnRequestRepository.save(returnRequest);

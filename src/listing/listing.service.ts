@@ -1,18 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { Listing } from './entities/listing.entity';
 import { ConfigService } from '@nestjs/config';
+import { SearchSyncService } from '../search/search-sync.service';
 
 // NOTE: Ensure ConfigService is provided in the ListingsModule for dependency injection.
 @Injectable()
 export class ListingsService {
+  private readonly logger = new Logger(ListingsService.name);
+
   constructor(
     @InjectRepository(Listing)
     private readonly listingRepo: Repository<Listing>,
     private readonly configService: ConfigService,
+    private readonly searchSyncService: SearchSyncService,
   ) {}
 
   async create(dto: CreateListingDto, userId: string) {
@@ -20,7 +24,16 @@ export class ListingsService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + expiryDays * 24 * 60 * 60 * 1000);
     const listing = this.listingRepo.create({ ...dto, userId, expiresAt });
-    return await this.listingRepo.save(listing);
+    const saved = await this.listingRepo.save(listing);
+
+    // Index in search service
+    try {
+      await this.searchSyncService.syncSingleListing(saved, 'index');
+    } catch (error) {
+      this.logger.warn(`Failed to index listing ${saved.id} in search: ${error.message}`);
+    }
+
+    return saved;
   }
 
   async findOne(id: string) {
@@ -35,7 +48,16 @@ export class ListingsService {
   async update(id: string, dto: UpdateListingDto) {
     const listing = await this.findOne(id);
     Object.assign(listing, dto);
-    return await this.listingRepo.save(listing);
+    const saved = await this.listingRepo.save(listing);
+
+    // Update search index
+    try {
+      await this.searchSyncService.syncSingleListing(saved, 'update');
+    } catch (error) {
+      this.logger.warn(`Failed to update listing ${saved.id} in search: ${error.message}`);
+    }
+
+    return saved;
   }
 
   async delete(id: string) {
