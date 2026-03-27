@@ -6,9 +6,10 @@ import { FraudController } from './fraud.controller';
 import { RequestMonitorMiddleware } from './middleware/request-monitor.middleware';
 import { AdminModule } from '../admin/admin.module';
 import { GeolocationService } from '../geolocation/geolocation.service';
+import { Order } from '../orders/entities/order.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FraudAlert]), AdminModule],
+  imports: [TypeOrmModule.forFeature([FraudAlert, Order]), AdminModule],
   providers: [FraudService, RequestMonitorMiddleware, GeolocationService],
   controllers: [FraudController],
   exports: [FraudService],

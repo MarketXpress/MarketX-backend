@@ -5,6 +5,8 @@ import { FraudAlert } from './entities/fraud-alert.entity';
 import { evaluateAllRules } from './score';
 import type { AdminService } from '../admin/admin.service';
 import { GeolocationService } from '../geolocation/geolocation.service';
+import { Order } from '../orders/entities/order.entity';
+import { OrderStatus } from '../orders/dto/create-order.dto';
 
 @Injectable()
 export class FraudService {
@@ -13,6 +15,8 @@ export class FraudService {
   constructor(
     @InjectRepository(FraudAlert)
     private readonly repo: Repository<FraudAlert>,
+    @InjectRepository(Order)
+    private readonly ordersRepository: Repository<Order>,
     private readonly geolocationService: GeolocationService,
     private readonly adminService?: AdminService,
   ) {}
@@ -46,6 +50,13 @@ export class FraudService {
 
     // create an alert if above conservative threshold
     if (result.riskScore >= 20) {
+      const alertStatus =
+        result.riskScore >= 90
+          ? 'suspended'
+          : result.riskScore >= 75
+          ? 'manual_review'
+          : 'pending';
+
       const alert = this.repo.create({
         userId: input.userId,
         orderId: input.orderId,
@@ -54,13 +65,27 @@ export class FraudService {
         riskScore: result.riskScore,
         reason: result.reason,
         metadata: input.metadata,
-        status: result.riskScore >= 70 ? 'suspended' : 'pending',
+        status: alertStatus,
       });
 
       await this.repo.save(alert);
 
+      // Mark order for manual review if score breaches 75
+      if (result.riskScore >= 75 && input.orderId) {
+        const order = await this.ordersRepository.findOne({
+          where: { id: input.orderId },
+        });
+        if (order && order.status !== OrderStatus.MANUAL_REVIEW) {
+          order.status = OrderStatus.MANUAL_REVIEW;
+          await this.ordersRepository.save(order);
+          this.logger.warn(
+            `Order ${input.orderId} marked MANUAL_REVIEW (score=${result.riskScore})`,
+          );
+        }
+      }
+
       // Automatic suspension action for high-risk users
-      if (result.riskScore >= 70 && input.userId && this.adminService) {
+      if (result.riskScore >= 90 && input.userId && this.adminService) {
         try {
           await this.adminService.suspendUser(String(input.userId));
         } catch (err) {

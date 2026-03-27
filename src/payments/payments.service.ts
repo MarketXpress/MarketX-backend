@@ -63,6 +63,12 @@ export class PaymentsService {
       throw new NotFoundException(`Order with ID "${initiatePaymentDto.orderId}" not found`);
     }
 
+    if (order.status === OrderStatus.MANUAL_REVIEW) {
+      throw new BadRequestException(
+        `Order ${order.id} is under MANUAL_REVIEW due to fraud risk; payment is halted`,
+      );
+    }
+
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException(`Order must be in PENDING status to initiate payment`);
     }
@@ -149,6 +155,12 @@ export class PaymentsService {
 
     if (payment.status !== PaymentStatus.PENDING) {
       throw new BadRequestException(`Payment is no longer in PENDING status`);
+    }
+
+    if (payment.order && payment.order.status === OrderStatus.MANUAL_REVIEW) {
+      throw new BadRequestException(
+        `Payment for order ${payment.orderId} is blocked: order is under MANUAL_REVIEW`,
+      );
     }
 
     // Verify transaction data
