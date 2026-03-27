@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class CreateDisputeDto {
   @IsString()
@@ -12,4 +12,16 @@ export class CreateDisputeDto {
 
   @IsString()
   reason: string;
+
+  @IsOptional()
+  @IsString()
+  escrowId?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrls?: string;
 } 

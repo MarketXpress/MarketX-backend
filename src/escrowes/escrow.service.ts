@@ -192,6 +192,96 @@ export class EscrowService {
 
   /**
    * =========================
+   * FREEZE ESCROW (FOR DISPUTES)
+   * =========================
+   */
+  async freezeEscrow(escrowId: string): Promise<EscrowResponseDto> {
+    const escrow = await this.findEscrowOrFail(escrowId);
+
+    if (escrow.status !== EscrowStatus.LOCKED) {
+      throw new BadRequestException(
+        `Cannot freeze escrow with status: ${escrow.status}`,
+      );
+    }
+
+    escrow.status = EscrowStatus.FROZEN;
+    await this.escrowRepository.save(escrow);
+
+    return this.mapToResponse(escrow);
+  }
+
+  /**
+   * =========================
+   * ADMIN RELEASE FUNDS (FOR DISPUTE RESOLUTION)
+   * =========================
+   */
+  async adminReleaseFunds(
+    escrowId: string,
+    distribution: {
+      toSeller: number;
+      toBuyer: number;
+    },
+  ): Promise<EscrowResponseDto> {
+    const escrow = await this.findEscrowOrFail(escrowId);
+
+    if (escrow.status !== EscrowStatus.FROZEN) {
+      throw new BadRequestException(
+        `Can only release frozen escrow, current status: ${escrow.status}`,
+      );
+    }
+
+    const totalAmount = escrow.amount;
+    if (distribution.toSeller + distribution.toBuyer !== totalAmount) {
+      throw new BadRequestException(
+        'Distribution must equal total escrow amount',
+      );
+    }
+
+    try {
+      // Release to seller
+      let releaseHash: string | null = null;
+      if (distribution.toSeller > 0) {
+        const releaseTx = await this.buildTransaction(
+          escrow.escrowAccountPublicKey,
+          escrow.sellerPublicKey,
+          distribution.toSeller,
+        );
+        releaseHash = await this.submitTransaction(releaseTx);
+      }
+
+      // Refund to buyer
+      let refundHash: string | null = null;
+      if (distribution.toBuyer > 0) {
+        const refundTx = await this.buildTransaction(
+          escrow.escrowAccountPublicKey,
+          escrow.buyerPublicKey,
+          distribution.toBuyer,
+        );
+        refundHash = await this.submitTransaction(refundTx);
+      }
+
+      escrow.releaseTransactionHash = releaseHash;
+      escrow.refundTransactionHash = refundHash;
+      escrow.status = EscrowStatus.RELEASED;
+      escrow.deliveryConfirmedAt = new Date();
+
+      await this.escrowRepository.save(escrow);
+
+      this.emitFundsReleasedEvent(escrow);
+
+      return this.mapToResponse(escrow);
+    } catch (error) {
+      escrow.errorMessage = error.message;
+      await this.escrowRepository.save(escrow);
+
+      throw new BadRequestException(
+        `Failed to release frozen escrow: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * =========================
    * REFUND FULL
    * =========================
    */
@@ -227,7 +317,7 @@ export class EscrowService {
    * =========================
    */
 
-  private async findEscrowOrFail(id: string): Promise<EscrowEntity> {
+  async findEscrowOrFail(id: string): Promise<EscrowEntity> {
     const escrow = await this.escrowRepository.findOne({ where: { id } });
 
     if (!escrow) {

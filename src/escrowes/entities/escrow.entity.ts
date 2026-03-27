@@ -13,6 +13,8 @@ export enum EscrowStatus {
   RELEASED = 'released',
   REFUNDED = 'refunded',
   CANCELLED = 'cancelled',
+  FROZEN = 'frozen',
+  PARTIALLY_RELEASED = 'partially_released',
 }
 
 @Entity('escrow_transactions')
