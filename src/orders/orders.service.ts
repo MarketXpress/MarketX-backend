@@ -1,26 +1,20 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Order } from './entities/order.entity';
+import { DataSource, Repository } from 'typeorm';
+import { InventoryService } from '../inventory/inventory.service';
+import { OrderUpdatedEvent } from '../notifications/events/order.events';
+import { PricingService } from '../products/services/pricing.service';
 import {
   CreateOrderDto,
   OrderStatus,
   UpdateOrderStatusDto,
 } from './dto/create-order.dto';
-import {
-  PricingService,
-  SupportedCurrency,
-} from '../products/services/pricing.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  OrderCreatedEvent,
-  OrderUpdatedEvent,
-} from '../notifications/events/order.events';
-import { InventoryService } from '../inventory/inventory.service';
+import { Order } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
@@ -114,15 +108,6 @@ export class OrdersService {
     const order = await this.findOne(id);
     const previousStatus = order.status;
 
-    // Validate state transition
-    if (
-      !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
-    ) {
-      throw new BadRequestException(
-        `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
-      );
-    }
-
     // Handle inventory based on status change
     if (updateOrderStatusDto.status === OrderStatus.PAID) {
       await this.inventoryService.confirmOrder(order);
@@ -156,24 +141,5 @@ export class OrdersService {
     );
 
     return updatedOrder;
-  }
-
-
-
-  private isValidStateTransition(
-    currentStatus: OrderStatus,
-    newStatus: OrderStatus,
-  ): boolean {
-    // Define valid state transitions
-    const validTransitions: { [key in OrderStatus]: OrderStatus[] } = {
-      [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
-      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-      [OrderStatus.DELIVERED]: [],
-      [OrderStatus.CANCELLED]: [],
-    };
-
-    const allowedTransitions = validTransitions[currentStatus] || [];
-    return allowedTransitions.includes(newStatus);
   }
 }

@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
   ArrayMinSize,
@@ -11,7 +12,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { SanitizeString } from '../../common/transformers/sanitize-string.transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SupportedCurrency } from '../../products/services/pricing.service';
 
 export enum OrderStatus {
@@ -19,6 +19,7 @@ export enum OrderStatus {
   PAID = 'paid',
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
+  COMPLETED = 'completed',
   CANCELLED = 'cancelled',
 }
 

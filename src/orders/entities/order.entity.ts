@@ -1,6 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { OrderStatus } from '../dto/create-order.dto';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { SupportedCurrency } from '../../products/services/pricing.service';
+import { OrderStatus } from '../dto/create-order.dto';
 
 @Entity()
 export class Order {
