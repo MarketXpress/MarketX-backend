@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { FraudAlert } from './entities/fraud-alert.entity';
 import { evaluateAllRules } from './score';
 import type { AdminService } from '../admin/admin.service';
+import { GeolocationService } from '../geolocation/geolocation.service';
 
 @Injectable()
 export class FraudService {
@@ -12,6 +13,7 @@ export class FraudService {
   constructor(
     @InjectRepository(FraudAlert)
     private readonly repo: Repository<FraudAlert>,
+    private readonly geolocationService: GeolocationService,
     private readonly adminService?: AdminService,
   ) {}
 
@@ -22,6 +24,24 @@ export class FraudService {
     deviceFingerprint?: string;
     metadata?: any;
   }) {
+    // enrich with geolocation context if shipping address is present
+    const shippingAddress = input.metadata?.shippingAddress;
+    if (input.ip && shippingAddress) {
+      try {
+        const ipLocation = await this.geolocationService.getLocationFromIp(input.ip);
+        const shipLocation = await this.geolocationService.geocodeAddress(shippingAddress);
+
+        if (ipLocation && shipLocation) {
+          const distance = this.geolocationService.distanceMiles(ipLocation, shipLocation);
+          input.metadata.geoDistanceMiles = distance;
+          input.metadata.ipGeoPoint = ipLocation;
+          input.metadata.shippingGeoPoint = shipLocation;
+        }
+      } catch (err) {
+        this.logger.warn(`Geolocation enrichment failed: ${err?.message || err}`);
+      }
+    }
+
     const result = await evaluateAllRules(input);
 
     // create an alert if above conservative threshold

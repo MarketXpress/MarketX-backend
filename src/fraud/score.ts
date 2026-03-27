@@ -74,6 +74,12 @@ const RULES: Rule[] = [
     check: ({ metadata }) =>
       metadata?.isFirstOrder === true && (metadata?.amount ?? 0) > 1_000,
   },
+  {
+    name: 'geo_distance',
+    score: 50,
+    check: ({ metadata }) =>
+      (metadata?.geoDistanceMiles ?? 0) > 1000,
+  },
 ];
 
 export async function evaluateAllRules(input: FraudInput): Promise<ScoreResult> {
