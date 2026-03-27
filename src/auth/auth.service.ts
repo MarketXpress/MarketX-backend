@@ -117,4 +117,141 @@ export class AuthService {
 
     return true;
   }
+
+  /**
+   * Change user password with audit logging
+   * Emits user.password_changed event for compliance tracking
+   */
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+    ipAddress: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean }> {
+    try {
+      // Fetch user
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Verify old password
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+      if (!isPasswordValid) {
+        // Emit failed audit event
+        this.eventEmitter.emit('user.password_changed', {
+          actionType: 'PASSWORD_CHANGE',
+          userId,
+          ipAddress,
+          userAgent,
+          status: 'FAILURE',
+          errorMessage: 'Invalid current password',
+          resourceType: 'user',
+          resourceId: userId,
+          metadata: { reason: 'invalid_current_password' },
+        });
+
+        throw new BadRequestException('Invalid current password');
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      // Emit successful audit event
+      // Note: We intentionally don't store actual password values, only that a change occurred
+      this.eventEmitter.emit('user.password_changed', {
+        actionType: 'PASSWORD_CHANGE',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        resourceType: 'user',
+        resourceId: userId,
+        statePreviousValue: { passwordChanged: false },
+        stateNewValue: { passwordChanged: true },
+        metadata: {
+          changedAt: new Date(),
+          reason: 'user_initiated',
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.eventEmitter.emit('user.password_changed', {
+        actionType: 'PASSWORD_CHANGE',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'FAILURE',
+        errorMessage: error.message,
+        resourceType: 'user',
+        resourceId: userId,
+        metadata: { reason: 'system_error' },
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password (typically via email token)
+   * Emits user.password_changed event for compliance tracking
+   */
+  async resetPassword(
+    userId: string,
+    newPassword: string,
+    ipAddress: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean }> {
+    try {
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      // Emit successful audit event
+      this.eventEmitter.emit('user.password_changed', {
+        actionType: 'PASSWORD_CHANGE',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        resourceType: 'user',
+        resourceId: userId,
+        statePreviousValue: { passwordReset: false },
+        stateNewValue: { passwordReset: true },
+        metadata: {
+          changedAt: new Date(),
+          reason: 'password_reset',
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.eventEmitter.emit('user.password_changed', {
+        actionType: 'PASSWORD_CHANGE',
+        userId,
+        ipAddress,
+        userAgent,
+        status: 'FAILURE',
+        errorMessage: error.message,
+        resourceType: 'user',
+        resourceId: userId,
+        metadata: { reason: 'system_error' },
+      });
+
+      throw error;
+    }
+  }
 }
