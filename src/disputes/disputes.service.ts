@@ -10,6 +10,7 @@ import { UpdateDisputeDto } from './dto/update-dispute.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { DisputeStateMachine } from './state-machine/dispute.state-machine';
 import { EscrowService } from '../escrowes/escrow.service';
+import { EscrowEntity } from '../escrowes/entities/escrow.entity';
 
 @Injectable()
 export class DisputesService {
@@ -20,6 +21,8 @@ export class DisputesService {
     private readonly disputeRepo: Repository<Dispute>,
     @InjectRepository(Evidence)
     private readonly evidenceRepo: Repository<Evidence>,
+    @InjectRepository(EscrowEntity)
+    private readonly escrowRepo: Repository<EscrowEntity>,
     private readonly escrowService: EscrowService,
   ) {}
 
@@ -33,11 +36,15 @@ export class DisputesService {
     
     const savedDispute = await this.disputeRepo.save(dispute);
 
-    // Freeze the escrow if escrowId is provided
+    // Freeze the escrow and set dispute flag if escrowId is provided
     if (dto.escrowId) {
       try {
         await this.escrowService.freezeEscrow(dto.escrowId);
-        this.logger.log(`Escrow ${dto.escrowId} frozen for dispute ${savedDispute.id}`);
+        
+        // Set the dispute flag to prevent auto-release
+        await this.escrowRepo.update({ id: dto.escrowId }, { disputeFlag: true });
+        
+        this.logger.log(`Escrow ${dto.escrowId} frozen and disputeFlag set for dispute ${savedDispute.id}`);
       } catch (error) {
         this.logger.error(`Failed to freeze escrow ${dto.escrowId}: ${error.message}`);
         throw new BadRequestException(`Failed to freeze escrow: ${error.message}`);

@@ -6,9 +6,10 @@ import { DisputesService } from './disputes.service';
 import { DisputesController } from './disputes.controller';
 import { AdminDisputesController } from './admin-disputes.controller';
 import { EscrowModule } from '../escrowes/escrow.module';
+import { EscrowEntity } from '../escrowes/entities/escrow.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Dispute, Evidence]), EscrowModule],
+  imports: [TypeOrmModule.forFeature([Dispute, Evidence, EscrowEntity]), EscrowModule],
   providers: [DisputesService],
   controllers: [DisputesController, AdminDisputesController],
   exports: [DisputesService],
