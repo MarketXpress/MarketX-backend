@@ -38,6 +38,7 @@ import { RecommendationsModule } from './recommendation/recommendation.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ListingsModule } from './listing/listing.module';
 import { SearchModule } from './search/search.module';
+import { ArchivingModule } from './archiving/archiving.module';
 
 // ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
@@ -123,6 +124,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RefundsModule,
     ListingsModule,
     SearchModule,
+    ArchivingModule,
   ],
   controllers: [AppController],
   providers: [
