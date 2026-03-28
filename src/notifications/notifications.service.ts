@@ -143,6 +143,15 @@ export class NotificationsService {
         if (channel === NotificationChannel.PUSH && !preferences.pushEnabled)
           continue;
 
+        // Respect specific notification preferences
+        const notificationType = (dto as any).type;
+        if (channel === NotificationChannel.EMAIL && notificationType === NotificationType.ORDER_CREATED && !preferences.allowPromotionalEmail)
+          continue;
+        if (channel === NotificationChannel.PUSH && notificationType === NotificationType.ORDER_CREATED && !preferences.allowOrderSms)
+          continue;
+        if (channel === NotificationChannel.IN_APP && notificationType === NotificationType.ORDER_CREATED && !preferences.allowInAppAlerts)
+          continue;
+
         const notification = this.notificationRepository.create({
           ...(dto as any),
           channel,
