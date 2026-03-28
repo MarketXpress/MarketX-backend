@@ -1,7 +1,9 @@
 import { FraudService } from '../fraud.service';
+import { Order } from '../../orders/entities/order.entity';
+import { OrderStatus } from '../../orders/dto/create-order.dto';
 import { evaluateAllRules } from '../score';
 
-describe.skip('Fraud rules and service', () => {
+describe('Fraud rules and service', () => {
   it('evaluateAllRules returns numeric score and reason', async () => {
     const res = await evaluateAllRules({ userId: 'u1' });
     expect(typeof res.riskScore).toBe('number');
@@ -15,6 +17,37 @@ describe.skip('Fraud rules and service', () => {
     expect(r2.riskScore).toBeGreaterThanOrEqual(r1.riskScore);
   });
 
+  it('FraudService marks order MANUAL_REVIEW at >=75', async () => {
+    const fakeRepo: any = {
+      create: (o: any) => ({ ...o }),
+      save: jest.fn(async (o: any) => ({ ...o, id: 'fake-id' })),
+      findAndCount: jest.fn(async () => [[], 0]),
+      findOneBy: jest.fn(async () => null),
+    };
+
+    const fakeOrderRepo: any = {
+      findOne: jest.fn(async () => ({ id: 'ord-1', status: OrderStatus.PENDING })),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const svc = new FraudService(fakeRepo, fakeOrderRepo);
+
+    const result = await svc.analyzeRequest({
+      userId: 'user-highrisk',
+      orderId: 'ord-1',
+      metadata: {
+        amount: 1000,
+        accountAgeHours: 1,
+        billingAddress: '123 A St',
+        shippingAddress: '456 B Ave',
+      },
+    });
+
+    expect(result.flagged).toBe(true);
+    expect(fakeOrderRepo.save).toHaveBeenCalled();
+    expect(fakeOrderRepo.save.mock.calls[0][0].status).toBe(OrderStatus.MANUAL_REVIEW);
+  });
+
   it('FraudService creates alert when score high', async () => {
     const fakeRepo: any = {
       create: (o: any) => ({ ...o }),
@@ -23,7 +56,15 @@ describe.skip('Fraud rules and service', () => {
       findOneBy: jest.fn(async () => null),
     };
 
-    const svc = new FraudService(fakeRepo);
+    const fakeOrderRepo: any = {
+      findOne: jest.fn(async () => ({
+        id: 'ord-1',
+        status: OrderStatus.PENDING,
+      })),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const svc = new FraudService(fakeRepo, fakeOrderRepo);
 
     // prime velocity: call rules repeatedly to build internal state
     for (let i = 0; i < 30; i++) {

@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Body, Patch, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
 import { ApplyCouponDto, ApplyCouponResponseDto } from '../coupons/dto/apply-coupon.dto';
 import { CouponsService } from '../coupons/coupons.service';
+import { OrderCreatedEvent, OrderCancelledEvent, EventNames } from '../common/events';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -12,14 +14,27 @@ export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly couponsService: CouponsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createOrderDto: CreateOrderDto) {
     const order = await this.ordersService.create(createOrderDto);
-    // Emit event: OrderCreated
-    console.log(`Event emitted: OrderCreated - Order ID: ${order.id}`);
+    
+    // Emit order.created event for side-effects (email, notifications, analytics)
+    this.eventEmitter.emit(
+      EventNames.ORDER_CREATED,
+      new OrderCreatedEvent(
+        order.id,
+        order.buyerId,
+        `ORD-${order.id.substring(0, 8)}`,
+        order.totalAmount,
+        order.items,
+        order.currency,
+      ),
+    );
+    
     return order;
   }
 
@@ -53,8 +68,18 @@ export class OrdersController {
       throw new Error('User ID is required to cancel an order');
     }
     const order = await this.ordersService.cancelOrder(id, userId);
-    // Emit event: OrderCancelled
-    console.log(`Event emitted: OrderCancelled - Order ID: ${order.id}`);
+    
+    // Emit order.cancelled event for side-effects (email, notifications, analytics)
+    this.eventEmitter.emit(
+      EventNames.ORDER_CANCELLED,
+      new OrderCancelledEvent(
+        order.id,
+        order.buyerId,
+        `ORD-${order.id.substring(0, 8)}`,
+        'User requested cancellation',
+      ),
+    );
+    
     return order;
   }
 

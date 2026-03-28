@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
@@ -14,255 +18,347 @@ import {
 export class EscrowService {
   private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
-  private escrowRepository: Repository<EscrowEntity>;
 
-  constructor() {
-    // Initialize Stellar SDK for testnet
-    this.stellarServer = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
+  constructor(
+    @InjectRepository(EscrowEntity)
+    private readonly escrowRepository: Repository<EscrowEntity>,
+  ) {
+    this.stellarServer = new StellarSdk.Horizon.Server(
+      'https://horizon-testnet.stellar.org',
+    );
     this.networkPassphrase = StellarSdk.Networks.TESTNET;
-    // InjectRepository should be handled outside the service class
-    // this.escrowRepository = escrowRepository;
   }
 
   /**
-   * Creates and locks funds in escrow
-   * Generates new escrow account and transfers funds from buyer
+   * =========================
+   * CREATE ESCROW
+   * =========================
    */
   async createEscrow(dto: CreateEscrowDto): Promise<EscrowResponseDto> {
-    try {
-      // Validate inputs
-      if (dto.amount <= 0) {
-        throw new BadRequestException('Amount must be positive');
-      }
-
-      if (dto.buyerPublicKey === dto.sellerPublicKey) {
-        throw new BadRequestException('Buyer and seller cannot be the same');
-      }
-
-      // Generate new escrow account
-      const escrowKeypair = StellarSdk.Keypair.random();
-      const escrowPublicKey = escrowKeypair.publicKey();
-
-      // Create escrow record
-      const escrow = {
-        orderId: dto.orderId,
-        buyerPublicKey: dto.buyerPublicKey,
-        sellerPublicKey: dto.sellerPublicKey,
-        amount: dto.amount,
-        escrowAccountPublicKey: escrowPublicKey,
-        status: EscrowStatus.PENDING,
-      };
-
-      const savedEscrow = await this.saveEscrow(escrow as any);
-
-      // Build lock transaction: buyer funds escrow account
-      const lockTx = await this.buildLockTransaction(
-        dto.buyerPublicKey,
-        escrowPublicKey,
-        dto.amount,
-      );
-
-      // Sign and submit transaction (buyer secret required - handle in controller)
-      const transactionHash = await this.submitTransaction(lockTx);
-
-      // Update escrow with transaction hash
-      savedEscrow.lockTransactionHash = transactionHash;
-      savedEscrow.status = EscrowStatus.LOCKED;
-      await this.saveEscrow(savedEscrow);
-
-      return this.mapToResponse(savedEscrow);
-    } catch (error) {
-      throw new BadRequestException(`Failed to create escrow: ${error.message}`);
+    if (dto.amount <= 0) {
+      throw new BadRequestException('Amount must be positive');
     }
+
+    if (dto.buyerPublicKey === dto.sellerPublicKey) {
+      throw new BadRequestException('Buyer and seller cannot be the same');
+    }
+
+    const escrowKeypair = StellarSdk.Keypair.random();
+
+    const escrow = this.escrowRepository.create({
+      orderId: dto.orderId,
+      buyerPublicKey: dto.buyerPublicKey,
+      sellerPublicKey: dto.sellerPublicKey,
+      amount: dto.amount,
+      escrowAccountPublicKey: escrowKeypair.publicKey(),
+      status: EscrowStatus.PENDING,
+    });
+
+    const savedEscrow = await this.escrowRepository.save(escrow);
+
+    const lockTx = await this.buildTransaction(
+      dto.buyerPublicKey,
+      escrow.escrowAccountPublicKey,
+      dto.amount,
+    );
+
+    const txHash = await this.submitTransaction(lockTx);
+
+    savedEscrow.lockTransactionHash = txHash;
+    savedEscrow.status = EscrowStatus.LOCKED;
+
+    await this.escrowRepository.save(savedEscrow);
+
+    return this.mapToResponse(savedEscrow);
   }
 
   /**
-   * Releases funds to seller upon delivery confirmation
+   * =========================
+   * FULL RELEASE
+   * =========================
    */
   async releaseFunds(dto: ReleaseEscrowDto): Promise<EscrowResponseDto> {
     const escrow = await this.findEscrowOrFail(dto.escrowId);
 
-    // Validate status
     if (escrow.status !== EscrowStatus.LOCKED) {
       throw new BadRequestException(
         `Cannot release escrow with status: ${escrow.status}`,
       );
     }
 
+    const tx = await this.buildTransaction(
+      escrow.escrowAccountPublicKey,
+      escrow.sellerPublicKey,
+      escrow.amount,
+    );
+
+    const hash = await this.submitTransaction(tx);
+
+    escrow.releaseTransactionHash = hash;
+    escrow.status = EscrowStatus.RELEASED;
+    escrow.deliveryConfirmedAt = new Date();
+
+    await this.escrowRepository.save(escrow);
+
+    this.emitFundsReleasedEvent(escrow);
+
+    return this.mapToResponse(escrow);
+  }
+
+  /**
+   * =========================
+   * 🔥 PARTIAL RELEASE (NEW)
+   * =========================
+   */
+  async releasePartial(
+    escrowId: string,
+    releasedAmount: number,
+  ): Promise<EscrowResponseDto> {
+    const escrow = await this.findEscrowOrFail(escrowId);
+
+    if (escrow.status !== EscrowStatus.LOCKED) {
+      throw new BadRequestException(
+        `Cannot partially release escrow with status: ${escrow.status}`,
+      );
+    }
+
+    if (releasedAmount <= 0) {
+      throw new BadRequestException('Released amount must be positive');
+    }
+
+    if (releasedAmount > escrow.amount) {
+      throw new BadRequestException(
+        'Released amount exceeds escrow balance',
+      );
+    }
+
+    const refundAmount = escrow.amount - releasedAmount;
+
     try {
-      // Build release transaction: escrow account sends to seller
-      const releaseTx = await this.buildReleaseTransaction(
+      /**
+       * 1. Pay seller (partial)
+       */
+      const releaseTx = await this.buildTransaction(
         escrow.escrowAccountPublicKey,
         escrow.sellerPublicKey,
-        escrow.amount,
+        releasedAmount,
       );
 
-      // Submit transaction
-      const transactionHash = await this.submitTransaction(releaseTx);
+      const releaseHash = await this.submitTransaction(releaseTx);
 
-      // Update escrow record
-      escrow.releaseTransactionHash = transactionHash;
-      escrow.status = EscrowStatus.RELEASED;
-      escrow.deliveryConfirmedAt = new Date();
-      await this.saveEscrow(escrow);
+      /**
+       * 2. Refund buyer (remaining)
+       */
+      let refundHash: string | null = null;
+
+      if (refundAmount > 0) {
+        const refundTx = await this.buildTransaction(
+          escrow.escrowAccountPublicKey,
+          escrow.buyerPublicKey,
+          refundAmount,
+        );
+
+        refundHash = await this.submitTransaction(refundTx);
+      }
+
+      /**
+       * 3. Update DB
+       */
+      escrow.releaseTransactionHash = releaseHash;
+      escrow.refundTransactionHash = refundHash;
+
+      (escrow as any).releasedAmount = releasedAmount;
+      (escrow as any).refundedAmount = refundAmount;
+
+      escrow.status =
+        refundAmount > 0
+          ? EscrowStatus.PARTIALLY_RELEASED
+          : EscrowStatus.RELEASED;
+
+      await this.escrowRepository.save(escrow);
+
+      this.emitFundsReleasedEvent(escrow);
 
       return this.mapToResponse(escrow);
     } catch (error) {
       escrow.errorMessage = error.message;
-      await this.saveEscrow(escrow);
-      throw new BadRequestException(`Failed to release funds: ${error.message}`);
+      await this.escrowRepository.save(escrow);
+
+      throw new BadRequestException(
+        `Failed partial release: ${error.message}`,
+      );
     }
   }
 
   /**
-   * Refunds funds back to buyer on cancellation
+   * =========================
+   * FREEZE ESCROW (FOR DISPUTES)
+   * =========================
+   */
+  async freezeEscrow(escrowId: string): Promise<EscrowResponseDto> {
+    const escrow = await this.findEscrowOrFail(escrowId);
+
+    if (escrow.status !== EscrowStatus.LOCKED) {
+      throw new BadRequestException(
+        `Cannot freeze escrow with status: ${escrow.status}`,
+      );
+    }
+
+    escrow.status = EscrowStatus.FROZEN;
+    await this.escrowRepository.save(escrow);
+
+    return this.mapToResponse(escrow);
+  }
+
+  /**
+   * =========================
+   * ADMIN RELEASE FUNDS (FOR DISPUTE RESOLUTION)
+   * =========================
+   */
+  async adminReleaseFunds(
+    escrowId: string,
+    distribution: {
+      toSeller: number;
+      toBuyer: number;
+    },
+  ): Promise<EscrowResponseDto> {
+    const escrow = await this.findEscrowOrFail(escrowId);
+
+    if (escrow.status !== EscrowStatus.FROZEN) {
+      throw new BadRequestException(
+        `Can only release frozen escrow, current status: ${escrow.status}`,
+      );
+    }
+
+    const totalAmount = escrow.amount;
+    if (distribution.toSeller + distribution.toBuyer !== totalAmount) {
+      throw new BadRequestException(
+        'Distribution must equal total escrow amount',
+      );
+    }
+
+    try {
+      // Release to seller
+      let releaseHash: string | null = null;
+      if (distribution.toSeller > 0) {
+        const releaseTx = await this.buildTransaction(
+          escrow.escrowAccountPublicKey,
+          escrow.sellerPublicKey,
+          distribution.toSeller,
+        );
+        releaseHash = await this.submitTransaction(releaseTx);
+      }
+
+      // Refund to buyer
+      let refundHash: string | null = null;
+      if (distribution.toBuyer > 0) {
+        const refundTx = await this.buildTransaction(
+          escrow.escrowAccountPublicKey,
+          escrow.buyerPublicKey,
+          distribution.toBuyer,
+        );
+        refundHash = await this.submitTransaction(refundTx);
+      }
+
+      escrow.releaseTransactionHash = releaseHash;
+      escrow.refundTransactionHash = refundHash;
+      escrow.status = EscrowStatus.RELEASED;
+      escrow.deliveryConfirmedAt = new Date();
+
+      await this.escrowRepository.save(escrow);
+
+      this.emitFundsReleasedEvent(escrow);
+
+      return this.mapToResponse(escrow);
+    } catch (error) {
+      escrow.errorMessage = error.message;
+      await this.escrowRepository.save(escrow);
+
+      throw new BadRequestException(
+        `Failed to release frozen escrow: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * =========================
+   * REFUND FULL
+   * =========================
    */
   async refundBuyer(dto: RefundEscrowDto): Promise<EscrowResponseDto> {
     const escrow = await this.findEscrowOrFail(dto.escrowId);
 
-    // Only allow refund if locked
     if (escrow.status !== EscrowStatus.LOCKED) {
       throw new BadRequestException(
         `Cannot refund escrow with status: ${escrow.status}`,
       );
     }
 
-    try {
-      // Build refund transaction: escrow account sends back to buyer
-      const refundTx = await this.buildRefundTransaction(
-        escrow.escrowAccountPublicKey,
-        escrow.buyerPublicKey,
-        escrow.amount,
-      );
+    const tx = await this.buildTransaction(
+      escrow.escrowAccountPublicKey,
+      escrow.buyerPublicKey,
+      escrow.amount,
+    );
 
-      // Submit transaction
-      const transactionHash = await this.submitTransaction(refundTx);
+    const hash = await this.submitTransaction(tx);
 
-      // Update escrow record
-      escrow.refundTransactionHash = transactionHash;
-      escrow.status = EscrowStatus.REFUNDED;
-      escrow.cancelledAt = new Date();
-      await this.saveEscrow(escrow);
+    escrow.refundTransactionHash = hash;
+    escrow.status = EscrowStatus.REFUNDED;
+    escrow.cancelledAt = new Date();
 
-      return this.mapToResponse(escrow);
-    } catch (error) {
-      escrow.errorMessage = error.message;
-      await this.saveEscrow(escrow);
-      throw new BadRequestException(`Failed to refund: ${error.message}`);
-    }
-  }
-
-  /**
-   * Retrieve escrow transaction details
-   */
-  async getEscrow(escrowId: string): Promise<EscrowResponseDto> {
-    const escrow = await this.findEscrowOrFail(escrowId);
-    return this.mapToResponse(escrow);
-  }
-
-  /**
-   * Get escrow by order ID
-   */
-  async getEscrowByOrderId(orderId: string): Promise<EscrowResponseDto> {
-    const escrow = await this.findEscrowByOrderId(orderId);
-
-    if (!escrow) {
-      throw new NotFoundException(`Escrow not found for order: ${orderId}`);
-    }
+    await this.escrowRepository.save(escrow);
 
     return this.mapToResponse(escrow);
   }
 
-  // Private helper methods
-  private async findEscrowOrFail(escrowId: string): Promise<EscrowEntity> {
-    const escrow = await this.findEscrowById(escrowId);
+  /**
+   * =========================
+   * HELPERS
+   * =========================
+   */
+
+  async findEscrowOrFail(id: string): Promise<EscrowEntity> {
+    const escrow = await this.escrowRepository.findOne({ where: { id } });
 
     if (!escrow) {
-      throw new NotFoundException(`Escrow not found: ${escrowId}`);
+      throw new NotFoundException(`Escrow not found: ${id}`);
     }
 
     return escrow;
   }
 
-  private async buildLockTransaction(
-    fromPublicKey: string,
-    toPublicKey: string,
+  private async buildTransaction(
+    from: string,
+    to: string,
     amount: number,
-  ): Promise<any> {
-    const sourceAccount = await this.stellarServer.loadAccount(fromPublicKey);
+  ) {
+    const account = await this.stellarServer.loadAccount(from);
 
-    const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
+    return new StellarSdk.TransactionBuilder(account, {
       fee: StellarSdk.BASE_FEE,
       networkPassphrase: this.networkPassphrase,
     })
       .addOperation(
         StellarSdk.Operation.payment({
-          destination: toPublicKey,
+          destination: to,
           amount: amount.toString(),
           asset: StellarSdk.Asset.native(),
         }),
       )
       .setTimeout(180)
       .build();
-
-    return transaction;
   }
 
-  private async buildReleaseTransaction(
-    fromPublicKey: string,
-    toPublicKey: string,
-    amount: number,
-  ): Promise<any> {
-    const sourceAccount = await this.stellarServer.loadAccount(fromPublicKey);
-
-    const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
-      fee: StellarSdk.BASE_FEE,
-      networkPassphrase: this.networkPassphrase,
-    })
-      .addOperation(
-        StellarSdk.Operation.payment({
-          destination: toPublicKey,
-          amount: amount.toString(),
-          asset: StellarSdk.Asset.native(),
-        }),
-      )
-      .setTimeout(180)
-      .build();
-
-    return transaction;
+  private async submitTransaction(tx: any): Promise<string> {
+    const res = await this.stellarServer.submitTransaction(tx);
+    return res.hash;
   }
 
-  private async buildRefundTransaction(
-    fromPublicKey: string,
-    toPublicKey: string,
-    amount: number,
-  ): Promise<any> {
-    const sourceAccount = await this.stellarServer.loadAccount(fromPublicKey);
-
-    const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
-      fee: StellarSdk.BASE_FEE,
-      networkPassphrase: this.networkPassphrase,
-    })
-      .addOperation(
-        StellarSdk.Operation.payment({
-          destination: toPublicKey,
-          amount: amount.toString(),
-          asset: StellarSdk.Asset.native(),
-        }),
-      )
-      .setTimeout(180)
-      .build();
-
-    return transaction;
-  }
-
-  private async submitTransaction(
-    transaction: any,
-  ): Promise<string> {
-    // Note: Transaction must be signed before submission
-    // This should be done in the controller after getting the signing key
-    const response = await this.stellarServer.submitTransaction(transaction);
-    return response.hash;
+  private emitFundsReleasedEvent(escrow: EscrowEntity) {
+    console.log('FundsReleasedEvent emitted:', {
+      id: escrow.id,
+      status: escrow.status,
+    });
   }
 
   private mapToResponse(escrow: EscrowEntity): EscrowResponseDto {
@@ -280,21 +376,5 @@ export class EscrowService {
       createdAt: escrow.createdAt,
       updatedAt: escrow.updatedAt,
     };
-  }
-
-  // Mock methods for repository operations
-  private async saveEscrow(escrow: EscrowEntity): Promise<EscrowEntity> {
-    // Simulate saving escrow to database
-    return escrow;
-  }
-
-  private async findEscrowById(escrowId: string): Promise<EscrowEntity> {
-    // Simulate finding escrow by ID from database
-    return {} as EscrowEntity;
-  }
-
-  private async findEscrowByOrderId(orderId: string): Promise<EscrowEntity> {
-    // Simulate finding escrow by order ID from database
-    return {} as EscrowEntity;
   }
 }

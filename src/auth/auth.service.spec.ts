@@ -1,108 +1,52 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AuthService, OAuthProfile } from './auth.service';
-import { UsersService } from '../users/users.service';
-import { Users } from '../users/users.entity';
+import { TokenRegistryService } from './token-registry.service';
+import { ForbiddenException } from '@nestjs/common';
 
-describe('AuthService — findOrCreateOAuthUser', () => {
-  let authService: AuthService;
-  let usersService: jest.Mocked<UsersService>;
-  let jwtService: jest.Mocked<JwtService>;
+describe('AuthService - Refresh Token Security', () => {
+  let service: AuthService;
+  let tokenRegistry: TokenRegistryService;
 
-  const mockProfile: OAuthProfile = {
-    provider: 'google',
-    providerId: 'google-uid-123',
-    email: 'jane@example.com',
-    name: 'Jane Doe',
-    avatarUrl: 'https://example.com/avatar.png',
+  const mockTokenRegistry = {
+    get: jest.fn(),
+    del: jest.fn(),
+    keys: jest.fn(),
+    invalidateAllForUser: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        {
-          provide: JwtService,
-          useValue: { sign: jest.fn().mockReturnValue('signed.jwt.token') },
-        },
-        {
-          provide: EventEmitter2,
-          useValue: { emit: jest.fn() },
-        },
-        {
-          provide: UsersService,
-          useValue: {
-            findByEmail: jest.fn(),
-            create: jest.fn(),
-          },
-        },
+        { provide: JwtService, useValue: { signAsync: jest.fn().mockResolvedValue('new_at') } },
+        { provide: TokenRegistryService, useValue: mockTokenRegistry },
+        { provide: 'EventEmitter2', useValue: {} },
       ],
     }).compile();
 
-    authService = module.get<AuthService>(AuthService);
-    usersService = module.get(UsersService) as jest.Mocked<UsersService>;
-    jwtService = module.get(JwtService) as jest.Mocked<JwtService>;
+    service = module.get<AuthService>(AuthService);
+    tokenRegistry = module.get<TokenRegistryService>(TokenRegistryService);
   });
 
-  describe('when the user already exists (email match)', () => {
-    it('should return a JWT without creating a new user', async () => {
-      const existingUser = { id: 42, email: 'jane@example.com' } as unknown as Users;
-      usersService.findByEmail.mockResolvedValue(existingUser);
+  it('should rotate tokens and delete the old one on success', async () => {
+    mockTokenRegistry.get.mockResolvedValue('active');
+    
+    const result = await service.refreshTokens('user123', 'test@example.com', 'old_rt');
 
-      const token = await authService.findOrCreateOAuthUser(mockProfile);
-
-      expect(usersService.findByEmail).toHaveBeenCalledWith('jane@example.com');
-      expect(usersService.create).not.toHaveBeenCalled();
-      expect(jwtService.sign).toHaveBeenCalledWith({
-        sub: existingUser.id,
-        email: existingUser.email,
-      });
-      expect(token).toBe('signed.jwt.token');
-    });
+    expect(result).toHaveProperty('accessToken');
+    expect(mockTokenRegistry.del).toHaveBeenCalledWith(expect.stringContaining('old_rt'));
   });
 
-  describe('when the user does not yet exist', () => {
-    it('should create a new user and return a JWT', async () => {
-      const newUser = { id: 99, email: 'jane@example.com' } as unknown as Users;
-      usersService.findByEmail.mockResolvedValue(null);
-      usersService.create.mockResolvedValue(newUser);
+  it('should throw ForbiddenException and revoke all tokens if reuse is detected', async () => {
+    // Simulate token already rotated/missing
+    mockTokenRegistry.get.mockResolvedValue(null); 
+    const revokeSpy = jest.spyOn(service, 'revokeAllUserTokens');
 
-      const token = await authService.findOrCreateOAuthUser(mockProfile);
+    await expect(
+      service.refreshTokens('user123', 'test@example.com', 'stolen_rt'),
+    ).rejects.toThrow(ForbiddenException);
 
-      expect(usersService.findByEmail).toHaveBeenCalledWith('jane@example.com');
-      expect(usersService.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: 'jane@example.com',
-          name: 'Jane Doe',
-          password: null,
-          oauthProvider: 'google',
-          oauthProviderId: 'google-uid-123',
-        }),
-      );
-      expect(jwtService.sign).toHaveBeenCalledWith({
-        sub: newUser.id,
-        email: newUser.email,
-      });
-      expect(token).toBe('signed.jwt.token');
-    });
-  });
-
-  describe('when the OAuth profile has no email', () => {
-    it('should skip the email lookup and create a user with empty email', async () => {
-      const profileWithoutEmail: OAuthProfile = {
-        ...mockProfile,
-        email: '',
-      };
-      const createdUser = { id: 77, email: '' } as unknown as Users;
-      usersService.findByEmail.mockResolvedValue(null);
-      usersService.create.mockResolvedValue(createdUser);
-
-      await authService.findOrCreateOAuthUser(profileWithoutEmail);
-
-      // findByEmail is not called when email is falsy
-      expect(usersService.findByEmail).not.toHaveBeenCalled();
-      expect(usersService.create).toHaveBeenCalled();
-    });
+    expect(revokeSpy).toHaveBeenCalledWith('user123');
   });
 });

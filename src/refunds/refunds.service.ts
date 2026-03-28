@@ -23,6 +23,7 @@ import {
 } from './dto/refund.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ReturnRequestedEvent, ReturnReviewedEvent, EventNames } from '../common/events';
 
 const DEFAULT_RETURN_WINDOW_DAYS = 30;
 
@@ -57,6 +58,7 @@ export class RefundsService {
       refundType,
       items,
       returnWindowDays,
+      evidenceHash,
     } = dto;
 
     const order = await this.orderRepository.findOne({
@@ -151,16 +153,20 @@ export class RefundsService {
       currency: order.currency,
       items,
       returnWindowDays: maxReturnDays,
+      evidenceHash: evidenceHash ? Buffer.from(evidenceHash) : undefined,
     });
 
     const saved = await this.returnRequestRepository.save(returnRequest);
 
-    this.eventEmitter.emit('return.requested', {
-      returnRequestId: saved.id,
-      orderId,
-      buyerId,
-      sellerId,
-    });
+    this.eventEmitter.emit(
+      EventNames.RETURN_REQUESTED,
+      new ReturnRequestedEvent(
+        saved.id,
+        orderId,
+        buyerId,
+        sellerId,
+      ),
+    );
 
     this.logger.log(
       `Created return request ${saved.id} for order ${orderId}`,
@@ -223,12 +229,15 @@ export class RefundsService {
     const saved =
       await this.returnRequestRepository.save(returnRequest);
 
-    this.eventEmitter.emit('return.reviewed', {
-      returnRequestId: saved.id,
-      status: saved.status,
-      buyerId: saved.buyerId,
-      sellerId: saved.sellerId,
-    });
+    this.eventEmitter.emit(
+      EventNames.RETURN_REVIEWED,
+      new ReturnReviewedEvent(
+        saved.id,
+        saved.status,
+        saved.buyerId,
+        saved.sellerId,
+      ),
+    );
 
     return saved;
   }

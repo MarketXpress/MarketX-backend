@@ -32,6 +32,15 @@ export class NotificationPreferencesEntity {
   @Column({ default: false })
   pushEnabled: boolean;
 
+  @Column({ default: true })
+  allowPromotionalEmail: boolean;
+
+  @Column({ default: true })
+  allowOrderSms: boolean;
+
+  @Column({ default: true })
+  allowInAppAlerts: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

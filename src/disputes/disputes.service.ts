@@ -7,7 +7,9 @@ import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { SubmitEvidenceDto } from './dto/submit-evidence.dto';
 import { EscalateDisputeDto } from './dto/escalate-dispute.dto';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
+import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { DisputeStateMachine } from './state-machine/dispute.state-machine';
+import { EscrowService } from '../escrowes/escrow.service';
 
 @Injectable()
 export class DisputesService {
@@ -18,11 +20,31 @@ export class DisputesService {
     private readonly disputeRepo: Repository<Dispute>,
     @InjectRepository(Evidence)
     private readonly evidenceRepo: Repository<Evidence>,
+    private readonly escrowService: EscrowService,
   ) {}
 
   async createDispute(dto: CreateDisputeDto): Promise<Dispute> {
-    const dispute = this.disputeRepo.create({ ...dto, status: DisputeStatus.OPEN });
-    return this.disputeRepo.save(dispute);
+    const dispute = this.disputeRepo.create({ 
+      ...dto, 
+      status: DisputeStatus.OPEN,
+      description: dto.description,
+      imageUrls: dto.imageUrls,
+    });
+    
+    const savedDispute = await this.disputeRepo.save(dispute);
+
+    // Freeze the escrow if escrowId is provided
+    if (dto.escrowId) {
+      try {
+        await this.escrowService.freezeEscrow(dto.escrowId);
+        this.logger.log(`Escrow ${dto.escrowId} frozen for dispute ${savedDispute.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to freeze escrow ${dto.escrowId}: ${error.message}`);
+        throw new BadRequestException(`Failed to freeze escrow: ${error.message}`);
+      }
+    }
+
+    return savedDispute;
   }
 
   async getDisputeById(id: string): Promise<Dispute> {
@@ -90,5 +112,40 @@ export class DisputesService {
   async notifyParties(dispute: Dispute, message: string) {
     // Implement email or in-app notification
     this.logger.log(`Notify parties of dispute ${dispute.id}: ${message}`);
+  }
+
+  /**
+   * Admin resolve dispute - distributes funds according to admin decision
+   */
+  async adminResolveDispute(dto: ResolveDisputeDto, disputeId: string): Promise<Dispute> {
+    const dispute = await this.getDisputeById(disputeId);
+    
+    if (!DisputeStateMachine.canTransition(dispute.status, DisputeStatus.RESOLVED)) {
+      throw new BadRequestException('Cannot resolve dispute from current status');
+    }
+
+    // If escrow is associated, release funds according to distribution
+    if (dispute.escrowId) {
+      try {
+        // Calculate distribution based on refund amount
+        const totalAmount = parseFloat((await this.escrowService['findEscrowOrFail'](dispute.escrowId)).amount.toString());
+        const refundAmount = dto.refundAmount || 0;
+        
+        await this.escrowService.adminReleaseFunds(dispute.escrowId, {
+          toSeller: totalAmount - refundAmount,
+          toBuyer: refundAmount,
+        });
+        
+        this.logger.log(`Funds distributed for dispute ${disputeId}: $${refundAmount} to buyer, $${totalAmount - refundAmount} to seller`);
+      } catch (error) {
+        this.logger.error(`Failed to distribute funds for dispute ${disputeId}: ${error.message}`);
+        throw new BadRequestException(`Failed to distribute funds: ${error.message}`);
+      }
+    }
+
+    dispute.status = DisputeStatus.RESOLVED;
+    (dispute as any).resolutionNote = dto.adminDecision;
+    
+    return this.disputeRepo.save(dispute);
   }
 } 

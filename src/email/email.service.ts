@@ -17,6 +17,7 @@ import { WelcomeEmailDto } from './dto/welcome-email.dto';
 import { EmailLog, EmailStatus } from './entities/email-log.entity';
 import { EmailPreferenceService } from './email-preference.service';
 import { SendGridWebhookEventDto } from './dto/webhook-event.dto';
+import { AccountLockedEmailDto } from './dto/account-locked-email.dto';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -129,6 +130,19 @@ export class EmailService implements OnModuleInit {
       context: {
         name: dto.name,
         loginUrl: dto.loginUrl,
+      },
+    });
+  }
+
+  async sendAccountLocked(dto: AccountLockedEmailDto): Promise<void> {
+    // Security emails always send regardless of preferences
+    await this.queueEmail({
+      userId: dto.userId,
+      to: dto.to,
+      subject: 'URGENT: Your MarketX Account Has Been Locked',
+      template: 'account-locked',
+      context: {
+        name: dto.name,
       },
     });
   }

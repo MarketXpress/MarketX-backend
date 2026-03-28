@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nestjs/throttler-storage-redis';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -35,8 +37,12 @@ import { JobsModule } from './job-processing/jobs.module';
 import { RecommendationsModule } from './recommendation/recommendation.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ListingsModule } from './listing/listing.module';
+import { SearchModule } from './search/search.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
+import { OrdersModule } from './orders/orders.module';
 
-// ── Entities registered at root (shared / no dedicated module) ─────────────
+// ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
@@ -53,6 +59,21 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     // ── Core config ──────────────────────────────────────────────────────
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+
+    /**
+     * ── 🔥 GLOBAL THROTTLER (REDIS BACKED)
+     */
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        ttl: 60, // seconds window
+        limit: 100, // default rate limit
+        storage: new ThrottlerStorageRedisService({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379', 10),
+          password: process.env.REDIS_PASSWORD || undefined,
+        }),
+      }),
+    }),
 
     // ── Database ─────────────────────────────────────────────────────────
     TypeOrmModule.forRoot({
@@ -93,6 +114,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     CustomI18nModule,
     VerificationModule,
     SubscriptionsModule,
+    MilestonesModule,
     ShippingModule,
     MediaModule,
     CouponsModule,
@@ -104,12 +126,18 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RecommendationsModule,
     RefundsModule,
     ListingsModule,
+    SearchModule,
+    ArchivingModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     AdminGuard,
     RolesGuard,
+
+    /**
+     * ── GLOBAL RATE LIMIT GUARD
+     */
     {
       provide: APP_GUARD,
       useClass: ThrottleGuard,

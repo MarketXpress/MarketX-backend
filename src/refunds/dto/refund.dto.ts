@@ -57,6 +57,11 @@ export class CreateReturnRequestDto {
   @Min(1)
   @Max(90)
   returnWindowDays?: number = 30;
+
+  @ApiPropertyOptional({ description: 'Evidence hash (IPFS CID) for dispute resolution' })
+  @IsOptional()
+  @IsString()
+  evidenceHash?: string;
 }
 
 export class ReturnItemDto {

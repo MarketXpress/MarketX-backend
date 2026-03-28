@@ -19,8 +19,12 @@ export interface FraudInput {
     duplicateOrderInWindow?: boolean;
     knownBadIp?: boolean;
     accountAgeDays?: number;
+    accountAgeHours?: number;
+    billingAddress?: string;
+    shippingAddress?: string;
     failedPaymentCount?: number; // failed attempts in the past hour
     isFirstOrder?: boolean;
+    geoDistanceMiles?: number;
   };
 }
 
@@ -37,6 +41,24 @@ interface Rule {
 }
 
 const RULES: Rule[] = [
+  {
+    name: 'high_value_order',
+    score: 20,
+    check: ({ metadata }) => (metadata?.amount ?? 0) > 500,
+  },
+  {
+    name: 'new_account',
+    score: 30,
+    check: ({ metadata }) =>
+      (metadata?.accountAgeHours ?? (metadata?.accountAgeDays ? metadata.accountAgeDays * 24 : 999)) < 24,
+  },
+  {
+    name: 'billing_shipping_mismatch',
+    score: 30,
+    check: ({ metadata }) =>
+      metadata?.billingAddress && metadata?.shippingAddress &&
+      metadata.billingAddress.trim().toLowerCase() !== metadata.shippingAddress.trim().toLowerCase(),
+  },
   {
     name: 'high_velocity',
     score: 35,
@@ -58,12 +80,6 @@ const RULES: Rule[] = [
     check: ({ metadata }) => metadata?.knownBadIp === true,
   },
   {
-    name: 'new_account_large_order',
-    score: 30,
-    check: ({ metadata }) =>
-      (metadata?.accountAgeDays ?? 999) < 3 && (metadata?.amount ?? 0) > 500,
-  },
-  {
     name: 'repeated_payment_failures',
     score: 35,
     check: ({ metadata }) => (metadata?.failedPaymentCount ?? 0) >= 3,
@@ -73,6 +89,12 @@ const RULES: Rule[] = [
     score: 20,
     check: ({ metadata }) =>
       metadata?.isFirstOrder === true && (metadata?.amount ?? 0) > 1_000,
+  },
+  {
+    name: 'geo_distance',
+    score: 50,
+    check: ({ metadata }) =>
+      (metadata?.geoDistanceMiles ?? 0) > 1000,
   },
 ];
 

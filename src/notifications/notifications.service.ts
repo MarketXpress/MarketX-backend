@@ -32,6 +32,8 @@ import { QueryNotificationsDto } from './dto/query-notifications.dto';
 
 // Cache manager service used in first file
 import { CacheManagerService } from '../cache/cache-manager.service';
+import { NotificationGateway } from './notification.gateway';
+import { NotificationCreatedEvent, NotificationSendPushEvent, EventNames } from '../common/events';
 
 // unify CreateNotificationDto type (accept either shape)
 type CreateNotificationDto = CreateNotificationDtoV1 | CreateNotificationDtoV2;
@@ -63,6 +65,7 @@ export class NotificationsService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(InjectQueue('email')) private readonly emailQueue: Queue,
     private readonly i18nService: I18nService,
+    private readonly notificationGateway: NotificationGateway,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
   ) { }
 
@@ -140,6 +143,15 @@ export class NotificationsService {
         if (channel === NotificationChannel.PUSH && !preferences.pushEnabled)
           continue;
 
+        // Respect specific notification preferences
+        const notificationType = (dto as any).type;
+        if (channel === NotificationChannel.EMAIL && notificationType === NotificationType.ORDER_CREATED && !preferences.allowPromotionalEmail)
+          continue;
+        if (channel === NotificationChannel.PUSH && notificationType === NotificationType.ORDER_CREATED && !preferences.allowOrderSms)
+          continue;
+        if (channel === NotificationChannel.IN_APP && notificationType === NotificationType.ORDER_CREATED && !preferences.allowInAppAlerts)
+          continue;
+
         const notification = this.notificationRepository.create({
           ...(dto as any),
           channel,
@@ -163,7 +175,17 @@ export class NotificationsService {
 
       // Emit created events & process each notification (async but not backgrounded by the assistant — we trigger here)
       for (const notification of saved) {
-        this.eventEmitter.emit('notification.created', notification);
+        this.eventEmitter.emit(
+          EventNames.NOTIFICATION_CREATED,
+          new NotificationCreatedEvent(
+            notification.id,
+            notification.userId,
+            notification.type,
+            notification.title,
+            notification.message,
+            notification.channel,
+          ),
+        );
         // process but don't block the save. We catch errors to prevent unhandled rejections.
         this.processNotification(notification).catch((err) => {
           this.logger.error(
@@ -299,10 +321,12 @@ export class NotificationsService {
     notification: NotificationEntity,
   ): Promise<void> {
     // In-app items are already persisted to DB; emit for realtime delivery (websockets)
-    this.eventEmitter.emit('notification.in-app', {
-      userId: notification.userId,
-      notification,
+    this.notificationGateway.sendNotification(notification.userId, {
+      type: notification.type,
+      message: notification.message,
+      payload: notification.metadata,
     });
+
     this.logger.log(
       `In-app notification created for user ${notification.userId}`,
     );
@@ -315,15 +339,18 @@ export class NotificationsService {
     this.logger.log(
       `(PUSH) To user ${notification.userId}: ${notification.title}`,
     );
-    this.eventEmitter.emit('notification.send_push', {
-      userId: notification.userId,
-      title: notification.title,
-      message: notification.message,
-      data: {
-        notificationId: notification.id,
-        relatedEntityId: (notification as any).relatedEntityId,
-      },
-    });
+    this.eventEmitter.emit(
+      EventNames.NOTIFICATION_SEND_PUSH,
+      new NotificationSendPushEvent(
+        notification.userId,
+        notification.title,
+        notification.message,
+        {
+          notificationId: notification.id,
+          relatedEntityId: (notification as any).relatedEntityId,
+        },
+      ),
+    );
   }
 
   /**
@@ -368,23 +395,29 @@ export class NotificationsService {
     // Also emit push send event for high priority (duplicate-safe)
     if (Array.isArray(created)) {
       created.forEach((c) =>
-        this.eventEmitter.emit('notification.send_push', {
-          userId,
-          title: c.title,
-          message: c.message,
-          data: { notificationId: c.id, transactionId },
-        }),
+        this.eventEmitter.emit(
+          EventNames.NOTIFICATION_SEND_PUSH,
+          new NotificationSendPushEvent(
+            userId,
+            c.title,
+            c.message,
+            { notificationId: c.id, transactionId },
+          ),
+        ),
       );
     } else if (created) {
-      this.eventEmitter.emit('notification.send_push', {
-        userId,
-        title: (created as NotificationEntity).title,
-        message: (created as NotificationEntity).message,
-        data: {
-          notificationId: (created as NotificationEntity).id,
-          transactionId,
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.NOTIFICATION_SEND_PUSH,
+        new NotificationSendPushEvent(
+          userId,
+          (created as NotificationEntity).title,
+          (created as NotificationEntity).message,
+          {
+            notificationId: (created as NotificationEntity).id,
+            transactionId,
+          },
+        ),
+      );
     }
 
     return created as NotificationEntity | NotificationEntity[];

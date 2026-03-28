@@ -16,6 +16,7 @@ import {
 import { NotificationsService } from '../notifications/notifications.service';
 import { Product } from '../entities/product.entity';
 import { Order } from '../orders/entities/order.entity';
+import { InventoryLowStockEvent, EventNames } from '../common/events';
 
 @Injectable()
 export class InventoryService {
@@ -282,11 +283,14 @@ export class InventoryService {
       );
 
       if (product.available <= 5) {
-        this.eventEmitter.emit('inventory.low_stock', {
-          productId: product.id,
-          title: product.title,
-          available: product.available,
-        });
+        this.eventEmitter.emit(
+          EventNames.INVENTORY_LOW_STOCK,
+          new InventoryLowStockEvent(
+            product.id,
+            product.title,
+            product.available,
+          ),
+        );
       }
 
       return product;
@@ -368,9 +372,14 @@ export class InventoryService {
   }
 
   private async notifyLowStock(listing: Listing) {
-    this.eventEmitter.emit('inventory.low_stock', {
-      listingId: listing.id,
-      available: listing.available,
-    });
+    this.eventEmitter.emit(
+      EventNames.INVENTORY_LOW_STOCK,
+      new InventoryLowStockEvent(
+        listing.id,
+        listing.title,
+        listing.available,
+        listing.id,
+      ),
+    );
   }
 }
