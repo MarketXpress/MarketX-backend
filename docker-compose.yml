@@ -1,0 +1,80 @@
+version: '3.9'
+
+services:
+  # ── NestJS API ────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: marketx_api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV:    ${NODE_ENV:-development}
+      PORT:        3000
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${DB_NAME:-marketx}
+      DB_USER:     ${DB_USER:-marketx_user}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST:  redis
+      REDIS_PORT:  6379
+      JWT_SECRET:  ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - marketx_net
+
+  # ── PostgreSQL 15 ─────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: marketx_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-marketx}
+      POSTGRES_USER:     ${DB_USER:-marketx_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test:     ['CMD-SHELL', 'pg_isready -U ${DB_USER:-marketx_user} -d ${DB_NAME:-marketx}']
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - marketx_net
+
+  # ── Redis ─────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: marketx_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test:     ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - marketx_net
+
+# ── Persistent Volumes ────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+
+# ── Network ───────────────────────────────────────────────────
+networks:
+  marketx_net:
+    driver: bridge

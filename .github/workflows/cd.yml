@@ -1,0 +1,108 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Deploy to AWS ECS (rolling, zero-downtime)
+  # ──────────────────────────────────────────────
+  deploy-ecs:
+    name: Build & Deploy → AWS ECS
+    runs-on: ubuntu-latest
+    # Remove this `if` and delete the heroku job below if you only use ECS
+    if: ${{ vars.DEPLOY_TARGET == 'ecs' || vars.DEPLOY_TARGET == '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag & push image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY:   ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG:      ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg NODE_ENV=production \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download current ECS task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ secrets.ECS_TASK_DEFINITION }} \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Render new ECS task definition with fresh image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name:  ${{ secrets.ECS_CONTAINER_NAME }}
+          image:           ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy to ECS (rolling zero-downtime)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition:  ${{ steps.task-def.outputs.task-definition }}
+          service:          ${{ secrets.ECS_SERVICE }}
+          cluster:          ${{ secrets.ECS_CLUSTER }}
+          wait-for-service-stability: true   # blocks until old tasks drain
+
+  # ──────────────────────────────────────────────
+  # Deploy to Heroku (rolling dyno restart)
+  # ──────────────────────────────────────────────
+  deploy-heroku:
+    name: Build & Deploy → Heroku
+    runs-on: ubuntu-latest
+    if: ${{ vars.DEPLOY_TARGET == 'heroku' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Heroku Container Registry
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          echo "$HEROKU_API_KEY" | docker login \
+            --username=_ \
+            --password-stdin \
+            registry.heroku.com
+
+      - name: Build & push image to Heroku registry
+        env:
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          docker build \
+            --build-arg NODE_ENV=production \
+            -t registry.heroku.com/$HEROKU_APP_NAME/web \
+            .
+          docker push registry.heroku.com/$HEROKU_APP_NAME/web
+
+      - name: Release new image on Heroku (rolling restart)
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          heroku container:release web --app $HEROKU_APP_NAME
