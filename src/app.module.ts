@@ -16,6 +16,8 @@ import { LoggerModule } from './common/logger/logger.module';
 import { HealthModule } from './health/health.module';
 import { RedisCacheModule } from './redis-caching/redis-cache.module';
 import { BackupModule } from './backup/backup.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 // ── Features ───────────────────────────────────────────────────────────────
 import { ProductsModule } from './products/products.module';
@@ -104,6 +106,8 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     CommonModule,
     HealthModule,
     BackupModule,
+    SchedulerModule,
+    EventEmitterModule.forRoot(),
 
     // ── Features ──────────────────────────────────────────────────────────
     PriceModule,

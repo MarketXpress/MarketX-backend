@@ -102,6 +102,18 @@ export class PaymentStreamConfirmedEvent {
   ) {}
 }
 
+export class PaymentReleasedEvent {
+  constructor(
+    public readonly escrowId: string,
+    public readonly orderId: string,
+    public readonly sellerPublicKey: string,
+    public readonly amount: number,
+    public readonly releaseTransactionHash: string,
+    public readonly releasedAt: Date,
+    public readonly autoReleased: boolean = true,
+  ) {}
+}
+
 // ============================================================================
 // USER/AUTH EVENTS
 // ============================================================================
@@ -406,6 +418,7 @@ export const EventNames = {
   PAYMENT_FAILED: 'payment.failed',
   PAYMENT_TIMEOUT: 'payment.timeout',
   PAYMENT_STREAM_CONFIRMED: 'payment.stream.confirmed',
+  PAYMENT_RELEASED: 'payment.released',
 
   // User/Auth events
   USER_PASSWORD_CHANGED: 'user.password_changed',
