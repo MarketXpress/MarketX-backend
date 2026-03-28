@@ -43,23 +43,28 @@ export class PiiPurgeTask {
       for (const user of toPurge) {
         try {
           await this.anonymizeUser(user);
-        } catch (err) {
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          const stack = err instanceof Error ? err.stack : undefined;
           this.logger.error(
-            `Failed to anonymize user ${user.id}: ${err.message}`,
-            err.stack,
+            `Failed to anonymize user ${user.id}: ${message}`,
+            stack,
           );
         }
       }
 
-      this.logger.log(`PII purge complete. Anonymized ${toPurge.length} user(s).`);
-    } catch (err) {
-      this.logger.error('PII purge job failed', err.stack);
+      this.logger.log(
+        `PII purge complete. Anonymized ${toPurge.length} user(s).`,
+      );
+    } catch (err: unknown) {
+      const stack = err instanceof Error ? err.stack : String(err);
+      this.logger.error('PII purge job failed', stack);
     }
   }
 
   /**
    * Overwrites all PII fields with anonymized placeholders.
-   * Financial aggregates (totalSales, sellerRating, totalReviews) are preserved.
+   * Financial aggregates (trustScore, isVerifiedSeller, etc.) are preserved.
    */
   async anonymizeUser(user: Users): Promise<void> {
     user.email = `deleted_${user.id}@anonymized.local`;
@@ -69,9 +74,9 @@ export class PiiPurgeTask {
     user.status = 'deleted';
     user.isActive = false;
 
-    // Clear any nullable PII columns that exist on the entity
+    // Clear refreshToken if present on the entity
     if ('refreshToken' in user) {
-      (user as any).refreshToken = null;
+      (user as Users & { refreshToken: null }).refreshToken = null;
     }
 
     await this.userRepository.save(user);

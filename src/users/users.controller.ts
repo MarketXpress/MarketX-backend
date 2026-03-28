@@ -29,7 +29,6 @@ import { CacheInterceptor } from '../cache/cache.interceptor';
 import { Cacheable } from '../decorators/cacheable.decorator';
 import { CacheControl } from '../decorators/cache-control.decorator';
 
-
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
@@ -111,5 +110,4 @@ export class UsersController {
     await this.usersService.softDeleteUser(+id);
     return { message: 'User account deleted successfully' };
   }
-
 }

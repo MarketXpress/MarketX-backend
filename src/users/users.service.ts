@@ -7,7 +7,6 @@ import { CreateUserDto } from './dto/create-user-dto.dto';
 import { CacheManagerService } from '../cache/cache-manager.service';
 import { Listing } from '../listing/entities/listing.entity';
 
-
 @Injectable()
 export class UsersService {
   constructor(
@@ -100,10 +99,7 @@ export class UsersService {
       async () => {
         return this.findOne(+id);
       },
-      { 
-        ttl: 7200, 
-        tags: ['users', `user:${id}`] 
-      }
+      { ttl: 7200, tags: ['users', `user:${id}`] },
     );
   }
 
@@ -113,10 +109,7 @@ export class UsersService {
       async () => {
         return this.findOne(+id);
       },
-      { 
-        ttl: 3600, 
-        tags: ['users', `user:${id}`, 'profiles'] 
-      }
+      { ttl: 3600, tags: ['users', `user:${id}`, 'profiles'] },
     );
   }
 
@@ -127,17 +120,17 @@ export class UsersService {
         return {
           totalListings: 0,
           totalSales: 0,
-          rating: 0
-        }; 
+          rating: 0,
+        };
       },
-      { 
-        ttl: 1800, 
-        tags: ['users', `user:${id}`, 'stats'] 
-      }
+      { ttl: 1800, tags: ['users', `user:${id}`, 'stats'] },
     );
   }
 
-  async validateRefreshToken(userId: string, token: string): Promise<boolean> {
+  async validateRefreshToken(
+    _userId: string,
+    _token: string,
+  ): Promise<boolean> {
     // Stub implementation - should compare hashed tokens
     return true;
   }
