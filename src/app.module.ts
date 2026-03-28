@@ -114,6 +114,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     CustomI18nModule,
     VerificationModule,
     SubscriptionsModule,
+    MilestonesModule,
     ShippingModule,
     MediaModule,
     CouponsModule,
@@ -146,8 +147,6 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(SecurityMiddleware, RequestMonitorMiddleware)
-      .forRoutes('*');
+    consumer.apply(SecurityMiddleware, RequestMonitorMiddleware).forRoutes('*');
   }
 }
