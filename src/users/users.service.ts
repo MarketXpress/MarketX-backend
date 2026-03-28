@@ -5,6 +5,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Users } from './users.entity';
 import { CreateUserDto } from './dto/create-user-dto.dto';
 import { CacheManagerService } from '../cache/cache-manager.service';
+import { Listing } from '../listing/entities/listing.entity';
 
 
 @Injectable()
@@ -12,6 +13,8 @@ export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    @InjectRepository(Listing)
+    private readonly listingRepository: Repository<Listing>,
     private readonly cacheManager: CacheManagerService,
   ) {}
 
@@ -70,6 +73,25 @@ export class UsersService {
     if (result.affected === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+  }
+
+  /**
+   * Soft-deletes a user and cascades the soft-delete to all their listings.
+   * Sets status = 'deleted' and isActive = false.
+   * The user row is retained for financial integrity; PII is purged later by PiiPurgeTask.
+   */
+  async softDeleteUser(id: number): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Mark user as deleted
+    await this.userRepository.update(id, { status: 'deleted', isActive: false });
+    await this.userRepository.softDelete(id);
+
+    // Cascade soft-delete to all listings owned by this user
+    await this.listingRepository.softDelete({ userId: String(id) });
   }
 
   async findOneWithCache(id: string) {
