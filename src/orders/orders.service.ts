@@ -15,6 +15,7 @@ import {
   UpdateOrderStatusDto,
 } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
+import { AdminWebhookService } from '../admin/admin-webhook.service';
 
 @Injectable()
 export class OrdersService {
@@ -25,6 +26,7 @@ export class OrdersService {
     private readonly pricingService: PricingService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryService: InventoryService,
+    private readonly adminWebhookService: AdminWebhookService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -44,6 +46,16 @@ export class OrdersService {
           item.quantity,
           manager,
         );
+      }
+
+      // Real-time Admin Webhook for Massive Orders (#231)
+      if (savedOrder.totalAmount > 5000) {
+        await this.adminWebhookService.notifyAdmin('Massive Order Detected', {
+          orderId: savedOrder.id,
+          buyerId: savedOrder.buyerId,
+          amount: savedOrder.totalAmount,
+          itemCount: savedOrder.items.length,
+        });
       }
 
       return savedOrder;

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CouponsModule } from '../coupons/coupons.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ProductsModule } from '../products/products.module';
+import { AdminModule } from '../admin/admin.module';
 import { Order } from './entities/order.entity';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
@@ -14,6 +15,7 @@ import { OrderStateSubscriber } from './subscribers/order-state.subscriber';
     ProductsModule,
     CouponsModule,
     InventoryModule,
+    AdminModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrderStateSubscriber],

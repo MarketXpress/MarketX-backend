@@ -10,14 +10,16 @@ import { UsersModule } from 'src/Authentication/user.module';
 import { AdminService } from './admin.service';
 import { User } from 'src/profile/user.entity';
 import { FraudAlert } from '../fraud/entities/fraud-alert.entity';
-import { EscrowEntity } from '../escrowes/entities/escrow.entity';
+import { AdminWebhookService } from './admin-webhook.service';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Order, FraudAlert, EscrowEntity]), // import entities used by AdminService
+    TypeOrmModule.forFeature([User, Order, FraudAlert]), // import entities used by AdminService
+    HttpModule,
   ],
-  controllers: [AdminController, AdminFraudController, AdminEscrowController],
-  providers: [AdminService],
-  exports: [AdminService],
+  controllers: [AdminController, AdminFraudController],
+  providers: [AdminService, AdminWebhookService],
+  exports: [AdminService, AdminWebhookService],
 })
 export class AdminModule {}

@@ -105,6 +105,19 @@ export class CacheService {
     }
   }
 
+  async increment(key: string, ttl: number): Promise<number> {
+    try {
+      const count = await this.redis.incr(key);
+      if (count === 1) {
+        await this.redis.expire(key, ttl);
+      }
+      return count;
+    } catch (error) {
+      this.logger.error(`Cache increment error for key ${key}:`, error);
+      return 0;
+    }
+  }
+
   async warmUp(data: Array<{ key: string; value: any; config?: CacheConfig }>): Promise<void> {
     try {
       await Promise.all(
