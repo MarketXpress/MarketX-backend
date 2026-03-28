@@ -29,7 +29,6 @@ import { CacheInterceptor } from '../cache/cache.interceptor';
 import { Cacheable } from '../decorators/cacheable.decorator';
 import { CacheControl } from '../decorators/cache-control.decorator';
 
-
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
@@ -104,11 +103,11 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete user by ID' })
-  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  @ApiOperation({ summary: 'Soft-delete user by ID (preserves financial history)' })
+  @ApiResponse({ status: 200, description: 'User soft-deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.usersService.remove(+id);
+  async remove(@Param('id') id: string): Promise<{ message: string }> {
+    await this.usersService.softDeleteUser(+id);
+    return { message: 'User account deleted successfully' };
   }
-
 }
