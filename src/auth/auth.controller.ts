@@ -13,6 +13,7 @@ import { RefreshTokenGuard } from './common/guards/refresh-token.guard';
 import { Enable2FADto } from './dto/enable-2fa.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}

@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -13,10 +14,12 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'StrongPassword123' })
+  @ApiProperty({ example: 'StrongPassword123', required: false })
+  @IsOptional()
+  @ValidateIf((o: CreateUserDto) => o.password !== null)
   @IsString()
   @MinLength(6)
-  password: string;
+  password?: string | null;
 
   @ApiProperty({ example: 'Jane Doe' })
   @IsString()
@@ -36,9 +39,23 @@ export class CreateUserDto {
   @IsString()
   avatarUrl?: string;
 
-  @ApiProperty({ example: 'en', enum: ['en', 'es', 'fr'], required: false })
+  @ApiProperty({
+    example: 'en',
+    enum: ['en', 'es', 'fr'],
+    required: false,
+  })
   @IsOptional()
   @IsString()
   @IsIn(['en', 'es', 'fr'])
   language?: string;
+
+  @ApiProperty({ example: 'google', required: false })
+  @IsOptional()
+  @IsString()
+  oauthProvider?: string | null;
+
+  @ApiProperty({ example: 'google-uid-123', required: false })
+  @IsOptional()
+  @IsString()
+  oauthProviderId?: string | null;
 }

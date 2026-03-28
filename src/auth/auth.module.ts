@@ -31,6 +31,7 @@ import { TokenRegistryService } from './token-registry.service';
         }),
       }),
     }),
+    UsersModule,
   ],
   providers: [
     AuthService,
