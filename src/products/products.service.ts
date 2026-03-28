@@ -17,6 +17,7 @@ import { UpdatePriceDto } from './dto/update-price.dto';
 import { PricingService, SupportedCurrency } from './services/pricing.service';
 import { ProductPriceEntity } from './entities/product-price.entity';
 import { MediaService } from '../media/media.service';
+import { ProductPriceUpdatedEvent, EventNames } from '../common/events';
 
 @Injectable()
 export class ProductsService {
@@ -209,16 +210,19 @@ export class ProductsService {
       }),
     );
 
-    this.eventEmitter.emit('product.price.updated', {
-      productId: product.id,
-      sellerId,
-      basePrice: product.basePrice,
-      basePriceMinor: product.basePriceMinor,
-      baseCurrency: product.baseCurrency,
-      rateSnapshot: rateSnapshot.rates,
-      rateTimestamp: rateSnapshot.timestamp,
-      updatedAt: product.updatedAt,
-    });
+    this.eventEmitter.emit(
+      EventNames.PRODUCT_PRICE_UPDATED,
+      new ProductPriceUpdatedEvent(
+        product.id,
+        sellerId,
+        product.basePrice,
+        product.basePriceMinor,
+        product.baseCurrency,
+        rateSnapshot.rates,
+        rateSnapshot.timestamp,
+        product.updatedAt,
+      ),
+    );
 
     return product;
   }

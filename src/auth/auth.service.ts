@@ -6,6 +6,7 @@ import { crypto } from 'crypto'; // Built-in Node module
 import { authenticator } from 'otplib';
 import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma.service';
+import { UserPasswordChangedEvent, AuthPasswordResetRequestedEvent, EventNames } from '../common/events';
 
 @Injectable()
 export class AuthService {
@@ -99,11 +100,14 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     const resetUrl = `https://marketx.com/reset-password?token=mock-token-${Date.now()}`;
     
-    this.eventEmitter.emit('auth.password_reset_requested', {
-      email,
-      name: 'User',
-      resetUrl,
-    });
+    this.eventEmitter.emit(
+      EventNames.AUTH_PASSWORD_RESET_REQUESTED,
+      new AuthPasswordResetRequestedEvent(
+        email,
+        'User',
+        resetUrl,
+      ),
+    );
   }
 
     async verify2FA(userId: string, code: string) {
@@ -140,17 +144,22 @@ export class AuthService {
       const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
       if (!isPasswordValid) {
         // Emit failed audit event
-        this.eventEmitter.emit('user.password_changed', {
-          actionType: 'PASSWORD_CHANGE',
-          userId,
-          ipAddress,
-          userAgent,
-          status: 'FAILURE',
-          errorMessage: 'Invalid current password',
-          resourceType: 'user',
-          resourceId: userId,
-          metadata: { reason: 'invalid_current_password' },
-        });
+        this.eventEmitter.emit(
+          EventNames.USER_PASSWORD_CHANGED,
+          new UserPasswordChangedEvent(
+            'PASSWORD_CHANGE',
+            userId,
+            ipAddress,
+            userAgent,
+            'FAILURE',
+            'Invalid current password',
+            'user',
+            userId,
+            undefined,
+            undefined,
+            { reason: 'invalid_current_password' },
+          ),
+        );
 
         throw new BadRequestException('Invalid current password');
       }
@@ -166,35 +175,44 @@ export class AuthService {
 
       // Emit successful audit event
       // Note: We intentionally don't store actual password values, only that a change occurred
-      this.eventEmitter.emit('user.password_changed', {
-        actionType: 'PASSWORD_CHANGE',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'SUCCESS',
-        resourceType: 'user',
-        resourceId: userId,
-        statePreviousValue: { passwordChanged: false },
-        stateNewValue: { passwordChanged: true },
-        metadata: {
-          changedAt: new Date(),
-          reason: 'user_initiated',
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.USER_PASSWORD_CHANGED,
+        new UserPasswordChangedEvent(
+          'PASSWORD_CHANGE',
+          userId,
+          ipAddress,
+          userAgent,
+          'SUCCESS',
+          undefined,
+          'user',
+          userId,
+          { passwordChanged: false },
+          { passwordChanged: true },
+          {
+            changedAt: new Date(),
+            reason: 'user_initiated',
+          },
+        ),
+      );
 
       return { success: true };
     } catch (error) {
-      this.eventEmitter.emit('user.password_changed', {
-        actionType: 'PASSWORD_CHANGE',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'FAILURE',
-        errorMessage: error.message,
-        resourceType: 'user',
-        resourceId: userId,
-        metadata: { reason: 'system_error' },
-      });
+      this.eventEmitter.emit(
+        EventNames.USER_PASSWORD_CHANGED,
+        new UserPasswordChangedEvent(
+          'PASSWORD_CHANGE',
+          userId,
+          ipAddress,
+          userAgent,
+          'FAILURE',
+          error.message,
+          'user',
+          userId,
+          undefined,
+          undefined,
+          { reason: 'system_error' },
+        ),
+      );
 
       throw error;
     }
@@ -221,35 +239,44 @@ export class AuthService {
       });
 
       // Emit successful audit event
-      this.eventEmitter.emit('user.password_changed', {
-        actionType: 'PASSWORD_CHANGE',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'SUCCESS',
-        resourceType: 'user',
-        resourceId: userId,
-        statePreviousValue: { passwordReset: false },
-        stateNewValue: { passwordReset: true },
-        metadata: {
-          changedAt: new Date(),
-          reason: 'password_reset',
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.USER_PASSWORD_CHANGED,
+        new UserPasswordChangedEvent(
+          'PASSWORD_CHANGE',
+          userId,
+          ipAddress,
+          userAgent,
+          'SUCCESS',
+          undefined,
+          'user',
+          userId,
+          { passwordReset: false },
+          { passwordReset: true },
+          {
+            changedAt: new Date(),
+            reason: 'password_reset',
+          },
+        ),
+      );
 
       return { success: true };
     } catch (error) {
-      this.eventEmitter.emit('user.password_changed', {
-        actionType: 'PASSWORD_CHANGE',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'FAILURE',
-        errorMessage: error.message,
-        resourceType: 'user',
-        resourceId: userId,
-        metadata: { reason: 'system_error' },
-      });
+      this.eventEmitter.emit(
+        EventNames.USER_PASSWORD_CHANGED,
+        new UserPasswordChangedEvent(
+          'PASSWORD_CHANGE',
+          userId,
+          ipAddress,
+          userAgent,
+          'FAILURE',
+          error.message,
+          'user',
+          userId,
+          undefined,
+          undefined,
+          { reason: 'system_error' },
+        ),
+      );
 
       throw error;
     }

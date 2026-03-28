@@ -33,6 +33,7 @@ import { QueryNotificationsDto } from './dto/query-notifications.dto';
 // Cache manager service used in first file
 import { CacheManagerService } from '../cache/cache-manager.service';
 import { NotificationGateway } from './notification.gateway';
+import { NotificationCreatedEvent, NotificationSendPushEvent, EventNames } from '../common/events';
 
 // unify CreateNotificationDto type (accept either shape)
 type CreateNotificationDto = CreateNotificationDtoV1 | CreateNotificationDtoV2;
@@ -165,7 +166,17 @@ export class NotificationsService {
 
       // Emit created events & process each notification (async but not backgrounded by the assistant — we trigger here)
       for (const notification of saved) {
-        this.eventEmitter.emit('notification.created', notification);
+        this.eventEmitter.emit(
+          EventNames.NOTIFICATION_CREATED,
+          new NotificationCreatedEvent(
+            notification.id,
+            notification.userId,
+            notification.type,
+            notification.title,
+            notification.message,
+            notification.channel,
+          ),
+        );
         // process but don't block the save. We catch errors to prevent unhandled rejections.
         this.processNotification(notification).catch((err) => {
           this.logger.error(
@@ -319,15 +330,18 @@ export class NotificationsService {
     this.logger.log(
       `(PUSH) To user ${notification.userId}: ${notification.title}`,
     );
-    this.eventEmitter.emit('notification.send_push', {
-      userId: notification.userId,
-      title: notification.title,
-      message: notification.message,
-      data: {
-        notificationId: notification.id,
-        relatedEntityId: (notification as any).relatedEntityId,
-      },
-    });
+    this.eventEmitter.emit(
+      EventNames.NOTIFICATION_SEND_PUSH,
+      new NotificationSendPushEvent(
+        notification.userId,
+        notification.title,
+        notification.message,
+        {
+          notificationId: notification.id,
+          relatedEntityId: (notification as any).relatedEntityId,
+        },
+      ),
+    );
   }
 
   /**
@@ -372,23 +386,29 @@ export class NotificationsService {
     // Also emit push send event for high priority (duplicate-safe)
     if (Array.isArray(created)) {
       created.forEach((c) =>
-        this.eventEmitter.emit('notification.send_push', {
-          userId,
-          title: c.title,
-          message: c.message,
-          data: { notificationId: c.id, transactionId },
-        }),
+        this.eventEmitter.emit(
+          EventNames.NOTIFICATION_SEND_PUSH,
+          new NotificationSendPushEvent(
+            userId,
+            c.title,
+            c.message,
+            { notificationId: c.id, transactionId },
+          ),
+        ),
       );
     } else if (created) {
-      this.eventEmitter.emit('notification.send_push', {
-        userId,
-        title: (created as NotificationEntity).title,
-        message: (created as NotificationEntity).message,
-        data: {
-          notificationId: (created as NotificationEntity).id,
-          transactionId,
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.NOTIFICATION_SEND_PUSH,
+        new NotificationSendPushEvent(
+          userId,
+          (created as NotificationEntity).title,
+          (created as NotificationEntity).message,
+          {
+            notificationId: (created as NotificationEntity).id,
+            transactionId,
+          },
+        ),
+      );
     }
 
     return created as NotificationEntity | NotificationEntity[];
