@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -63,4 +64,7 @@ export class Order {
 
   @Column({ nullable: true })
   deliveredAt?: Date;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
 }

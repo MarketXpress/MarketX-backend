@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   OneToMany,
   ManyToMany,
   JoinTable,
@@ -104,11 +105,20 @@ export class Users {
   @Column({ name: 'has_premium_subscription', default: false })
   hasPremiumSubscription: boolean;
 
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Column({ nullable: true, default: 'active' })
+  status: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
 
   @OneToMany(() => Listing, (listing) => listing.user)
   listings: Listing[];
