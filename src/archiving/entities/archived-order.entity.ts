@@ -1,16 +1,15 @@
 import {
   Column,
   CreateDateColumn,
-  DeleteDateColumn,
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { SupportedCurrency } from '../../products/services/pricing.service';
-import { OrderStatus } from '../dto/create-order.dto';
+import { OrderStatus } from '../../orders/dto/create-order.dto';
 
-@Entity()
-export class Order {
+@Entity('archived_orders')
+export class ArchivedOrder {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -64,7 +63,4 @@ export class Order {
 
   @Column({ nullable: true })
   deliveredAt?: Date;
-
-  @DeleteDateColumn()
-  deletedAt?: Date;
 }

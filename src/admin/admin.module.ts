@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminController } from './admin.controller';
 import { AdminFraudController } from './admin-fraud.controller';
+import { AdminEscrowController } from './admin-escrow.controller';
 import { Order } from '../orders/entities/order.entity';
 import { UsersModule } from 'src/Authentication/user.module';
 import { AdminService } from './admin.service';

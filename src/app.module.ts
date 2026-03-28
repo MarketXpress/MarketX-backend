@@ -126,9 +126,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RefundsModule,
     ListingsModule,
     SearchModule,
-    NotificationsModule,
-    AdminModule,
-    OrdersModule,
+    ArchivingModule,
   ],
   controllers: [AppController],
   providers: [
