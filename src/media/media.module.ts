@@ -8,6 +8,7 @@ import { ImagesController } from './images.controller';
 import { ImageProcessingService } from './services/image-processing.service';
 import { LocalStorageProvider } from './providers/local-storage.provider';
 import { S3StorageProvider } from './providers/s3-storage.provider';
+import { ModerationService } from './services/moderation.service';
 
 /**
  * Requirement: Cloud Storage Integration (AWS S3)
@@ -43,6 +44,7 @@ const storageProviderFactory: Provider = {
   providers: [
     MediaService, // Requirement: Upload handling
     ImageProcessingService, // Requirement: Validation and Transformation
+    ModerationService,
     storageProviderFactory,
   ],
   exports: [MediaService, ImageProcessingService],

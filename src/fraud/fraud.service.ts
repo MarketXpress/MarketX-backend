@@ -7,6 +7,10 @@ import type { AdminService } from '../admin/admin.service';
 import { GeolocationService } from '../geolocation/geolocation.service';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/dto/create-order.dto';
+import { CacheService } from '../cache/cache.service';
+import { EmailService } from '../email/email.service';
+import { UserStatus } from '../entities/user.entity';
+import { AdminWebhookService } from '../admin/admin-webhook.service';
 
 @Injectable()
 export class FraudService {
@@ -18,6 +22,9 @@ export class FraudService {
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
     private readonly geolocationService: GeolocationService,
+    private readonly cacheService: CacheService,
+    private readonly emailService: EmailService,
+    private readonly adminWebhookService: AdminWebhookService,
     private readonly adminService?: AdminService,
   ) {}
 
@@ -69,6 +76,47 @@ export class FraudService {
       });
 
       await this.repo.save(alert);
+
+      // --- Automated Account Lockout Protocol (#229) ---
+      if (input.userId) {
+        const fraudKey = `fraud_flags:${input.userId}`;
+        const flagCount = await this.cacheService.increment(fraudKey, 3600); // 60-minute window
+
+        if (flagCount >= 3) {
+          try {
+            // Fetch user to get email and current status
+            const user = await this.adminService['userRepository'].findOne({
+              where: { id: input.userId },
+            });
+
+            if (user && user.status !== UserStatus.LOCKED) {
+              user.status = UserStatus.LOCKED;
+              await this.adminService['userRepository'].save(user);
+
+              await this.emailService.sendAccountLocked({
+                userId: input.userId,
+                to: user.email,
+                name: user.name || user.firstName || 'User',
+              });
+
+              this.logger.warn(`Account LOCKED for user ${input.userId} after ${flagCount} flags`);
+            }
+          } catch (err) {
+            this.logger.error(`Failed to lock account for user ${input.userId}: ${err.message}`);
+          }
+        }
+      }
+
+      // Real-time Admin Webhook for High Risk Events (#231)
+      if (result.riskScore >= 90) {
+        await this.adminWebhookService.notifyAdmin('High Risk Fraud Detected', {
+          userId: input.userId,
+          riskScore: result.riskScore,
+          rulesTriggered: result.triggeredRules.join(', '),
+          ip: input.ip,
+        }, result.riskScore);
+      }
+      // -------------------------------------------------
 
       // Mark order for manual review if score breaches 75
       if (result.riskScore >= 75 && input.orderId) {

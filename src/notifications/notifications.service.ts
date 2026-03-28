@@ -32,6 +32,7 @@ import { QueryNotificationsDto } from './dto/query-notifications.dto';
 
 // Cache manager service used in first file
 import { CacheManagerService } from '../cache/cache-manager.service';
+import { NotificationGateway } from './notification.gateway';
 
 // unify CreateNotificationDto type (accept either shape)
 type CreateNotificationDto = CreateNotificationDtoV1 | CreateNotificationDtoV2;
@@ -63,6 +64,7 @@ export class NotificationsService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(InjectQueue('email')) private readonly emailQueue: Queue,
     private readonly i18nService: I18nService,
+    private readonly notificationGateway: NotificationGateway,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
   ) { }
 
@@ -299,10 +301,12 @@ export class NotificationsService {
     notification: NotificationEntity,
   ): Promise<void> {
     // In-app items are already persisted to DB; emit for realtime delivery (websockets)
-    this.eventEmitter.emit('notification.in-app', {
-      userId: notification.userId,
-      notification,
+    this.notificationGateway.sendNotification(notification.userId, {
+      type: notification.type,
+      message: notification.message,
+      payload: notification.metadata,
     });
+
     this.logger.log(
       `In-app notification created for user ${notification.userId}`,
     );

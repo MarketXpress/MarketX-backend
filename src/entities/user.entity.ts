@@ -30,6 +30,7 @@ export enum UserStatus {
   INACTIVE = 'inactive',
   SUSPENDED = 'suspended',
   DELETED = 'deleted',
+  LOCKED = 'locked',
 }
 
 @Entity('users')
