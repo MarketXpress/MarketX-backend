@@ -88,6 +88,7 @@ export class ListingsService {
     const now = new Date();
     const query = this.listingRepo
       .createQueryBuilder('listing')
+      .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
       .where('listing.isActive = :isActive', { isActive: true })
       .andWhere('listing.deletedAt IS NULL')
       .andWhere('(listing.expiresAt IS NULL OR listing.expiresAt > :now)', { now });
@@ -131,7 +132,9 @@ export class ListingsService {
     const skip = ((page || 1) - 1) * take;
 
     const query = this.listingRepo.createQueryBuilder('listing')
-      .where('listing.isActive = :isActive', { isActive: true });
+      .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
+      .where('listing.isActive = :isActive', { isActive: true })
+      .andWhere('listing.deletedAt IS NULL');
 
     if (category) {
       query.andWhere('listing.category = :category', { category });
@@ -146,11 +149,14 @@ export class ListingsService {
   }
 
   async findFeatured() {
-    return this.listingRepo.find({
-      where: { isActive: true },
-      order: { createdAt: 'DESC' },
-      take: 10,
-    });
+    return this.listingRepo
+      .createQueryBuilder('listing')
+      .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
+      .where('listing.isActive = :isActive', { isActive: true })
+      .andWhere('listing.deletedAt IS NULL')
+      .orderBy('listing.createdAt', 'DESC')
+      .take(10)
+      .getMany();
   }
 
   async remove(id: string) {
