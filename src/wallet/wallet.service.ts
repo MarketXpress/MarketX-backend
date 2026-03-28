@@ -7,6 +7,12 @@ import { Wallet } from './entities/wallet.entity';
 import { WalletKeyAudit } from './entities/wallet-key-audit.entity';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { ConfigService } from '@nestjs/config';
+import {
+  WalletWithdrawalRequestedEvent,
+  WalletWithdrawalCompletedEvent,
+  WalletDepositRequestedEvent,
+  EventNames,
+} from '../common/events';
 
 @Injectable()
 export class WalletService {
@@ -178,24 +184,27 @@ export class WalletService {
       const { balance } = await this.getWalletBalance(userId);
       if (parseFloat(balance) < amount) {
         // Emit audit event for failed withdrawal attempt
-        this.eventEmitter.emit('wallet.withdrawal_requested', {
-          actionType: 'WITHDRAWAL',
-          userId,
-          ipAddress,
-          userAgent,
-          status: 'FAILURE',
-          errorMessage: 'Insufficient balance',
-          resourceType: 'wallet',
-          resourceId: wallet.id,
-          statePreviousValue: { balance: parseFloat(balance) },
-          stateNewValue: { balance: parseFloat(balance) - amount },
-          metadata: {
-            amount,
-            destination,
-            currency: 'XLM',
-            reason: 'insufficient_balance',
-          },
-        });
+        this.eventEmitter.emit(
+          EventNames.WALLET_WITHDRAWAL_REQUESTED,
+          new WalletWithdrawalRequestedEvent(
+            'WITHDRAWAL',
+            userId,
+            ipAddress,
+            userAgent,
+            'FAILURE',
+            'Insufficient balance',
+            'wallet',
+            wallet.id,
+            { balance: parseFloat(balance) },
+            { balance: parseFloat(balance) - amount },
+            {
+              amount,
+              destination,
+              currency: 'XLM',
+              reason: 'insufficient_balance',
+            },
+          ),
+        );
 
         throw new BadRequestException('Insufficient balance for withdrawal');
       }
@@ -204,24 +213,28 @@ export class WalletService {
       const transactionId = `withdrawal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Emit audit event for successful withdrawal request
-      this.eventEmitter.emit('wallet.withdrawal_requested', {
-        actionType: 'WITHDRAWAL',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'SUCCESS',
-        resourceType: 'wallet',
-        resourceId: wallet.id,
-        statePreviousValue: { balance: parseFloat(balance), withdrawn: false },
-        stateNewValue: { balance: parseFloat(balance) - amount, withdrawn: true },
-        metadata: {
-          amount,
-          destination,
-          currency: 'XLM',
-          transactionId,
-          requestedAt: new Date(),
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.WALLET_WITHDRAWAL_REQUESTED,
+        new WalletWithdrawalRequestedEvent(
+          'WITHDRAWAL',
+          userId,
+          ipAddress,
+          userAgent,
+          'SUCCESS',
+          undefined,
+          'wallet',
+          wallet.id,
+          { balance: parseFloat(balance), withdrawn: false },
+          { balance: parseFloat(balance) - amount, withdrawn: true },
+          {
+            amount,
+            destination,
+            currency: 'XLM',
+            transactionId,
+            requestedAt: new Date(),
+          },
+        ),
+      );
 
       this.logger.log(
         `Withdrawal requested: ${amount} XLM from ${userId} to ${destination}`,
@@ -232,21 +245,26 @@ export class WalletService {
       this.logger.error(`Withdrawal request failed: ${error.message}`, error.stack);
 
       // Emit audit event for error
-      this.eventEmitter.emit('wallet.withdrawal_requested', {
-        actionType: 'WITHDRAWAL',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'FAILURE',
-        errorMessage: error.message,
-        resourceType: 'wallet',
-        resourceId: userId,
-        metadata: {
-          amount,
-          destination,
-          reason: 'system_error',
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.WALLET_WITHDRAWAL_REQUESTED,
+        new WalletWithdrawalRequestedEvent(
+          'WITHDRAWAL',
+          userId,
+          ipAddress,
+          userAgent,
+          'FAILURE',
+          error.message,
+          'wallet',
+          userId,
+          undefined,
+          undefined,
+          {
+            amount,
+            destination,
+            reason: 'system_error',
+          },
+        ),
+      );
 
       throw error;
     }
@@ -275,22 +293,26 @@ export class WalletService {
       }
 
       // Emit audit event for withdrawal completion
-      this.eventEmitter.emit('wallet.withdrawal_completed', {
-        actionType: 'WITHDRAWAL',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'SUCCESS',
-        resourceType: 'wallet',
-        resourceId: wallet.id,
-        metadata: {
-          amount,
-          destination,
-          transactionHash,
-          currency: 'XLM',
-          completedAt: new Date(),
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.WALLET_WITHDRAWAL_COMPLETED,
+        new WalletWithdrawalCompletedEvent(
+          'WITHDRAWAL',
+          userId,
+          ipAddress,
+          userAgent,
+          'SUCCESS',
+          undefined,
+          'wallet',
+          wallet.id,
+          {
+            amount,
+            destination,
+            transactionHash,
+            currency: 'XLM',
+            completedAt: new Date(),
+          },
+        ),
+      );
 
       this.logger.log(
         `Withdrawal completed: ${amount} XLM, transaction hash: ${transactionHash}`,
@@ -301,21 +323,24 @@ export class WalletService {
       this.logger.error(`Withdrawal completion failed: ${error.message}`, error.stack);
 
       // Emit audit event for error
-      this.eventEmitter.emit('wallet.withdrawal_completed', {
-        actionType: 'WITHDRAWAL',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'FAILURE',
-        errorMessage: error.message,
-        resourceType: 'wallet',
-        resourceId: userId,
-        metadata: {
-          amount,
-          destination,
-          transactionHash,
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.WALLET_WITHDRAWAL_COMPLETED,
+        new WalletWithdrawalCompletedEvent(
+          'WITHDRAWAL',
+          userId,
+          ipAddress,
+          userAgent,
+          'FAILURE',
+          error.message,
+          'wallet',
+          userId,
+          {
+            amount,
+            destination,
+            transactionHash,
+          },
+        ),
+      );
 
       throw error;
     }
@@ -345,23 +370,27 @@ export class WalletService {
       const transactionId = `deposit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Emit audit event for deposit
-      this.eventEmitter.emit('wallet.deposit_requested', {
-        actionType: 'DEPOSIT',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'SUCCESS',
-        resourceType: 'wallet',
-        resourceId: wallet.id,
-        statePreviousValue: { balance: parseFloat(balanceBefore.balance) },
-        stateNewValue: { balance: parseFloat(balanceBefore.balance) + amount },
-        metadata: {
-          amount,
-          currency: 'XLM',
-          transactionId,
-          requestedAt: new Date(),
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.WALLET_DEPOSIT_REQUESTED,
+        new WalletDepositRequestedEvent(
+          'DEPOSIT',
+          userId,
+          ipAddress,
+          userAgent,
+          'SUCCESS',
+          undefined,
+          'wallet',
+          wallet.id,
+          { balance: parseFloat(balanceBefore.balance) },
+          { balance: parseFloat(balanceBefore.balance) + amount },
+          {
+            amount,
+            currency: 'XLM',
+            transactionId,
+            requestedAt: new Date(),
+          },
+        ),
+      );
 
       this.logger.log(`Deposit requested: ${amount} XLM to wallet ${userId}`);
 
@@ -369,20 +398,25 @@ export class WalletService {
     } catch (error) {
       this.logger.error(`Deposit request failed: ${error.message}`, error.stack);
 
-      this.eventEmitter.emit('wallet.deposit_requested', {
-        actionType: 'DEPOSIT',
-        userId,
-        ipAddress,
-        userAgent,
-        status: 'FAILURE',
-        errorMessage: error.message,
-        resourceType: 'wallet',
-        resourceId: userId,
-        metadata: {
-          amount,
-          reason: 'system_error',
-        },
-      });
+      this.eventEmitter.emit(
+        EventNames.WALLET_DEPOSIT_REQUESTED,
+        new WalletDepositRequestedEvent(
+          'DEPOSIT',
+          userId,
+          ipAddress,
+          userAgent,
+          'FAILURE',
+          error.message,
+          'wallet',
+          userId,
+          undefined,
+          undefined,
+          {
+            amount,
+            reason: 'system_error',
+          },
+        ),
+      );
 
       throw error;
     }

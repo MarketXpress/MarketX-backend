@@ -7,7 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { InventoryService } from '../inventory/inventory.service';
-import { OrderUpdatedEvent } from '../notifications/events/order.events';
+import { OrderUpdatedEvent, EventNames } from '../common/events';
 import { PricingService } from '../products/services/pricing.service';
 import {
   CreateOrderDto,
@@ -142,7 +142,7 @@ export class OrdersService {
     const updatedOrder = await this.ordersRepository.save(order);
 
     this.eventEmitter.emit(
-      'order.updated',
+      EventNames.ORDER_UPDATED,
       new OrderUpdatedEvent(
         updatedOrder.id,
         updatedOrder.buyerId,
