@@ -21,6 +21,7 @@ export enum OrderStatus {
   DELIVERED = 'delivered',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+  MANUAL_REVIEW = 'manual_review',
 }
 
 export class CreateOrderItemDto {
