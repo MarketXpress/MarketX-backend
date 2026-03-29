@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -8,7 +9,10 @@ import { CacheManagerService } from '../cache/cache-manager.service';
 import { Listing } from '../listing/entities/listing.entity';
 
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType, NotificationChannel } from '../notifications/notification.entity';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/notification.entity';
 
 @Injectable()
 export class UsersService {
@@ -19,6 +23,7 @@ export class UsersService {
     private readonly listingRepository: Repository<Listing>,
     private readonly cacheManager: CacheManagerService,
     private readonly notificationsService: NotificationsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Users> {
@@ -37,6 +42,13 @@ export class UsersService {
         email: savedUser.email,
       },
     } as any);
+
+    this.eventEmitter.emit('user.created', {
+      id: savedUser.id.toString(),
+      email: savedUser.email,
+      name: savedUser.name,
+      createdAt: new Date().toISOString(),
+    });
 
     return savedUser;
   }
@@ -105,7 +117,10 @@ export class UsersService {
     }
 
     // Mark user as deleted
-    await this.userRepository.update(id, { status: 'deleted', isActive: false });
+    await this.userRepository.update(id, {
+      status: 'deleted',
+      isActive: false,
+    });
     await this.userRepository.softDelete(id);
 
     // Cascade soft-delete to all listings owned by this user
@@ -154,7 +169,10 @@ export class UsersService {
     return true;
   }
 
-  async updateRefreshToken(userId: number, token: string | null): Promise<void> {
+  async updateRefreshToken(
+    userId: number,
+    token: string | null,
+  ): Promise<void> {
     await this.userRepository.update(userId, { refreshToken: token } as any);
   }
 }

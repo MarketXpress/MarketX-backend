@@ -21,9 +21,13 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { MediaService, UploadedImageResult } from '../media/media.service';
+import { MediaService } from '../media/media.service';
 import { ProductImage } from '../media/entities/image.entity';
-import { UploadImageDto, ReorderImagesDto } from '../media/dto/upload-image.dto';
+import {
+  UploadImageDto,
+  ReorderImagesDto,
+} from '../media/dto/upload-image.dto';
+import { QueuedImageUploadResult } from '../media/media.jobs';
 
 @ApiTags('Product Images')
 @Controller('products')
@@ -38,7 +42,8 @@ export class ProductImagesController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Upload images for a product',
-    description: 'Upload multiple images for a product. Supports JPEG, PNG, and WebP formats (max 5MB each). Generates thumbnail (200x200), medium (800x800), and original variants.',
+    description:
+      'Upload multiple images for a product. Supports JPEG, PNG, and WebP formats (max 5MB each). Generates thumbnail (200x200), medium (800x800), and original variants.',
   })
   @ApiParam({
     name: 'id',
@@ -66,7 +71,8 @@ export class ProductImagesController {
         },
         displayOrder: {
           type: 'integer',
-          description: 'Display order for the images (optional, auto-incremented if not provided)',
+          description:
+            'Display order for the images (optional, auto-incremented if not provided)',
           example: 0,
         },
       },
@@ -80,8 +86,14 @@ export class ProductImagesController {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', example: '550e8400-e29b-41d4-a716-446655440000' },
-          productId: { type: 'string', example: '550e8400-e29b-41d4-a716-446655440001' },
+          id: {
+            type: 'string',
+            example: '550e8400-e29b-41d4-a716-446655440000',
+          },
+          productId: {
+            type: 'string',
+            example: '550e8400-e29b-41d4-a716-446655440001',
+          },
           originalName: { type: 'string', example: 'product-image.jpg' },
           variants: {
             type: 'object',
@@ -147,7 +159,7 @@ export class ProductImagesController {
     @Param('id') productId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto?: UploadImageDto,
-  ): Promise<UploadedImageResult[]> {
+  ): Promise<QueuedImageUploadResult[]> {
     return this.mediaService.uploadProductImages(productId, files, dto);
   }
 
@@ -158,7 +170,8 @@ export class ProductImagesController {
   @Get(':id/images')
   @ApiOperation({
     summary: 'Get all images for a product',
-    description: 'Retrieve all images associated with a product, ordered by display order',
+    description:
+      'Retrieve all images associated with a product, ordered by display order',
   })
   @ApiParam({
     name: 'id',
@@ -184,7 +197,8 @@ export class ProductImagesController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Reorder images for a product',
-    description: 'Reorder images by providing an array of image IDs in the desired order',
+    description:
+      'Reorder images by providing an array of image IDs in the desired order',
   })
   @ApiParam({
     name: 'id',
@@ -214,7 +228,8 @@ export class ProductImagesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete all images for a product',
-    description: 'Delete all images associated with a product from both storage and database',
+    description:
+      'Delete all images associated with a product from both storage and database',
   })
   @ApiParam({
     name: 'id',
@@ -223,9 +238,7 @@ export class ProductImagesController {
   })
   @ApiResponse({ status: 204, description: 'All images deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async deleteProductImages(
-    @Param('id') productId: string,
-  ): Promise<void> {
+  async deleteProductImages(@Param('id') productId: string): Promise<void> {
     await this.mediaService.deleteProductImages(productId);
   }
 }

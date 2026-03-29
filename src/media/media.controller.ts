@@ -21,7 +21,8 @@ import {
   ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
-import { MediaService, UploadedImageResult } from './media.service';
+import { MediaService } from './media.service';
+import { QueuedImageUploadResult } from './media.jobs';
 import { UploadImageDto, ReorderImagesDto } from './dto/upload-image.dto';
 import { ProductImage } from './entities/image.entity';
 
@@ -90,7 +91,7 @@ export class MediaController {
     @Param('productId', ParseUUIDPipe) productId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto?: UploadImageDto,
-  ): Promise<UploadedImageResult[]> {
+  ): Promise<QueuedImageUploadResult[]> {
     return this.mediaService.uploadProductImages(productId, files, dto);
   }
 
