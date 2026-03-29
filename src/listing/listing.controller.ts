@@ -91,7 +91,7 @@ export class ListingsController {
   findFeatured() {
     return this.listingsService.findFeatured();
   }
-  
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @Cacheable({ ttl: 3600, tags: ['listings'] })

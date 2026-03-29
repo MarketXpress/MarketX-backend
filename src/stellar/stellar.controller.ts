@@ -17,8 +17,14 @@ export class StellarController {
 
   @Post('wallet/create')
   @ApiOperation({ summary: 'Create a new Stellar wallet' })
-  @ApiResponse({ status: 201, description: 'Wallet created successfully', type: WalletResponseDto })
-  async createWallet(@Body() createWalletDto: CreateWalletDto): Promise<WalletResponseDto> {
+  @ApiResponse({
+    status: 201,
+    description: 'Wallet created successfully',
+    type: WalletResponseDto,
+  })
+  async createWallet(
+    @Body() createWalletDto: CreateWalletDto,
+  ): Promise<WalletResponseDto> {
     return this.stellarService.createWallet();
   }
 
@@ -31,15 +37,23 @@ export class StellarController {
 
   @Get('wallet/balance/:publicKey')
   @ApiOperation({ summary: 'Get balance for a Stellar account' })
-  @ApiResponse({ status: 200, description: 'Balance retrieved successfully', type: BalanceResponseDto })
-  async getBalance(@Param('publicKey') publicKey: string): Promise<BalanceResponseDto> {
+  @ApiResponse({
+    status: 200,
+    description: 'Balance retrieved successfully',
+    type: BalanceResponseDto,
+  })
+  async getBalance(
+    @Param('publicKey') publicKey: string,
+  ): Promise<BalanceResponseDto> {
     return this.stellarService.getBalance(publicKey);
   }
 
   @Get('wallet/exists/:publicKey')
   @ApiOperation({ summary: 'Check if account exists on the network' })
   @ApiResponse({ status: 200, description: 'Account existence check result' })
-  async accountExists(@Param('publicKey') publicKey: string): Promise<{ exists: boolean }> {
+  async accountExists(
+    @Param('publicKey') publicKey: string,
+  ): Promise<{ exists: boolean }> {
     const exists = await this.stellarService.accountExists(publicKey);
     return { exists };
   }

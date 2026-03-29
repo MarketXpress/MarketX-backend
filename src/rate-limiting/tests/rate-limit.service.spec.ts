@@ -26,7 +26,7 @@ describe('RateLimitService', () => {
     }).compile();
 
     service = module.get<RateLimitService>(RateLimitService);
-    
+
     // Get the mocked Redis instance
     mockRedis = new Redis() as jest.Mocked<any>;
     mockRedis.pipeline = jest.fn().mockReturnValue({
@@ -56,7 +56,7 @@ describe('RateLimitService', () => {
   describe('checkRateLimit', () => {
     it('should allow request when under limit', async () => {
       const result = await service.checkRateLimit('test-user', UserTier.FREE);
-      
+
       expect(result.success).toBe(true);
       expect(result.totalHits).toBe(3); // Based on mocked zcard + 1
       expect(result.remainingPoints).toBeGreaterThan(0);
@@ -72,41 +72,51 @@ describe('RateLimitService', () => {
       ]);
 
       const result = await service.checkRateLimit('test-user', UserTier.FREE);
-      
+
       expect(result.success).toBe(false);
       expect(result.totalHits).toBe(16);
       expect(result.remainingPoints).toBe(0);
     });
 
     it('should apply different limits for different tiers', async () => {
-      const freeResult = await service.checkRateLimit('free-user', UserTier.FREE);
-      const premiumResult = await service.checkRateLimit('premium-user', UserTier.PREMIUM);
-      
+      const freeResult = await service.checkRateLimit(
+        'free-user',
+        UserTier.FREE,
+      );
+      const premiumResult = await service.checkRateLimit(
+        'premium-user',
+        UserTier.PREMIUM,
+      );
+
       // Both should succeed with same request count, but premium has higher limits
       expect(freeResult.success).toBe(true);
       expect(premiumResult.success).toBe(true);
-      
+
       // Premium should have more remaining points
-      expect(premiumResult.remainingPoints).toBeGreaterThan(freeResult.remainingPoints);
+      expect(premiumResult.remainingPoints).toBeGreaterThan(
+        freeResult.remainingPoints,
+      );
     });
 
     it('should apply endpoint-specific limits', async () => {
       const result = await service.checkRateLimit(
         'test-user',
         UserTier.FREE,
-        '/api/auth/login'
+        '/api/auth/login',
       );
-      
+
       expect(result.success).toBe(true);
       // Login endpoint has stricter limits
       expect(result.headers['X-RateLimit-Limit']).toBe('5');
     });
 
     it('should fail open when Redis is unavailable', async () => {
-      mockRedis.pipeline().exec = jest.fn().mockRejectedValue(new Error('Redis unavailable'));
+      mockRedis.pipeline().exec = jest
+        .fn()
+        .mockRejectedValue(new Error('Redis unavailable'));
 
       const result = await service.checkRateLimit('test-user', UserTier.FREE);
-      
+
       expect(result.success).toBe(true);
       expect(result.totalHits).toBe(0);
     });
@@ -115,21 +125,23 @@ describe('RateLimitService', () => {
   describe('resetRateLimit', () => {
     it('should reset rate limit for identifier', async () => {
       await service.resetRateLimit('test-user');
-      
+
       expect(mockRedis.del).toHaveBeenCalledWith('rate_limit:test-user');
     });
 
     it('should reset rate limit for identifier and endpoint', async () => {
       await service.resetRateLimit('test-user', '/api/listings');
-      
-      expect(mockRedis.del).toHaveBeenCalledWith('rate_limit:test-user:_api_listings');
+
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'rate_limit:test-user:_api_listings',
+      );
     });
   });
 
   describe('getRateLimitStatus', () => {
     it('should return current status', async () => {
       const status = await service.getRateLimitStatus('test-user');
-      
+
       expect(status.currentCount).toBe(2);
       expect(status.windowStart).toBeInstanceOf(Date);
       expect(status.nextReset).toBeInstanceOf(Date);
@@ -139,15 +151,15 @@ describe('RateLimitService', () => {
   describe('updateTierConfig', () => {
     it('should update tier configuration', async () => {
       mockRedis.set = jest.fn().mockResolvedValue('OK');
-      
+
       await service.updateTierConfig(UserTier.FREE, {
         maxRequests: 20,
         windowMs: 120000,
       });
-      
+
       expect(mockRedis.set).toHaveBeenCalledWith(
         'rate_limit_config:tier:free',
-        expect.stringContaining('20')
+        expect.stringContaining('20'),
       );
     });
   });
@@ -155,15 +167,15 @@ describe('RateLimitService', () => {
   describe('updateEndpointConfig', () => {
     it('should update endpoint configuration', async () => {
       mockRedis.set = jest.fn().mockResolvedValue('OK');
-      
+
       await service.updateEndpointConfig('/api/test', {
         maxRequests: 5,
         windowMs: 300000,
       });
-      
+
       expect(mockRedis.set).toHaveBeenCalledWith(
         'rate_limit_config:endpoint:/api/test',
-        expect.stringContaining('5')
+        expect.stringContaining('5'),
       );
     });
   });
@@ -182,7 +194,7 @@ describe('RateLimitService', () => {
       ]);
 
       const analytics = await service.getAnalytics(1);
-      
+
       expect(analytics).toHaveLength(1);
       expect(analytics[0].data).toHaveLength(1);
       expect(analytics[0].data[0].identifier).toBe('user:123');

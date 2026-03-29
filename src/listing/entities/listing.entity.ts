@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Users } from '../../users/users.entity';
 import {
   Entity,

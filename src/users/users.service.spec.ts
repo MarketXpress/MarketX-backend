@@ -56,7 +56,9 @@ describe('UsersService - softDeleteUser', () => {
 
   it('throws NotFoundException when user does not exist', async () => {
     userRepo.findOne.mockResolvedValue(null);
-    await expect(service.softDeleteUser(999)).rejects.toThrow(NotFoundException);
+    await expect(service.softDeleteUser(999)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('calls softDelete on the user repository', async () => {

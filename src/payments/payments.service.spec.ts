@@ -20,7 +20,8 @@ describe.skip('PaymentsService', () => {
 
   const testOrderId = 'order-123';
   const testBuyerId = 'buyer-123';
-  const testWalletAddress = 'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMhtqc6VPM7';
+  const testWalletAddress =
+    'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMhtqc6VPM7';
 
   beforeEach(async () => {
     // Mock repositories
@@ -138,7 +139,10 @@ describe.skip('PaymentsService', () => {
       });
 
       expect(mockPaymentsRepo.save).toHaveBeenCalledTimes(1);
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('payment.initiated', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'payment.initiated',
+        expect.any(Object),
+      );
     });
 
     it('should throw error if order not found', async () => {
@@ -236,18 +240,25 @@ describe.skip('PaymentsService', () => {
         buyerId: testBuyerId,
       };
 
-      mockPaymentsRepo.findOne.mockResolvedValue({ ...mockPayment, order: mockOrder });
+      mockPaymentsRepo.findOne.mockResolvedValue({
+        ...mockPayment,
+        order: mockOrder,
+      });
       mockPaymentsRepo.save.mockResolvedValue({
         ...mockPayment,
         status: PaymentStatus.CONFIRMED,
         stellarTransactionId: 'tx-123',
         confirmedAt: new Date(),
       });
-      mockOrdersRepo.save.mockResolvedValue({ ...mockOrder, status: OrderStatus.PAID });
+      mockOrdersRepo.save.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.PAID,
+      });
 
       const transactionData = {
         id: 'tx-123',
-        source_account: 'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMHTQC6VTEST',
+        source_account:
+          'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMHTQC6VTEST',
         to: testWalletAddress,
         destination: testWalletAddress,
         amount: '100',
@@ -256,14 +267,20 @@ describe.skip('PaymentsService', () => {
         confirmations: 1,
       };
 
-      const result = await service.verifyAndConfirmPayment('payment-123', transactionData);
+      const result = await service.verifyAndConfirmPayment(
+        'payment-123',
+        transactionData,
+      );
 
       expect(result.status).toBe(PaymentStatus.CONFIRMED);
       expect(result.stellarTransactionId).toBe('tx-123');
       expect(mockOrdersRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ status: OrderStatus.PAID }),
       );
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('payment.confirmed', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'payment.confirmed',
+        expect.any(Object),
+      );
     });
 
     it('should fail payment if destination does not match', async () => {
@@ -290,10 +307,16 @@ describe.skip('PaymentsService', () => {
         created_at: new Date().toISOString(),
       };
 
-      const result = await service.verifyAndConfirmPayment('payment-123', transactionData);
+      const result = await service.verifyAndConfirmPayment(
+        'payment-123',
+        transactionData,
+      );
 
       expect(result.status).toBe(PaymentStatus.FAILED);
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('payment.failed', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'payment.failed',
+        expect.any(Object),
+      );
     });
 
     it('should fail payment if amount does not match', async () => {
@@ -320,7 +343,10 @@ describe.skip('PaymentsService', () => {
         created_at: new Date().toISOString(),
       };
 
-      const result = await service.verifyAndConfirmPayment('payment-123', transactionData);
+      const result = await service.verifyAndConfirmPayment(
+        'payment-123',
+        transactionData,
+      );
 
       expect(result.status).toBe(PaymentStatus.FAILED);
     });
@@ -351,7 +377,10 @@ describe.skip('PaymentsService', () => {
         created_at: new Date().toISOString(),
       };
 
-      const result = await service.verifyAndConfirmPayment('payment-123', transactionData);
+      const result = await service.verifyAndConfirmPayment(
+        'payment-123',
+        transactionData,
+      );
 
       expect(result.status).toBe(PaymentStatus.FAILED);
     });
@@ -375,15 +404,18 @@ describe.skip('PaymentsService', () => {
       const result = await service.handlePaymentTimeout('payment-123');
 
       expect(result.status).toBe(PaymentStatus.TIMEOUT);
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('payment.timeout', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'payment.timeout',
+        expect.any(Object),
+      );
     });
 
     it('should throw error if payment not found', async () => {
       mockPaymentsRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.handlePaymentTimeout('non-existent')).rejects.toThrow(
-        'Payment with ID',
-      );
+      await expect(
+        service.handlePaymentTimeout('non-existent'),
+      ).rejects.toThrow('Payment with ID');
     });
   });
 

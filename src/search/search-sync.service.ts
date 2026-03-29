@@ -74,7 +74,9 @@ export class SearchSyncService implements OnModuleInit {
       // Bulk index
       await this.searchService.bulkIndex(documents);
 
-      this.logger.log(`Successfully synced ${listings.length} listings to search index`);
+      this.logger.log(
+        `Successfully synced ${listings.length} listings to search index`,
+      );
       return { synced: listings.length, failed: 0 };
     } catch (error: any) {
       this.logger.error(`Listing sync failed: ${error.message}`);
@@ -82,7 +84,10 @@ export class SearchSyncService implements OnModuleInit {
     }
   }
 
-  async syncSingleListing(listing: Listing, action: 'index' | 'update' | 'delete'): Promise<void> {
+  async syncSingleListing(
+    listing: Listing,
+    action: 'index' | 'update' | 'delete',
+  ): Promise<void> {
     if (!this.searchService.isInitialized()) {
       return;
     }

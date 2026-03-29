@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 
 @Injectable()
@@ -8,7 +13,10 @@ export class ChatParticipantGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const userId = request.user?.id;
-    const listingId = request.params.listingId || request.body.listingId || request.query.listingId;
+    const listingId =
+      request.params.listingId ||
+      request.body.listingId ||
+      request.query.listingId;
     if (!userId || !listingId) {
       throw new ForbiddenException('Missing user or listing information');
     }
@@ -19,4 +27,4 @@ export class ChatParticipantGuard implements CanActivate {
     }
     return true;
   }
-} 
+}

@@ -127,9 +127,7 @@ export class EscrowService {
     }
 
     if (releasedAmount > escrow.amount) {
-      throw new BadRequestException(
-        'Released amount exceeds escrow balance',
-      );
+      throw new BadRequestException('Released amount exceeds escrow balance');
     }
 
     const refundAmount = escrow.amount - releasedAmount;
@@ -184,9 +182,7 @@ export class EscrowService {
       escrow.errorMessage = error.message;
       await this.escrowRepository.save(escrow);
 
-      throw new BadRequestException(
-        `Failed partial release: ${error.message}`,
-      );
+      throw new BadRequestException(`Failed partial release: ${error.message}`);
     }
   }
 
@@ -327,11 +323,7 @@ export class EscrowService {
     return escrow;
   }
 
-  private async buildTransaction(
-    from: string,
-    to: string,
-    amount: number,
-  ) {
+  private async buildTransaction(from: string, to: string, amount: number) {
     const account = await this.stellarServer.loadAccount(from);
 
     return new StellarSdk.TransactionBuilder(account, {

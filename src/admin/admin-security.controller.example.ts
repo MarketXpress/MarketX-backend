@@ -50,7 +50,9 @@ export class AdminSecurityController {
   @Post('block-ip')
   @HttpCode(HttpStatus.OK)
   blockIP(@Body() dto: BlockIPDto) {
-    this.logger.warn(`IP blocked: ${dto.ip}. Reason: ${dto.reason || 'No reason provided'}`);
+    this.logger.warn(
+      `IP blocked: ${dto.ip}. Reason: ${dto.reason || 'No reason provided'}`,
+    );
     this.securityMiddleware.blockIP(dto.ip);
 
     return {

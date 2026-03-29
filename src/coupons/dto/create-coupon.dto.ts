@@ -34,7 +34,9 @@ export class CouponRestrictionDto {
   @IsString({ each: true })
   excludedProductIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Category IDs excluded from this coupon' })
+  @ApiPropertyOptional({
+    description: 'Category IDs excluded from this coupon',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

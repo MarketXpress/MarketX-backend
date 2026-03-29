@@ -1,4 +1,10 @@
-import { Injectable, NestMiddleware, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  NestMiddleware,
+  Logger,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
 
@@ -19,7 +25,7 @@ export class IpBlockMiddleware implements NestMiddleware {
       await this.refreshIpListIfNeeded();
 
       const clientIp = this.getClientIp(req);
-      
+
       if (this.isBlacklisted(clientIp)) {
         this.logBlockedAttempt(req, clientIp);
         throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
@@ -30,9 +36,12 @@ export class IpBlockMiddleware implements NestMiddleware {
       if (error instanceof HttpException) {
         throw error;
       }
-      
+
       // Log error but don't block request if IP check fails
-      this.logger.error(`IP blocking middleware error: ${error.message}`, error.stack);
+      this.logger.error(
+        `IP blocking middleware error: ${error.message}`,
+        error.stack,
+      );
       next();
     }
   }
@@ -42,9 +51,9 @@ export class IpBlockMiddleware implements NestMiddleware {
     const forwarded = req.headers['x-forwarded-for'] as string;
     const realIp = req.headers['x-real-ip'] as string;
     const cfConnectingIp = req.headers['cf-connecting-ip'] as string;
-    
+
     let clientIp = req.connection.remoteAddress || req.socket.remoteAddress;
-    
+
     if (forwarded) {
       clientIp = forwarded.split(',')[0].trim();
     } else if (realIp) {
@@ -75,13 +84,18 @@ export class IpBlockMiddleware implements NestMiddleware {
   private async loadBlacklistedIps(): Promise<void> {
     try {
       this.blacklistedIps.clear();
-      
+
       // Try to load from environment variable first
       const envIps = this.configService.get<string>('BLACKLISTED_IPS');
       if (envIps) {
-        const ips = envIps.split(',').map(ip => ip.trim()).filter(ip => ip);
-        ips.forEach(ip => this.blacklistedIps.add(ip));
-        this.logger.log(`Loaded ${ips.length} blacklisted IPs from environment`);
+        const ips = envIps
+          .split(',')
+          .map((ip) => ip.trim())
+          .filter((ip) => ip);
+        ips.forEach((ip) => this.blacklistedIps.add(ip));
+        this.logger.log(
+          `Loaded ${ips.length} blacklisted IPs from environment`,
+        );
       }
 
       // If you have database integration, uncomment and modify this section:
@@ -97,10 +111,14 @@ export class IpBlockMiddleware implements NestMiddleware {
       */
 
       this.lastUpdated = Date.now();
-      this.logger.log(`Total blacklisted IPs loaded: ${this.blacklistedIps.size}`);
-      
+      this.logger.log(
+        `Total blacklisted IPs loaded: ${this.blacklistedIps.size}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to load blacklisted IPs: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to load blacklisted IPs: ${error.message}`,
+        error.stack,
+      );
       // Keep existing IPs if reload fails
     }
   }
@@ -116,12 +134,12 @@ export class IpBlockMiddleware implements NestMiddleware {
       headers: {
         'x-forwarded-for': req.headers['x-forwarded-for'],
         'x-real-ip': req.headers['x-real-ip'],
-        'cf-connecting-ip': req.headers['cf-connecting-ip']
-      }
+        'cf-connecting-ip': req.headers['cf-connecting-ip'],
+      },
     };
 
     this.logger.warn(`🚫 BLOCKED ACCESS ATTEMPT`, logData);
-    
+
     // Optional: Send to external logging service
     // this.securityService.reportBlockedAttempt(logData);
   }

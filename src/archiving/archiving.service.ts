@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource, LessThan } from 'typeorm';
 import { Order } from '../orders/entities/order.entity';
-import { Transaction, TransactionStatus } from '../transactions/entities/transaction.entity';
+import {
+  Transaction,
+  TransactionStatus,
+} from '../transactions/entities/transaction.entity';
 import { ArchivedOrder } from './entities/archived-order.entity';
 import { ArchivedTransaction } from './entities/archived-transaction.entity';
 import { OrderStatus } from '../orders/dto/create-order.dto';
@@ -17,10 +20,10 @@ export class ArchivingService {
   @Cron('0 2 * * 0') // 2:00 AM every Sunday
   async handleWeeklyArchiving() {
     this.logger.log('Starting automated transaction archiving pipeline...');
-    
+
     const threshold = new Date();
     threshold.setMonth(threshold.getMonth() - 18);
-    
+
     try {
       await this.archiveOrders(threshold);
       await this.archiveTransactions(threshold);
@@ -34,7 +37,9 @@ export class ArchivingService {
     let totalMoved = 0;
     let hasMore = true;
 
-    this.logger.log(`Archiving orders completed before ${threshold.toISOString()}`);
+    this.logger.log(
+      `Archiving orders completed before ${threshold.toISOString()}`,
+    );
 
     while (hasMore) {
       const moved = await this.dataSource.transaction(async (manager) => {
@@ -52,15 +57,15 @@ export class ArchivingService {
           return 0;
         }
 
-        const ids = ordersToMove.map(o => o.id);
+        const ids = ordersToMove.map((o) => o.id);
 
         // Move to archive
         // We fetch full data for these IDs and save them to the archive
         // Then delete from primary
         const fullData = await manager.getRepository(Order).findByIds(ids);
-        
+
         // Deep copy items to avoid reference issues if any
-        const archivedItems = fullData.map(order => {
+        const archivedItems = fullData.map((order) => {
           const archived = new ArchivedOrder();
           Object.assign(archived, order);
           return archived;
@@ -74,7 +79,7 @@ export class ArchivingService {
 
       totalMoved += moved;
       hasMore = moved === this.BATCH_SIZE;
-      
+
       if (moved > 0) {
         this.logger.log(`Moved ${moved} orders (Total: ${totalMoved})...`);
       }
@@ -87,27 +92,33 @@ export class ArchivingService {
     let totalMoved = 0;
     let hasMore = true;
 
-    this.logger.log(`Archiving transactions completed before ${threshold.toISOString()}`);
+    this.logger.log(
+      `Archiving transactions completed before ${threshold.toISOString()}`,
+    );
 
     while (hasMore) {
       const moved = await this.dataSource.transaction(async (manager) => {
-        const transactionsToMove = await manager.getRepository(Transaction).find({
-          where: {
-            status: TransactionStatus.COMPLETED,
-            updatedAt: LessThan(threshold),
-          },
-          take: this.BATCH_SIZE,
-          select: ['id'],
-        });
+        const transactionsToMove = await manager
+          .getRepository(Transaction)
+          .find({
+            where: {
+              status: TransactionStatus.COMPLETED,
+              updatedAt: LessThan(threshold),
+            },
+            take: this.BATCH_SIZE,
+            select: ['id'],
+          });
 
         if (transactionsToMove.length === 0) {
           return 0;
         }
 
-        const ids = transactionsToMove.map(t => t.id);
-        const fullData = await manager.getRepository(Transaction).findByIds(ids);
+        const ids = transactionsToMove.map((t) => t.id);
+        const fullData = await manager
+          .getRepository(Transaction)
+          .findByIds(ids);
 
-        const archivedTransactions = fullData.map(tx => {
+        const archivedTransactions = fullData.map((tx) => {
           const archived = new ArchivedTransaction();
           Object.assign(archived, tx);
           // Ensure sender/receiver are just IDs in the archive entity
@@ -127,10 +138,14 @@ export class ArchivingService {
       hasMore = moved === this.BATCH_SIZE;
 
       if (moved > 0) {
-        this.logger.log(`Moved ${moved} transactions (Total: ${totalMoved})...`);
+        this.logger.log(
+          `Moved ${moved} transactions (Total: ${totalMoved})...`,
+        );
       }
     }
 
-    this.logger.log(`Finished archiving transactions. Total moved: ${totalMoved}`);
+    this.logger.log(
+      `Finished archiving transactions. Total moved: ${totalMoved}`,
+    );
   }
 }

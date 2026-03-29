@@ -18,7 +18,11 @@ import {
   CarrierInfoDto,
 } from './dto/create-shipment.dto';
 import { OrderStatus } from '../orders/dto/create-order.dto';
-import { ShipmentCreatedEvent, ShipmentStatusUpdatedEvent, EventNames } from '../common/events';
+import {
+  ShipmentCreatedEvent,
+  ShipmentStatusUpdatedEvent,
+  EventNames,
+} from '../common/events';
 
 @Injectable()
 export class ShippingService {

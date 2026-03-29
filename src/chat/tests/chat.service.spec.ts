@@ -4,7 +4,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Chat } from '../chat.entity';
 import { Repository } from 'typeorm';
 
-
 const mockListing = { id: '1' } as any;
 const mockUser1 = { id: 1 } as any;
 const mockUser2 = { id: 2 } as any;
@@ -33,7 +32,19 @@ describe('ChatService', () => {
   });
 
   it('should create a message', async () => {
-    const chat = { id: 1, listingId: '1', senderId: 1, receiverId: 2, message: 'hi', status: 'sent', isRead: false, listing: mockListing, sender: mockUser1, receiver: mockUser2, timestamp: mockTimestamp } as Chat;
+    const chat = {
+      id: 1,
+      listingId: '1',
+      senderId: 1,
+      receiverId: 2,
+      message: 'hi',
+      status: 'sent',
+      isRead: false,
+      listing: mockListing,
+      sender: mockUser1,
+      receiver: mockUser2,
+      timestamp: mockTimestamp,
+    } as Chat;
     jest.spyOn(repo, 'create').mockReturnValue(chat);
     jest.spyOn(repo, 'save').mockResolvedValue(chat);
     expect(await service.createMessage(chat)).toEqual(chat);
@@ -41,26 +52,66 @@ describe('ChatService', () => {
 
   it('should get chat history', async () => {
     const chats = [
-      { id: 1, listingId: '1', senderId: 1, receiverId: 2, message: 'hi', status: 'sent', isRead: false, listing: mockListing, sender: mockUser1, receiver: mockUser2, timestamp: mockTimestamp } as Chat,
+      {
+        id: 1,
+        listingId: '1',
+        senderId: 1,
+        receiverId: 2,
+        message: 'hi',
+        status: 'sent',
+        isRead: false,
+        listing: mockListing,
+        sender: mockUser1,
+        receiver: mockUser2,
+        timestamp: mockTimestamp,
+      } as Chat,
     ];
     jest.spyOn(repo, 'find').mockResolvedValue(chats);
     expect(await service.getChatHistory('1', 1)).toEqual(chats);
   });
 
   it('should mark as read', async () => {
-    const chat = { id: 1, listingId: '1', senderId: 1, receiverId: 2, message: 'hi', status: 'sent', isRead: false, listing: mockListing, sender: mockUser1, receiver: mockUser2, timestamp: mockTimestamp } as Chat;
+    const chat = {
+      id: 1,
+      listingId: '1',
+      senderId: 1,
+      receiverId: 2,
+      message: 'hi',
+      status: 'sent',
+      isRead: false,
+      listing: mockListing,
+      sender: mockUser1,
+      receiver: mockUser2,
+      timestamp: mockTimestamp,
+    } as Chat;
     jest.spyOn(repo, 'findOne').mockResolvedValue(chat);
-    jest.spyOn(repo, 'save').mockImplementation(async (c) => Object.assign(chat, c));
+    jest
+      .spyOn(repo, 'save')
+      .mockImplementation(async (c) => Object.assign(chat, c));
     const result = await service.markAsRead(1, 2);
     expect(result.isRead).toBe(true);
     expect(result.status).toBe('read');
   });
 
   it('should update status', async () => {
-    const chat = { id: 1, listingId: '1', senderId: 1, receiverId: 2, message: 'hi', status: 'sent', isRead: false, listing: mockListing, sender: mockUser1, receiver: mockUser2, timestamp: mockTimestamp } as Chat;
+    const chat = {
+      id: 1,
+      listingId: '1',
+      senderId: 1,
+      receiverId: 2,
+      message: 'hi',
+      status: 'sent',
+      isRead: false,
+      listing: mockListing,
+      sender: mockUser1,
+      receiver: mockUser2,
+      timestamp: mockTimestamp,
+    } as Chat;
     jest.spyOn(repo, 'findOne').mockResolvedValue(chat);
-    jest.spyOn(repo, 'save').mockImplementation(async (c) => Object.assign(chat, c));
+    jest
+      .spyOn(repo, 'save')
+      .mockImplementation(async (c) => Object.assign(chat, c));
     const result = await service.updateStatus(1, 'delivered');
     expect(result.status).toBe('delivered');
   });
-}); 
+});

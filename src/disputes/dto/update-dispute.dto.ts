@@ -12,4 +12,4 @@ export class UpdateDisputeDto {
   @IsOptional()
   @IsString()
   resolutionNote?: string;
-} 
+}

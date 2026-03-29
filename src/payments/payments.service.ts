@@ -60,14 +60,18 @@ export class PaymentsService {
   /**
    * Create a pending payment record for an order
    */
-  async initiatePayment(initiatePaymentDto: InitiatePaymentDto): Promise<PaymentResponseDto> {
+  async initiatePayment(
+    initiatePaymentDto: InitiatePaymentDto,
+  ): Promise<PaymentResponseDto> {
     // Verify order exists and is in PENDING status
     const order = await this.ordersRepository.findOne({
       where: { id: initiatePaymentDto.orderId },
     });
 
     if (!order) {
-      throw new NotFoundException(`Order with ID "${initiatePaymentDto.orderId}" not found`);
+      throw new NotFoundException(
+        `Order with ID "${initiatePaymentDto.orderId}" not found`,
+      );
     }
 
     if (order.status === OrderStatus.MANUAL_REVIEW) {
@@ -77,7 +81,9 @@ export class PaymentsService {
     }
 
     if (order.status !== OrderStatus.PENDING) {
-      throw new BadRequestException(`Order must be in PENDING status to initiate payment`);
+      throw new BadRequestException(
+        `Order must be in PENDING status to initiate payment`,
+      );
     }
 
     const orderCurrency = order.currency ? String(order.currency) : undefined;
@@ -174,7 +180,10 @@ export class PaymentsService {
     }
 
     // Verify transaction data
-    const { isValid, errorMessage } = await this.validateTransaction(payment, transactionData);
+    const { isValid, errorMessage } = await this.validateTransaction(
+      payment,
+      transactionData,
+    );
 
     if (!isValid) {
       payment.status = PaymentStatus.FAILED;
@@ -182,7 +191,9 @@ export class PaymentsService {
       payment.failedAt = new Date();
       await this.paymentsRepository.save(payment);
 
-      this.logger.warn(`Payment ${paymentId} validation failed: ${errorMessage}`);
+      this.logger.warn(
+        `Payment ${paymentId} validation failed: ${errorMessage}`,
+      );
 
       this.eventEmitter.emit(
         EventNames.PAYMENT_FAILED,
@@ -247,7 +258,8 @@ export class PaymentsService {
 
     if (payment.status === PaymentStatus.PENDING) {
       payment.status = PaymentStatus.TIMEOUT;
-      payment.failureReason = 'Payment timeout - no confirmation received within expected time';
+      payment.failureReason =
+        'Payment timeout - no confirmation received within expected time';
       payment.failedAt = new Date();
       await this.paymentsRepository.save(payment);
 
@@ -255,10 +267,7 @@ export class PaymentsService {
 
       this.eventEmitter.emit(
         EventNames.PAYMENT_TIMEOUT,
-        new PaymentTimeoutEvent(
-          paymentId,
-          payment.orderId,
-        ),
+        new PaymentTimeoutEvent(paymentId, payment.orderId),
       );
     }
 
@@ -305,7 +314,7 @@ export class PaymentsService {
       order: { createdAt: 'DESC' },
     });
 
-    return payments.map(payment => this.mapToResponseDto(payment));
+    return payments.map((payment) => this.mapToResponseDto(payment));
   }
 
   /**
@@ -400,12 +409,17 @@ export class PaymentsService {
 
     const stats = {
       totalPayments: payments.length,
-      confirmedCount: payments.filter(p => p.status === PaymentStatus.CONFIRMED).length,
-      pendingCount: payments.filter(p => p.status === PaymentStatus.PENDING).length,
-      failedCount: payments.filter(p => p.status === PaymentStatus.FAILED).length,
-      timeoutCount: payments.filter(p => p.status === PaymentStatus.TIMEOUT).length,
+      confirmedCount: payments.filter(
+        (p) => p.status === PaymentStatus.CONFIRMED,
+      ).length,
+      pendingCount: payments.filter((p) => p.status === PaymentStatus.PENDING)
+        .length,
+      failedCount: payments.filter((p) => p.status === PaymentStatus.FAILED)
+        .length,
+      timeoutCount: payments.filter((p) => p.status === PaymentStatus.TIMEOUT)
+        .length,
       totalConfirmedAmount: payments
-        .filter(p => p.status === PaymentStatus.CONFIRMED)
+        .filter((p) => p.status === PaymentStatus.CONFIRMED)
         .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0),
     };
 

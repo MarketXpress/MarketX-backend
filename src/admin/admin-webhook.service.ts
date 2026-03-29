@@ -17,7 +17,9 @@ export class AdminWebhookService {
 
   async notifyAdmin(event: string, details: any, riskScore?: number) {
     if (!this.webhookUrl) {
-      this.logger.warn('ADMIN_WEBHOOK_URL not configured. Skipping notification.');
+      this.logger.warn(
+        'ADMIN_WEBHOOK_URL not configured. Skipping notification.',
+      );
       return;
     }
 

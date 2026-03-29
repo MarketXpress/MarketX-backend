@@ -14,10 +14,10 @@ export const cacheConfig = {
     checkPeriod: 60000,
   },
   ttl: {
-    default: 3600, 
-    short: 300,    
-    medium: 1800,  
-    long: 7200,    
-    daily: 86400,  
+    default: 3600,
+    short: 300,
+    medium: 1800,
+    long: 7200,
+    daily: 86400,
   },
 };

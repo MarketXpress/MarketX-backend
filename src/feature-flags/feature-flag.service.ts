@@ -70,7 +70,11 @@ export class FeatureFlagsService {
     }
 
     // 2. Rollout percentage
-    if (flag.rolloutPercentage !== null && flag.rolloutPercentage !== undefined && userId) {
+    if (
+      flag.rolloutPercentage !== null &&
+      flag.rolloutPercentage !== undefined &&
+      userId
+    ) {
       return this.hashBucket(userId, key) < flag.rolloutPercentage;
     }
 
@@ -86,7 +90,11 @@ export class FeatureFlagsService {
 
   // ── User overrides ───────────────────────────────────────────────────────
 
-  async setUserOverride(key: string, userId: string, value: boolean): Promise<FeatureFlag> {
+  async setUserOverride(
+    key: string,
+    userId: string,
+    value: boolean,
+  ): Promise<FeatureFlag> {
     const flag = await this.findOne(key);
     flag.userOverrides = { ...flag.userOverrides, [userId]: value };
     const saved = await this.repo.save(flag);

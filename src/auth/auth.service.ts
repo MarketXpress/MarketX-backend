@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -6,7 +11,11 @@ import { crypto } from 'crypto'; // Built-in Node module
 import { authenticator } from 'otplib';
 import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma.service';
-import { UserPasswordChangedEvent, AuthPasswordResetRequestedEvent, EventNames } from '../common/events';
+import {
+  UserPasswordChangedEvent,
+  AuthPasswordResetRequestedEvent,
+  EventNames,
+} from '../common/events';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +27,7 @@ export class AuthService {
   ) {}
 
   /**
-   * Generates both AT and RT. 
+   * Generates both AT and RT.
    * The Refresh Token is a cryptographically secure random string.
    */
   async getTokens(userId: string, email: string) {
@@ -43,7 +52,11 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     // Mock user for demonstration (In production, fetch from DB)
-    const user = { id: 'uuid-123', email: 'test@example.com', password: await bcrypt.hash('password123', 10) };
+    const user = {
+      id: 'uuid-123',
+      email: 'test@example.com',
+      password: await bcrypt.hash('password123', 10),
+    };
 
     if (user && (await bcrypt.compare(password, user.password))) {
       return this.getTokens(user.id, user.email);
@@ -65,7 +78,9 @@ export class AuthService {
        * We invalidate all tokens for this user for safety.
        */
       await this.revokeAllUserTokens(userId);
-      throw new ForbiddenException('Access Denied: Refresh token reuse detected.');
+      throw new ForbiddenException(
+        'Access Denied: Refresh token reuse detected.',
+      );
     }
 
     // Delete the used token (Rotation)
@@ -99,24 +114,23 @@ export class AuthService {
 
   async forgotPassword(email: string): Promise<void> {
     const resetUrl = `https://marketx.com/reset-password?token=mock-token-${Date.now()}`;
-    
+
     this.eventEmitter.emit(
       EventNames.AUTH_PASSWORD_RESET_REQUESTED,
-      new AuthPasswordResetRequestedEvent(
-        email,
-        'User',
-        resetUrl,
-      ),
+      new AuthPasswordResetRequestedEvent(email, 'User', resetUrl),
     );
   }
 
-    async verify2FA(userId: string, code: string) {
+  async verify2FA(userId: string, code: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.twoFAEnabled || !user.twoFASecret) {
       throw new BadRequestException('2FA not enabled for this user');
     }
 
-    const isValid = authenticator.verify({ token: code, secret: user.twoFASecret });
+    const isValid = authenticator.verify({
+      token: code,
+      secret: user.twoFASecret,
+    });
     if (!isValid) throw new BadRequestException('Invalid 2FA code');
 
     return true;

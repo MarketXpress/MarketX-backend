@@ -11,12 +11,19 @@ describe('PricingService string/minor helpers', () => {
     const minor = service.toMinorUnitsString(12.34, SupportedCurrency.USD);
     expect(minor).toBe('1234');
 
-    const decimal = service.fromMinorUnitsToDecimalString(BigInt(minor), SupportedCurrency.USD);
+    const decimal = service.fromMinorUnitsToDecimalString(
+      BigInt(minor),
+      SupportedCurrency.USD,
+    );
     expect(decimal).toBe('12.34');
   });
 
   it('convertAmountToString produces deterministic XLM result', () => {
-    const converted = service.convertAmountToString(12.34, SupportedCurrency.USD, SupportedCurrency.XLM);
+    const converted = service.convertAmountToString(
+      12.34,
+      SupportedCurrency.USD,
+      SupportedCurrency.XLM,
+    );
     // known result from numeric conversion tests
     expect(converted).toBe('102.8333333');
   });

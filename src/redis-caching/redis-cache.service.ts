@@ -36,7 +36,11 @@ export class RedisCacheService {
    *     CacheTTL.PRODUCT_DETAIL,
    *   );
    */
-  async getOrSet<T>(key: string, factory: () => Promise<T>, ttl?: number): Promise<T> {
+  async getOrSet<T>(
+    key: string,
+    factory: () => Promise<T>,
+    ttl?: number,
+  ): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== null) return cached;
     const value = await factory();
@@ -64,7 +68,8 @@ export class RedisCacheService {
       hits: this.hits,
       misses: this.misses,
       total,
-      hitRatio: total > 0 ? `${((this.hits / total) * 100).toFixed(1)}%` : 'N/A',
+      hitRatio:
+        total > 0 ? `${((this.hits / total) * 100).toFixed(1)}%` : 'N/A',
     };
   }
 

@@ -11,10 +11,13 @@ export class NotificationCleanupTask {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleExpiredNotificationsCleanup() {
     this.logger.log('Starting expired notifications cleanup...');
-    
+
     try {
-      const deletedCount = await this.notificationsService.cleanupExpiredNotifications();
-      this.logger.log(`Cleanup completed: ${deletedCount} expired notifications removed`);
+      const deletedCount =
+        await this.notificationsService.cleanupExpiredNotifications();
+      this.logger.log(
+        `Cleanup completed: ${deletedCount} expired notifications removed`,
+      );
     } catch (error) {
       this.logger.error('Error during notifications cleanup:', error);
     }

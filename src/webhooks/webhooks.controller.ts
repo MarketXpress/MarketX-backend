@@ -11,7 +11,12 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { WebhooksService } from './webhooks.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
@@ -30,14 +35,22 @@ export class WebhooksController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new webhook' })
-  @ApiResponse({ status: 201, description: 'Webhook created successfully', type: Webhook })
+  @ApiResponse({
+    status: 201,
+    description: 'Webhook created successfully',
+    type: Webhook,
+  })
   async create(@Body() createWebhookDto: CreateWebhookDto): Promise<Webhook> {
     return await this.webhooksService.create(createWebhookDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all webhooks' })
-  @ApiResponse({ status: 200, description: 'List of webhooks', type: [Webhook] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of webhooks',
+    type: [Webhook],
+  })
   async findAll(): Promise<Webhook[]> {
     return await this.webhooksService.findAll();
   }
@@ -67,7 +80,11 @@ export class WebhooksController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update webhook' })
-  @ApiResponse({ status: 200, description: 'Webhook updated successfully', type: Webhook })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook updated successfully',
+    type: Webhook,
+  })
   async update(
     @Param('id') id: string,
     @Body() updateWebhookDto: UpdateWebhookDto,

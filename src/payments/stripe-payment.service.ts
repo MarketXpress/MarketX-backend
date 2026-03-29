@@ -31,9 +31,11 @@ export class StripePaymentService implements OnModuleInit {
 
   async onModuleInit() {
     const stripeApiKey = this.configService.get<string>('STRIPE_API_KEY');
-    
+
     if (!stripeApiKey) {
-      this.logger.warn('Stripe API key not configured. Payment functionality will be disabled.');
+      this.logger.warn(
+        'Stripe API key not configured. Payment functionality will be disabled.',
+      );
       return;
     }
 
@@ -41,7 +43,8 @@ export class StripePaymentService implements OnModuleInit {
       // Use default API version
     });
 
-    this.platformFeePercent = this.configService.get<number>('PLATFORM_FEE_PERCENT') || 10;
+    this.platformFeePercent =
+      this.configService.get<number>('PLATFORM_FEE_PERCENT') || 10;
     this.logger.log('Stripe payment service initialized');
   }
 
@@ -53,22 +56,26 @@ export class StripePaymentService implements OnModuleInit {
    * Create a PaymentIntent for escrow funding
    * Automatically applies platform fee as application_fee
    */
-  async createEscrowPaymentIntent(options: CreatePaymentIntentOptions): Promise<PaymentIntentResult> {
+  async createEscrowPaymentIntent(
+    options: CreatePaymentIntentOptions,
+  ): Promise<PaymentIntentResult> {
     if (!this.stripe) {
       throw new Error('Stripe not initialized');
     }
 
-    const { 
-      amount, 
-      currency = 'usd', 
-      customerId, 
+    const {
+      amount,
+      currency = 'usd',
+      customerId,
       metadata,
       applicationFeeAmount,
-      transferData 
+      transferData,
     } = options;
 
     // Calculate platform fee if not provided
-    const feeAmount = applicationFeeAmount ?? Math.round(amount * (this.platformFeePercent / 100));
+    const feeAmount =
+      applicationFeeAmount ??
+      Math.round(amount * (this.platformFeePercent / 100));
 
     const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount,
@@ -96,9 +103,12 @@ export class StripePaymentService implements OnModuleInit {
     }
 
     try {
-      const paymentIntent = await this.stripe.paymentIntents.create(paymentIntentParams);
+      const paymentIntent =
+        await this.stripe.paymentIntents.create(paymentIntentParams);
 
-      this.logger.log(`Created payment intent ${paymentIntent.id} for amount ${amount}`);
+      this.logger.log(
+        `Created payment intent ${paymentIntent.id} for amount ${amount}`,
+      );
 
       return {
         id: paymentIntent.id,
@@ -116,7 +126,9 @@ export class StripePaymentService implements OnModuleInit {
   /**
    * Retrieve a PaymentIntent
    */
-  async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent | null> {
+  async getPaymentIntent(
+    paymentIntentId: string,
+  ): Promise<Stripe.PaymentIntent | null> {
     if (!this.stripe) {
       return null;
     }
@@ -132,7 +144,10 @@ export class StripePaymentService implements OnModuleInit {
   /**
    * Confirm a PaymentIntent
    */
-  async confirmPaymentIntent(paymentIntentId: string, paymentMethodId?: string): Promise<PaymentIntentResult | null> {
+  async confirmPaymentIntent(
+    paymentIntentId: string,
+    paymentMethodId?: string,
+  ): Promise<PaymentIntentResult | null> {
     if (!this.stripe) {
       return null;
     }
@@ -145,7 +160,7 @@ export class StripePaymentService implements OnModuleInit {
 
       const paymentIntent = await this.stripe.paymentIntents.confirm(
         paymentIntentId,
-        confirmParams
+        confirmParams,
       );
 
       return {
@@ -182,7 +197,10 @@ export class StripePaymentService implements OnModuleInit {
   /**
    * Create a refund for a PaymentIntent
    */
-  async refundPayment(paymentIntentId: string, amount?: number): Promise<Stripe.Refund | null> {
+  async refundPayment(
+    paymentIntentId: string,
+    amount?: number,
+  ): Promise<Stripe.Refund | null> {
     if (!this.stripe) {
       return null;
     }
@@ -197,8 +215,10 @@ export class StripePaymentService implements OnModuleInit {
       }
 
       const refund = await this.stripe.refunds.create(refundParams);
-      this.logger.log(`Created refund ${refund.id} for payment intent ${paymentIntentId}`);
-      
+      this.logger.log(
+        `Created refund ${refund.id} for payment intent ${paymentIntentId}`,
+      );
+
       return refund;
     } catch (error: any) {
       this.logger.error(`Failed to create refund: ${error.message}`);
@@ -209,7 +229,10 @@ export class StripePaymentService implements OnModuleInit {
   /**
    * Create a Stripe Connect account for a seller
    */
-  async createConnectAccount(email: string, businessType: 'individual' | 'company' = 'individual'): Promise<{ accountId: string; onboardingUrl: string } | null> {
+  async createConnectAccount(
+    email: string,
+    businessType: 'individual' | 'company' = 'individual',
+  ): Promise<{ accountId: string; onboardingUrl: string } | null> {
     if (!this.stripe) {
       return null;
     }

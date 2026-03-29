@@ -20,9 +20,14 @@ export class ListingsService {
   ) {}
 
   async create(dto: CreateListingDto, userId: string) {
-    const expiryDays = this.configService.get<number>('LISTING_EXPIRY_DAYS', 30);
+    const expiryDays = this.configService.get<number>(
+      'LISTING_EXPIRY_DAYS',
+      30,
+    );
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + expiryDays * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(
+      now.getTime() + expiryDays * 24 * 60 * 60 * 1000,
+    );
     const listing = this.listingRepo.create({ ...dto, userId, expiresAt });
     const saved = await this.listingRepo.save(listing);
 
@@ -30,7 +35,9 @@ export class ListingsService {
     try {
       await this.searchSyncService.syncSingleListing(saved, 'index');
     } catch (error) {
-      this.logger.warn(`Failed to index listing ${saved.id} in search: ${error.message}`);
+      this.logger.warn(
+        `Failed to index listing ${saved.id} in search: ${error.message}`,
+      );
     }
 
     return saved;
@@ -54,7 +61,9 @@ export class ListingsService {
     try {
       await this.searchSyncService.syncSingleListing(saved, 'update');
     } catch (error) {
-      this.logger.warn(`Failed to update listing ${saved.id} in search: ${error.message}`);
+      this.logger.warn(
+        `Failed to update listing ${saved.id} in search: ${error.message}`,
+      );
     }
 
     return saved;
@@ -75,15 +84,7 @@ export class ListingsService {
     maxPrice?: number;
     q?: string;
   }): Promise<{ listings: Listing[]; total: number }> {
-    const {
-      take,
-      skip,
-      category,
-      location,
-      minPrice,
-      maxPrice,
-      q,
-    } = filters;
+    const { take, skip, category, location, minPrice, maxPrice, q } = filters;
 
     const now = new Date();
     const query = this.listingRepo
@@ -91,7 +92,9 @@ export class ListingsService {
       .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
       .where('listing.isActive = :isActive', { isActive: true })
       .andWhere('listing.deletedAt IS NULL')
-      .andWhere('(listing.expiresAt IS NULL OR listing.expiresAt > :now)', { now });
+      .andWhere('(listing.expiresAt IS NULL OR listing.expiresAt > :now)', {
+        now,
+      });
 
     if (category) {
       query.andWhere('listing.category = :category', { category });
@@ -131,7 +134,8 @@ export class ListingsService {
     const take = limit || 10;
     const skip = ((page || 1) - 1) * take;
 
-    const query = this.listingRepo.createQueryBuilder('listing')
+    const query = this.listingRepo
+      .createQueryBuilder('listing')
       .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
       .where('listing.isActive = :isActive', { isActive: true })
       .andWhere('listing.deletedAt IS NULL');
@@ -140,9 +144,7 @@ export class ListingsService {
       query.andWhere('listing.category = :category', { category });
     }
 
-    query.orderBy('listing.createdAt', 'DESC')
-      .take(take)
-      .skip(skip);
+    query.orderBy('listing.createdAt', 'DESC').take(take).skip(skip);
 
     const [listings, total] = await query.getManyAndCount();
     return { listings, total, page: page || 1, limit: take };

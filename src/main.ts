@@ -7,7 +7,10 @@ import { LoggerService } from './common/logger/logger.service';
 import { Logger } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
-import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
+import {
+  REQUEST_SIZE_LIMITS,
+  CORS_CONFIG,
+} from './common/config/rate-limit.config';
 import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
 import * as express from 'express';
 import { join } from 'path';

@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsInt, Min, IsEnum, IsDateString, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  IsEnum,
+  IsDateString,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { AuditActionType, AuditStatus } from '../entities/audit-log.entity';
 
@@ -55,4 +63,4 @@ export class GetAuditLogsDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
-} 
+}

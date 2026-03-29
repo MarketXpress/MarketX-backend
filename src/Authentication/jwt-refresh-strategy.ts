@@ -6,7 +6,10 @@ import { JwtPayload, JWT_CONSTANTS } from './jwt-payload.interface';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor(private usersService: UsersService) {
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
@@ -22,13 +25,13 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     }
 
     const refreshToken = req.body?.refreshToken;
-    
+
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not found');
     }
 
     const user = await this.usersService.findOne(parseInt(payload.sub));
-    
+
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User not found or inactive');
     }

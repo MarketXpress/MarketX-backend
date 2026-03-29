@@ -28,7 +28,8 @@ export class ImagesController {
   @Get(':id')
   @ApiOperation({
     summary: 'Get a single image by ID',
-    description: 'Retrieve details of a specific image including all variants (thumbnail, medium, original)',
+    description:
+      'Retrieve details of a specific image including all variants (thumbnail, medium, original)',
   })
   @ApiParam({
     name: 'id',
@@ -41,9 +42,7 @@ export class ImagesController {
     type: ProductImage,
   })
   @ApiResponse({ status: 404, description: 'Image not found' })
-  async getImageById(
-    @Param('id') id: string,
-  ): Promise<ProductImage> {
+  async getImageById(@Param('id') id: string): Promise<ProductImage> {
     return this.mediaService.getImageById(id);
   }
 
@@ -56,7 +55,8 @@ export class ImagesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete a single image',
-    description: 'Delete an image from both storage (S3/Local) and database. This action cannot be undone.',
+    description:
+      'Delete an image from both storage (S3/Local) and database. This action cannot be undone.',
   })
   @ApiParam({
     name: 'id',

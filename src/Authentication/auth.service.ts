@@ -1,11 +1,21 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { User } from './user.entity';
 import { Users } from '../users/users.entity';
-import { RegisterDto, AuthResponseDto, ForgotPasswordDto, ResetPasswordDto } from './auth.dto';
+import {
+  RegisterDto,
+  AuthResponseDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './auth.dto';
 import { JwtPayload, JWT_CONSTANTS } from './jwt-payload.interface';
 import { EmailService } from '../email/email.service';
 
@@ -16,7 +26,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
-  ) { }
+  ) {}
 
   async validateUser(email: string, password: string): Promise<Users | null> {
     const user = await this.usersService.findByEmail(email);
@@ -40,7 +50,10 @@ export class AuthService {
 
   async login(user: User): Promise<AuthResponseDto> {
     const tokens = await this.generateTokens(user as any);
-    await this.usersService.updateRefreshToken(parseInt(String(user.id)), tokens.refreshToken);
+    await this.usersService.updateRefreshToken(
+      parseInt(String(user.id)),
+      tokens.refreshToken,
+    );
 
     return {
       ...tokens,
@@ -60,7 +73,8 @@ export class AuthService {
     const authResponse = await this.login(user as any);
 
     // Send welcome email (fire-and-forget — don't block registration)
-    const appUrl = this.configService.get<string>('APP_URL') || 'https://marketx.com';
+    const appUrl =
+      this.configService.get<string>('APP_URL') || 'https://marketx.com';
     this.emailService
       .sendWelcome({
         userId: String(user.id),
@@ -68,19 +82,27 @@ export class AuthService {
         name: user.name,
         loginUrl: `${appUrl}/login`,
       })
-      .catch(() => {/* non-critical */ });
+      .catch(() => {
+        /* non-critical */
+      });
 
     return authResponse;
   }
 
-  async refreshTokens(userId: string, refreshToken: string): Promise<AuthResponseDto> {
+  async refreshTokens(
+    userId: string,
+    refreshToken: string,
+  ): Promise<AuthResponseDto> {
     const user = await this.usersService.findOne(parseInt(userId));
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Access denied');
     }
 
-    const isValid = await this.usersService.validateRefreshToken(userId, refreshToken);
+    const isValid = await this.usersService.validateRefreshToken(
+      userId,
+      refreshToken,
+    );
 
     if (!isValid) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -109,7 +131,9 @@ export class AuthService {
    * Request a password reset — looks up the user, issues a short-lived JWT reset token,
    * and queues the password-reset email.
    */
-  async requestPasswordReset(dto: ForgotPasswordDto): Promise<{ message: string }> {
+  async requestPasswordReset(
+    dto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     const user = await this.usersService.findByEmail(dto.email);
 
     // Always return success to prevent user enumeration attacks
@@ -128,7 +152,8 @@ export class AuthService {
       expiresIn: '15m',
     } as any);
 
-    const appUrl = this.configService.get<string>('APP_URL') || 'https://marketx.com';
+    const appUrl =
+      this.configService.get<string>('APP_URL') || 'https://marketx.com';
     const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
     // Queue the password reset email — don't await so the response is fast
@@ -140,7 +165,9 @@ export class AuthService {
         resetUrl,
         expiryTime: '15 minutes',
       })
-      .catch(() => {/* non-critical – email failure shouldn't fail the API response */ });
+      .catch(() => {
+        /* non-critical – email failure shouldn't fail the API response */
+      });
 
     return { message: 'If that email exists, a reset link has been sent.' };
   }
@@ -168,17 +195,25 @@ export class AuthService {
     }
 
     const hashed = await bcrypt.hash(dto.newPassword, 10);
-    await (this.usersService as any)['userRepository']?.update(user.id, { password: hashed })
-      ?? (this.usersService as any).userRepository?.update(user.id, { password: hashed });
+    (await (this.usersService as any)['userRepository']?.update(user.id, {
+      password: hashed,
+    })) ??
+      (this.usersService as any).userRepository?.update(user.id, {
+        password: hashed,
+      });
 
     return { message: 'Password successfully reset. You can now log in.' };
   }
 
-  async verifyToken(token: string, type: 'access' | 'refresh' = 'access'): Promise<JwtPayload> {
+  async verifyToken(
+    token: string,
+    type: 'access' | 'refresh' = 'access',
+  ): Promise<JwtPayload> {
     try {
-      const secret = type === 'access'
-        ? JWT_CONSTANTS.accessTokenSecret
-        : JWT_CONSTANTS.refreshTokenSecret;
+      const secret =
+        type === 'access'
+          ? JWT_CONSTANTS.accessTokenSecret
+          : JWT_CONSTANTS.refreshTokenSecret;
 
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret,
@@ -213,14 +248,20 @@ export class AuthService {
     };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload as any, {
-        secret: JWT_CONSTANTS.accessTokenSecret,
-        expiresIn: JWT_CONSTANTS.accessTokenExpiration,
-      } as any),
-      this.jwtService.signAsync(refreshPayload as any, {
-        secret: JWT_CONSTANTS.refreshTokenSecret,
-        expiresIn: JWT_CONSTANTS.refreshTokenExpiration,
-      } as any),
+      this.jwtService.signAsync(
+        accessPayload as any,
+        {
+          secret: JWT_CONSTANTS.accessTokenSecret,
+          expiresIn: JWT_CONSTANTS.accessTokenExpiration,
+        } as any,
+      ),
+      this.jwtService.signAsync(
+        refreshPayload as any,
+        {
+          secret: JWT_CONSTANTS.refreshTokenSecret,
+          expiresIn: JWT_CONSTANTS.refreshTokenExpiration,
+        } as any,
+      ),
     ]);
 
     return {

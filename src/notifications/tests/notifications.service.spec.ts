@@ -4,7 +4,12 @@ import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { NotificationsService } from '../notifications.service';
-import { NotificationEntity, NotificationType, NotificationChannel, NotificationPriority } from '../notification.entity';
+import {
+  NotificationEntity,
+  NotificationType,
+  NotificationChannel,
+  NotificationPriority,
+} from '../notification.entity';
 
 describe.skip('NotificationsService', () => {
   let service: NotificationsService;
@@ -42,7 +47,9 @@ describe.skip('NotificationsService', () => {
     }).compile();
 
     service = module.get<NotificationsService>(NotificationsService);
-    repository = module.get<Repository<NotificationEntity>>(getRepositoryToken(NotificationEntity));
+    repository = module.get<Repository<NotificationEntity>>(
+      getRepositoryToken(NotificationEntity),
+    );
     eventEmitter = module.get<EventEmitter2>(EventEmitter2);
   });
 
@@ -73,9 +80,14 @@ describe.skip('NotificationsService', () => {
 
       const result = await service.createNotification(createDto);
 
-      expect(mockRepository.create).toHaveBeenCalledWith(expect.objectContaining(createDto));
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining(createDto),
+      );
       expect(mockRepository.save).toHaveBeenCalledWith(mockNotification);
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('notification.created', mockNotification);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'notification.created',
+        mockNotification,
+      );
       expect(result).toEqual(mockNotification);
     });
   });
@@ -84,7 +96,7 @@ describe.skip('NotificationsService', () => {
     it('should send a transaction received notification', async () => {
       const userId = 'user-123';
       const transactionId = 'txn-456';
-      const amount = 100.50;
+      const amount = 100.5;
       const currency = 'USD';
 
       const mockNotification = {
@@ -105,13 +117,21 @@ describe.skip('NotificationsService', () => {
       mockRepository.create.mockReturnValue(mockNotification);
       mockRepository.save.mockResolvedValue(mockNotification);
 
-      const result = await service.sendTransactionReceivedNotification(userId, transactionId, amount, currency);
+      const result = await service.sendTransactionReceivedNotification(
+        userId,
+        transactionId,
+        amount,
+        currency,
+      );
 
       expect(result.title).toBe('Transaction Received');
       expect(result.message).toBe('You received USD 100.50');
       expect(result.type).toBe(NotificationType.TRANSACTION_RECEIVED);
       expect(result.priority).toBe(NotificationPriority.HIGH);
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('notification.send_push', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'notification.send_push',
+        expect.any(Object),
+      );
     });
   });
 
@@ -161,7 +181,10 @@ describe.skip('NotificationsService', () => {
 
       expect(result.read).toBe(true);
       expect(result.readAt).toBeDefined();
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('notification.read', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'notification.read',
+        expect.any(Object),
+      );
     });
 
     it('should throw NotFoundException for non-existent notification', async () => {
@@ -170,7 +193,9 @@ describe.skip('NotificationsService', () => {
 
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.markAsRead(notificationId, userId)).rejects.toThrow('Notification not found');
+      await expect(service.markAsRead(notificationId, userId)).rejects.toThrow(
+        'Notification not found',
+      );
     });
   });
 });

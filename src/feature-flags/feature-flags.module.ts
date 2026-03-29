@@ -4,8 +4,8 @@ import { FeatureFlag } from './entities/feature-flag.entity';
 import { FeatureFlagsService } from './feature-flag.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([FeatureFlag])],
-    providers: [FeatureFlagsService],
-    exports: [FeatureFlagsService],
+  imports: [TypeOrmModule.forFeature([FeatureFlag])],
+  providers: [FeatureFlagsService],
+  exports: [FeatureFlagsService],
 })
-export class FeatureFlagsModule { }
+export class FeatureFlagsModule {}

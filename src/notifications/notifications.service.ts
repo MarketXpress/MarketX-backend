@@ -33,7 +33,11 @@ import { QueryNotificationsDto } from './dto/query-notifications.dto';
 // Cache manager service used in first file
 import { CacheManagerService } from '../cache/cache-manager.service';
 import { NotificationGateway } from './notification.gateway';
-import { NotificationCreatedEvent, NotificationSendPushEvent, EventNames } from '../common/events';
+import {
+  NotificationCreatedEvent,
+  NotificationSendPushEvent,
+  EventNames,
+} from '../common/events';
 
 // unify CreateNotificationDto type (accept either shape)
 type CreateNotificationDto = CreateNotificationDtoV1 | CreateNotificationDtoV2;
@@ -67,7 +71,7 @@ export class NotificationsService {
     private readonly i18nService: I18nService,
     private readonly notificationGateway: NotificationGateway,
     private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
-  ) { }
+  ) {}
 
   /**
    * Get or create default preferences for a user
@@ -145,11 +149,23 @@ export class NotificationsService {
 
         // Respect specific notification preferences
         const notificationType = (dto as any).type;
-        if (channel === NotificationChannel.EMAIL && notificationType === NotificationType.ORDER_CREATED && !preferences.allowPromotionalEmail)
+        if (
+          channel === NotificationChannel.EMAIL &&
+          notificationType === NotificationType.ORDER_CREATED &&
+          !preferences.allowPromotionalEmail
+        )
           continue;
-        if (channel === NotificationChannel.PUSH && notificationType === NotificationType.ORDER_CREATED && !preferences.allowOrderSms)
+        if (
+          channel === NotificationChannel.PUSH &&
+          notificationType === NotificationType.ORDER_CREATED &&
+          !preferences.allowOrderSms
+        )
           continue;
-        if (channel === NotificationChannel.IN_APP && notificationType === NotificationType.ORDER_CREATED && !preferences.allowInAppAlerts)
+        if (
+          channel === NotificationChannel.IN_APP &&
+          notificationType === NotificationType.ORDER_CREATED &&
+          !preferences.allowInAppAlerts
+        )
           continue;
 
         const notification = this.notificationRepository.create({
@@ -399,30 +415,23 @@ export class NotificationsService {
       created.forEach((c) =>
         this.eventEmitter.emit(
           EventNames.NOTIFICATION_SEND_PUSH,
-          new NotificationSendPushEvent(
-            userId,
-            c.title,
-            c.message,
-            { notificationId: c.id, transactionId },
-          ),
+          new NotificationSendPushEvent(userId, c.title, c.message, {
+            notificationId: c.id,
+            transactionId,
+          }),
         ),
       );
     } else if (created) {
       this.eventEmitter.emit(
         EventNames.NOTIFICATION_SEND_PUSH,
-        new NotificationSendPushEvent(
-          userId,
-          (created as NotificationEntity).title,
-          (created as NotificationEntity).message,
-          {
-            notificationId: (created as NotificationEntity).id,
-            transactionId,
-          },
-        ),
+        new NotificationSendPushEvent(userId, created.title, created.message, {
+          notificationId: created.id,
+          transactionId,
+        }),
       );
     }
 
-    return created as NotificationEntity | NotificationEntity[];
+    return created;
   }
 
   /**
@@ -485,7 +494,7 @@ export class NotificationsService {
       // fallback to direct DB query
       return this.notificationRepository.find({
         where: { userId },
-        order: { createdAt: 'DESC' as 'DESC' },
+        order: { createdAt: 'DESC' as const },
         skip: (page - 1) * limit,
         take: limit,
       });
@@ -496,7 +505,7 @@ export class NotificationsService {
       async () => {
         return this.notificationRepository.find({
           where: { userId },
-          order: { createdAt: 'DESC' as 'DESC' },
+          order: { createdAt: 'DESC' as const },
           skip: (page - 1) * limit,
           take: limit,
         });
@@ -770,7 +779,7 @@ export class NotificationsService {
 
     const total = notifications.length;
     const unread = notifications.filter(
-      (n: any) => !((n as any).isRead ?? (n as any).read),
+      (n: any) => !(n.isRead ?? n.read),
     ).length;
     const read = total - unread;
 

@@ -29,12 +29,17 @@ export class ExpireListingsTask {
           listing.isActive = false;
           await this.listingRepo.save(listing);
         }
-        this.logger.log(`Marked ${expiredListings.length} listings as expired.`);
+        this.logger.log(
+          `Marked ${expiredListings.length} listings as expired.`,
+        );
       } else {
         this.logger.log('No listings to expire.');
       }
     } catch (error) {
-      this.logger.error('Failed to expire listings', error.stack || error.message);
+      this.logger.error(
+        'Failed to expire listings',
+        error.stack || error.message,
+      );
     }
   }
-} 
+}
