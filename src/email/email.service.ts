@@ -54,28 +54,45 @@ export class EmailService implements OnModuleInit {
   }
 
   /**
-   * Render a Handlebars template
+   * Render a Handlebars template with layout support
    */
   private async renderTemplate(templateName: string, context: any): Promise<string> {
-    const filePath = path.join(this.templatesPath, `${templateName}.hbs`);
-    
-    // Fallback for development if files aren't in dist yet
-    const sourcePath = path.join(process.cwd(), 'src', 'email', 'templates', `${templateName}.hbs`);
-    
-    let templateSource: string;
-    
-    if (fs.existsSync(filePath)) {
-      templateSource = fs.readFileSync(filePath, 'utf8');
-    } else if (fs.existsSync(sourcePath)) {
-      templateSource = fs.readFileSync(sourcePath, 'utf8');
-    } else {
-      throw new Error(`Template ${templateName} not found at ${filePath} or ${sourcePath}`);
-    }
-
+    const templateSource = await this.getTemplateSource(templateName);
     const template = handlebars.compile(templateSource);
-    return template({
+    const content = template({
       ...context,
       year: new Date().getFullYear(),
     });
+
+    // Check if we should use the base layout
+    if (templateName !== 'base-layout') {
+      try {
+        const layoutSource = await this.getTemplateSource('base-layout');
+        const layout = handlebars.compile(layoutSource);
+        return layout({
+          ...context,
+          body: content,
+          year: new Date().getFullYear(),
+        });
+      } catch (error) {
+        this.logger.warn(`Base layout not found, sending template ${templateName} without layout.`);
+        return content;
+      }
+    }
+
+    return content;
+  }
+
+  private async getTemplateSource(templateName: string): Promise<string> {
+    const filePath = path.join(this.templatesPath, `${templateName}.hbs`);
+    const sourcePath = path.join(process.cwd(), 'src', 'email', 'templates', `${templateName}.hbs`);
+    
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, 'utf8');
+    } else if (fs.existsSync(sourcePath)) {
+      return fs.readFileSync(sourcePath, 'utf8');
+    } else {
+      throw new Error(`Template ${templateName} not found at ${filePath} or ${sourcePath}`);
+    }
   }
 }

@@ -275,9 +275,11 @@ export class NotificationsService {
         return 'order-confirmation';
       case NotificationType.ORDER_UPDATED:
         return 'shipping-update';
+      case NotificationType.WELCOME:
+        return 'welcome';
       case NotificationType.SYSTEM_ALERT:
       default:
-        return 'default'; // We might need a default template
+        return 'default';
     }
   }
 
@@ -710,11 +712,12 @@ export class NotificationsService {
     );
 
     // Invalidate caches per user (simple implementation)
-    if (this.cacheManager) {
+    const cacheManager = this.cacheManager;
+    if (cacheManager) {
       const uniqueUsers = Array.from(new Set(created.map((c) => c.userId)));
       await Promise.all(
         uniqueUsers.map((u) =>
-          this.cacheManager.invalidatePattern(`user:${u}:notifications:*`),
+          cacheManager.invalidatePattern(`user:${u}:notifications:*`),
         ),
       );
     }

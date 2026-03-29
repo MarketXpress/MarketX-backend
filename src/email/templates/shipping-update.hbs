@@ -1,37 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { width: 80%; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-        .header { font-size: 24px; font-weight: bold; color: #27ae60; margin-bottom: 20px; text-align: center; }
-        .info { margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 4px; }
-        .footer { font-size: 12px; color: #777; margin-top: 30px; text-align: center; }
-        .button { background: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">Your Order is on its way!</div>
-        <p>Hi {{name}},</p>
-        <p>Great news! Your order has been shipped and is on its way to you.</p>
-        
-        <div class="info">
-            <strong>Order ID:</strong> {{orderId}}<br>
-            <strong>Tracking Number:</strong> {{trackingNumber}}<br>
-            <strong>Carrier:</strong> {{carrier}}<br>
-        </div>
+<h2>Your order is on its way!</h2>
+<p>Hi {{name}},</p>
+<p>Great news! Your order has been shipped and is heading your way.</p>
 
-        <p>You can track your package by clicking the button below:</p>
-        <p style="text-align: center;">
-            <a href="{{trackingUrl}}" class="button">Track Package</a>
-        </p>
+<div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <p style="margin: 0; font-weight: 600; color: #475569;">Shipping Details</p>
+    <p style="margin: 8px 0 0 0; color: #64748b;">Order ID: <span style="color: #334155; font-weight: 500;">{{orderId}}</span></p>
+    <p style="margin: 4px 0 0 0; color: #64748b;">Tracking Number: <span style="color: #334155; font-weight: 500;">{{trackingNumber}}</span></p>
+    <p style="margin: 4px 0 0 0; color: #64748b;">Carrier: <span style="color: #334155; font-weight: 500;">{{carrier}}</span></p>
+</div>
 
-        <p>Best regards,<br>The MarketX Team</p>
-        
-        <div class="footer">
-            &copy; {{year}} MarketX Inc. All rights reserved.
-        </div>
-    </div>
-</body>
-</html>
+<p>You can track your package directly on the carrier's website:</p>
+<div style="text-align: center;">
+    <a href="{{trackingUrl}}" class="button">Track Package</a>
+</div>
+
+<p>If you have any questions about your shipment, feel free to reply to this email.</p>
+<div class="divider"></div>
+<p>Best regards,<br>The MarketX Team</p>

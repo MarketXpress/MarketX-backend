@@ -7,17 +7,36 @@ import { CreateUserDto } from './dto/create-user-dto.dto';
 import { CacheManagerService } from '../cache/cache-manager.service';
 
 
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType, NotificationChannel } from '../notifications/notification.entity';
+
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
     private readonly cacheManager: CacheManagerService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Users> {
     const user = this.userRepository.create(createUserDto);
-    return await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // Trigger welcome email
+    await this.notificationsService.createNotification({
+      userId: savedUser.id.toString(),
+      type: NotificationType.WELCOME,
+      title: 'Welcome to MarketX!',
+      message: `Hi ${savedUser.name || 'there'}, welcome to MarketX! We're glad to have you here.`,
+      channel: NotificationChannel.EMAIL,
+      metadata: {
+        name: savedUser.name || 'User',
+        email: savedUser.email,
+      },
+    } as any);
+
+    return savedUser;
   }
 
   async findAll(): Promise<Users[]> {
