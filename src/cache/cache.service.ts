@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
-import { CacheConfig, CacheEntry, CacheMetrics, CacheStrategy } from './interfaces/cache.interface';
+import {
+  CacheConfig,
+  CacheEntry,
+  CacheMetrics,
+  CacheStrategy,
+} from './interfaces/cache.interface';
 
 @Injectable()
 export class CacheService {
@@ -12,7 +17,7 @@ export class CacheService {
     misses: 0,
     hitRate: 0,
     totalRequests: 0,
-    averageResponseTime: 0
+    averageResponseTime: 0,
   };
 
   constructor() {
@@ -26,11 +31,13 @@ export class CacheService {
       });
     } else {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const maybeMock = require('ioredis');
-        this.redis = maybeMock && maybeMock.mocked ? maybeMock.mocked() : (maybeMock as any);
+        this.redis =
+          maybeMock && maybeMock.mocked ? maybeMock.mocked() : maybeMock;
       } catch (err) {
-        this.logger.warn('Unable to initialize Redis client for cache; using in-memory cache only');
+        this.logger.warn(
+          'Unable to initialize Redis client for cache; using in-memory cache only',
+        );
         this.redis = {} as any;
       }
     }
@@ -63,11 +70,15 @@ export class CacheService {
     }
   }
 
-  async set<T>(key: string, value: T, config: CacheConfig = { ttl: 3600 }): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    config: CacheConfig = { ttl: 3600 },
+  ): Promise<void> {
     try {
       await Promise.all([
         this.setInRedis(key, value, config),
-        this.setInMemory(key, value, config)
+        this.setInMemory(key, value, config),
       ]);
     } catch (error) {
       this.logger.error(`Cache set error for key ${key}:`, error);
@@ -76,10 +87,7 @@ export class CacheService {
 
   async delete(key: string): Promise<void> {
     try {
-      await Promise.all([
-        this.redis.del(key),
-        this.deleteFromMemory(key)
-      ]);
+      await Promise.all([this.redis.del(key), this.deleteFromMemory(key)]);
     } catch (error) {
       this.logger.error(`Cache delete error for key ${key}:`, error);
     }
@@ -89,7 +97,7 @@ export class CacheService {
     try {
       const keys = await this.getKeysByTags(tags);
       if (keys.length > 0) {
-        await Promise.all(keys.map(key => this.delete(key)));
+        await Promise.all(keys.map((key) => this.delete(key)));
       }
     } catch (error) {
       this.logger.error(`Cache delete by tags error:`, error);
@@ -118,10 +126,12 @@ export class CacheService {
     }
   }
 
-  async warmUp(data: Array<{ key: string; value: any; config?: CacheConfig }>): Promise<void> {
+  async warmUp(
+    data: Array<{ key: string; value: any; config?: CacheConfig }>,
+  ): Promise<void> {
     try {
       await Promise.all(
-        data.map(({ key, value, config }) => this.set(key, value, config))
+        data.map(({ key, value, config }) => this.set(key, value, config)),
       );
       this.logger.log(`Cache warmed up with ${data.length} entries`);
     } catch (error) {
@@ -130,9 +140,10 @@ export class CacheService {
   }
 
   getMetrics(): CacheMetrics {
-    this.metrics.hitRate = this.metrics.totalRequests > 0 
-      ? (this.metrics.hits / this.metrics.totalRequests) * 100 
-      : 0;
+    this.metrics.hitRate =
+      this.metrics.totalRequests > 0
+        ? (this.metrics.hits / this.metrics.totalRequests) * 100
+        : 0;
     return { ...this.metrics };
   }
 
@@ -171,32 +182,40 @@ export class CacheService {
     }
   }
 
-  private async setInMemory<T>(key: string, value: T, config: CacheConfig): Promise<void> {
+  private async setInMemory<T>(
+    key: string,
+    value: T,
+    config: CacheConfig,
+  ): Promise<void> {
     const entry: CacheEntry<T> = {
       data: value,
       timestamp: Date.now(),
       ttl: config.ttl * 1000,
       tags: config.tags || [],
       accessCount: 0,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     };
 
     this.inMemoryCache.set(key, entry);
     this.cleanupMemoryCache();
   }
 
-  private async setInRedis<T>(key: string, value: T, config: CacheConfig): Promise<void> {
+  private async setInRedis<T>(
+    key: string,
+    value: T,
+    config: CacheConfig,
+  ): Promise<void> {
     const entry = {
       data: value,
       timestamp: Date.now(),
-      tags: config.tags || []
+      tags: config.tags || [],
     };
 
     await this.redis.setex(key, config.ttl, JSON.stringify(entry));
 
     if (config.tags && config.tags.length > 0) {
       await Promise.all(
-        config.tags.map(tag => this.redis.sadd(`tag:${tag}`, key))
+        config.tags.map((tag) => this.redis.sadd(`tag:${tag}`, key)),
       );
     }
   }
@@ -207,10 +226,10 @@ export class CacheService {
 
   private async getKeysByTags(tags: string[]): Promise<string[]> {
     const keys = new Set<string>();
-    
+
     for (const tag of tags) {
       const tagKeys = await this.redis.smembers(`tag:${tag}`);
-      tagKeys.forEach(key => keys.add(key));
+      tagKeys.forEach((key) => keys.add(key));
     }
 
     return Array.from(keys);
@@ -222,7 +241,7 @@ export class CacheService {
 
   private cleanupMemoryCache(): void {
     const maxItems = parseInt(process.env.CACHE_MAX_MEMORY_ITEMS || '1000', 10);
-    
+
     if (this.inMemoryCache.size <= maxItems) return;
 
     const entries = Array.from(this.inMemoryCache.entries());
@@ -246,9 +265,9 @@ export class CacheService {
 
   private updateAverageResponseTime(startTime: number): void {
     const responseTime = Date.now() - startTime;
-    this.metrics.averageResponseTime = 
-      (this.metrics.averageResponseTime * (this.metrics.totalRequests - 1) + responseTime) / 
+    this.metrics.averageResponseTime =
+      (this.metrics.averageResponseTime * (this.metrics.totalRequests - 1) +
+        responseTime) /
       this.metrics.totalRequests;
   }
 }
-

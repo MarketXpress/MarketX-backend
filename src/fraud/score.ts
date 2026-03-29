@@ -15,7 +15,7 @@ export interface FraudInput {
   deviceFingerprint?: string;
   metadata?: {
     amount?: number;
-    orderCount?: number;         // orders by this user in the past 10 min
+    orderCount?: number; // orders by this user in the past 10 min
     duplicateOrderInWindow?: boolean;
     knownBadIp?: boolean;
     accountAgeDays?: number;
@@ -50,14 +50,17 @@ const RULES: Rule[] = [
     name: 'new_account',
     score: 30,
     check: ({ metadata }) =>
-      (metadata?.accountAgeHours ?? (metadata?.accountAgeDays ? metadata.accountAgeDays * 24 : 999)) < 24,
+      (metadata?.accountAgeHours ??
+        (metadata?.accountAgeDays ? metadata.accountAgeDays * 24 : 999)) < 24,
   },
   {
     name: 'billing_shipping_mismatch',
     score: 30,
     check: ({ metadata }) =>
-      metadata?.billingAddress && metadata?.shippingAddress &&
-      metadata.billingAddress.trim().toLowerCase() !== metadata.shippingAddress.trim().toLowerCase(),
+      metadata?.billingAddress &&
+      metadata?.shippingAddress &&
+      metadata.billingAddress.trim().toLowerCase() !==
+        metadata.shippingAddress.trim().toLowerCase(),
   },
   {
     name: 'high_velocity',
@@ -93,12 +96,13 @@ const RULES: Rule[] = [
   {
     name: 'geo_distance',
     score: 50,
-    check: ({ metadata }) =>
-      (metadata?.geoDistanceMiles ?? 0) > 1000,
+    check: ({ metadata }) => (metadata?.geoDistanceMiles ?? 0) > 1000,
   },
 ];
 
-export async function evaluateAllRules(input: FraudInput): Promise<ScoreResult> {
+export async function evaluateAllRules(
+  input: FraudInput,
+): Promise<ScoreResult> {
   const triggered: Rule[] = [];
 
   for (const rule of RULES) {

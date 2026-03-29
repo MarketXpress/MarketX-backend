@@ -24,10 +24,10 @@ export class EventDispatcherService {
 
   async dispatch(event: PlatformEvent): Promise<void> {
     this.logger.log(`Dispatching event: ${event.type}`);
-    
+
     // Emit internal event for other services
     this.eventEmitter.emit(event.type, event);
-    
+
     // Dispatch to external webhooks
     await this.webhooksService.dispatchEvent(event.type, {
       ...event.data,

@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Patch, Body, Query, Post, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Body,
+  Query,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { DisputesService } from './disputes.service';
 import { UpdateDisputeDto } from './dto/update-dispute.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
@@ -13,7 +22,9 @@ export class AdminDisputesController {
   @Get()
   @Roles('ADMIN')
   async listAllDisputes(@Query('status') status?: string) {
-    return this.disputesService.listDisputes(status ? { status: status as any } : undefined);
+    return this.disputesService.listDisputes(
+      status ? { status: status as any } : undefined,
+    );
   }
 
   @Get(':id')
@@ -37,7 +48,10 @@ export class AdminDisputesController {
 
   @Post(':id/resolve')
   @Roles('ADMIN')
-  async resolveDispute(@Param('id') id: string, @Body() dto: ResolveDisputeDto) {
+  async resolveDispute(
+    @Param('id') id: string,
+    @Body() dto: ResolveDisputeDto,
+  ) {
     return this.disputesService.adminResolveDispute(dto, id);
   }
-} 
+}

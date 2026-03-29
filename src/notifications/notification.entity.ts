@@ -28,6 +28,7 @@ export enum NotificationType {
   ORDER_COMPLETED = 'order_completed',
   SHIPMENT_UPDATE = 'shipment_update',
   PASSWORD_RESET = 'password_reset',
+  WELCOME = 'welcome',
 }
 
 export enum NotificationStatus {

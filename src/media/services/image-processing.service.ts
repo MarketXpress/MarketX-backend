@@ -64,10 +64,7 @@ export class ImageProcessingService {
   constructor(private readonly configService: ConfigService) {
     // Max file size: 5MB (default)
     this.maxFileSize =
-      parseInt(
-        this.configService.get<string>('MAX_IMAGE_SIZE_MB') || '5',
-        10,
-      ) *
+      parseInt(this.configService.get<string>('MAX_IMAGE_SIZE_MB') || '5', 10) *
       1024 *
       1024;
 
@@ -255,6 +252,39 @@ export class ImageProcessingService {
     };
   }
 
+  async createMarketXAsset(buffer: Buffer): Promise<ProcessedImage> {
+    const validation = await this.validateImage(buffer);
+    if (!validation.valid) {
+      throw new BadRequestException(validation.error);
+    }
+
+    const watermark = await this.createWatermarkSvg();
+    const optimizedBuffer = await sharp(buffer)
+      .resize(1080, 1080, {
+        fit: 'cover',
+        position: 'centre',
+      })
+      .composite([
+        {
+          input: watermark,
+          gravity: 'southeast',
+          blend: 'over',
+        },
+      ])
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    const metadata = await sharp(optimizedBuffer).metadata();
+
+    return {
+      buffer: optimizedBuffer,
+      width: metadata.width || 1080,
+      height: metadata.height || 1080,
+      size: optimizedBuffer.length,
+      format: 'webp',
+    };
+  }
+
   /**
    * Get image dimensions
    */
@@ -305,5 +335,16 @@ export class ImageProcessingService {
    */
   getVariantConfigs(): Record<string, ImageVariantConfig> {
     return this.variantConfigs;
+  }
+
+  private createWatermarkSvg(): Buffer {
+    const svg = `
+      <svg width="320" height="64" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="320" height="64" rx="12" fill="rgba(15,23,42,0.45)" />
+        <text x="160" y="40" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="rgba(255,255,255,0.82)">MarketX</text>
+      </svg>
+    `;
+
+    return Buffer.from(svg);
   }
 }

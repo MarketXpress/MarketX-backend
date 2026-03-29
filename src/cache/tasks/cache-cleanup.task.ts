@@ -12,10 +12,12 @@ export class CacheCleanupTask {
   async cleanupExpiredKeys() {
     try {
       this.logger.log('Starting cache cleanup task');
-      
+
       const metrics = this.cacheService.getMetrics();
       if (metrics.hitRate < 30) {
-        this.logger.warn('Cache hit rate is low, consider reviewing cache strategy');
+        this.logger.warn(
+          'Cache hit rate is low, consider reviewing cache strategy',
+        );
       }
 
       this.logger.log('Cache cleanup completed');

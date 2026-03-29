@@ -17,7 +17,9 @@ import { JwtService } from '@nestjs/jwt';
     origin: '*',
   },
 })
-export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -28,7 +30,9 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.split(' ')[1];
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.split(' ')[1];
       if (!token) {
         throw new UnauthorizedException('No token provided');
       }
@@ -39,7 +43,9 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
       this.connectedClients.set(client.id, userId);
       client.join(`user:${userId}`);
 
-      this.logger.log(`Client connected to notifications: ${client.id} (User: ${userId})`);
+      this.logger.log(
+        `Client connected to notifications: ${client.id} (User: ${userId})`,
+      );
     } catch (error) {
       this.logger.error(`Connection rejected: ${error.message}`);
       client.disconnect();
@@ -49,13 +55,18 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   handleDisconnect(client: Socket) {
     const userId = this.connectedClients.get(client.id);
     this.connectedClients.delete(client.id);
-    this.logger.log(`Client disconnected from notifications: ${client.id} (User: ${userId})`);
+    this.logger.log(
+      `Client disconnected from notifications: ${client.id} (User: ${userId})`,
+    );
   }
 
   /**
    * Send a real-time notification to a specific user
    */
-  sendNotification(userId: string, data: { type: string; message: string; payload?: any }) {
+  sendNotification(
+    userId: string,
+    data: { type: string; message: string; payload?: any },
+  ) {
     this.server.to(`user:${userId}`).emit('notification', {
       ...data,
       timestamp: new Date().toISOString(),

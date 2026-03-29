@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 import { Dispute } from './dispute.entity';
 
 @Entity('evidence')
@@ -9,7 +15,9 @@ export class Evidence {
   @Column()
   disputeId: string;
 
-  @ManyToOne(() => Dispute, dispute => dispute.evidences, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Dispute, (dispute) => dispute.evidences, {
+    onDelete: 'CASCADE',
+  })
   dispute: Dispute;
 
   @Column()
@@ -23,4 +31,4 @@ export class Evidence {
 
   @CreateDateColumn()
   createdAt: Date;
-} 
+}

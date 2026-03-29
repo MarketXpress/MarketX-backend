@@ -9,7 +9,7 @@ export enum CacheStrategy {
   LRU = 'lru',
   LFU = 'lfu',
   FIFO = 'fifo',
-  TTL = 'ttl'
+  TTL = 'ttl',
 }
 
 export interface CacheMetrics {

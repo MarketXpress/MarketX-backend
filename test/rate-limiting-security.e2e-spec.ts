@@ -107,10 +107,7 @@ describe('Rate Limiting Security (E2E)', () => {
           .get(endpoint.path)
           .set('X-Forwarded-For', '10.2.1.1');
 
-        const limit = parseInt(
-          response.headers['x-ratelimit-limit'] as string,
-          10,
-        );
+        const limit = parseInt(response.headers['x-ratelimit-limit'], 10);
         expect([endpoint.expectedLimit, 100, 3, 20]).toContain(limit); // Fallback to default
       }
     });
@@ -209,9 +206,9 @@ describe('Rate Limiting Security (E2E)', () => {
       middleware.blockIP('192.0.2.1');
 
       // Verify it's blocked by checking the middleware state
-      expect((middleware as any).ipBlockConfig.blockedIPs.has('192.0.2.1')).toBe(
-        true,
-      );
+      expect(
+        (middleware as any).ipBlockConfig.blockedIPs.has('192.0.2.1'),
+      ).toBe(true);
     });
 
     it('should handle IP unblocking', () => {
@@ -220,9 +217,9 @@ describe('Rate Limiting Security (E2E)', () => {
       middleware.blockIP('192.0.2.2');
       middleware.unblockIP('192.0.2.2');
 
-      expect((middleware as any).ipBlockConfig.blockedIPs.has('192.0.2.2')).toBe(
-        false,
-      );
+      expect(
+        (middleware as any).ipBlockConfig.blockedIPs.has('192.0.2.2'),
+      ).toBe(false);
     });
 
     it('should extract client IP from X-Forwarded-For header', async () => {
@@ -244,10 +241,7 @@ describe('Rate Limiting Security (E2E)', () => {
 
     it('should log security-relevant information', () => {
       const middleware = new SecurityMiddleware();
-      const logSpy = jest.spyOn(
-        (middleware as any).logger,
-        'debug',
-      );
+      const logSpy = jest.spyOn((middleware as any).logger, 'debug');
 
       // Middleware should log security info when processing requests
       expect((middleware as any).logger).toBeDefined();
@@ -271,10 +265,8 @@ describe('Rate Limiting Security (E2E)', () => {
 
         if (response.status === 429) {
           // Rate limited, backoff
-          const retryAfter = parseInt(
-            response.headers['retry-after'] as string,
-            10,
-          ) || 60;
+          const retryAfter =
+            parseInt(response.headers['retry-after'], 10) || 60;
           await new Promise((resolve) =>
             setTimeout(resolve, Math.min(1000, retryAfter * 100)),
           );
@@ -311,10 +303,7 @@ describe('Rate Limiting Security (E2E)', () => {
     });
 
     it('should protect against distributed attacks', async () => {
-      const ipAddresses = Array.from(
-        { length: 10 },
-        (_, i) => `10.8.${i}.1`,
-      );
+      const ipAddresses = Array.from({ length: 10 }, (_, i) => `10.8.${i}.1`);
       const results: Array<{ ip: string; status: number }> = [];
 
       for (const ip of ipAddresses) {

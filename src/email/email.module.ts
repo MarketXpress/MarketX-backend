@@ -12,6 +12,7 @@ import { OrderEmailListener } from './listeners/order-email.listener';
 
 import { EmailPreference } from './entities/email-preference.entity';
 import { EmailLog } from './entities/email-log.entity';
+import { EMAIL_QUEUE } from '../job-processing/queue.constants';
 
 @Global()
 @Module({
@@ -19,7 +20,7 @@ import { EmailLog } from './entities/email-log.entity';
     ConfigModule,
     TypeOrmModule.forFeature([EmailPreference, EmailLog]),
     BullModule.registerQueue({
-      name: 'email',
+      name: EMAIL_QUEUE,
       defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -41,4 +42,4 @@ import { EmailLog } from './entities/email-log.entity';
   ],
   exports: [EmailService, EmailPreferenceService],
 })
-export class EmailModule { }
+export class EmailModule {}

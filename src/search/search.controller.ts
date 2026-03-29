@@ -20,7 +20,11 @@ export class SearchController {
   @ApiQuery({ name: 'seller', required: false })
   @ApiQuery({ name: 'minPrice', required: false })
   @ApiQuery({ name: 'maxPrice', required: false })
-  @ApiQuery({ name: 'sortBy', required: false, enum: ['price', 'date', 'popularity'] })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: ['price', 'date', 'popularity'],
+  })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['ASC', 'DESC'] })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })

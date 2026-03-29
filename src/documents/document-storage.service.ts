@@ -12,7 +12,7 @@ export interface DocumentMetadata {
   size: number;
   mimetype: string;
   uploadedAt: Date;
-  iv?: string;      // Added for encryption support
+  iv?: string; // Added for encryption support
   authTag?: string; // Added for encryption support
 }
 
@@ -25,7 +25,9 @@ export class DocumentStorageService {
     private configService: ConfigService,
     private encryptionService: EncryptionService, // Inject EncryptionService
   ) {
-    this.uploadDir = this.configService.get<string>('UPLOAD_DIR') || './uploads/verification-docs';
+    this.uploadDir =
+      this.configService.get<string>('UPLOAD_DIR') ||
+      './uploads/verification-docs';
     this.ensureUploadDirectory();
   }
 
@@ -39,7 +41,9 @@ export class DocumentStorageService {
     const path = join(this.uploadDir, filename);
 
     // Encrypt the file buffer
-    const { encryptedData, iv, authTag } = await this.encryptionService.encrypt(file.buffer);
+    const { encryptedData, iv, authTag } = await this.encryptionService.encrypt(
+      file.buffer,
+    );
 
     // Write encrypted data to disk
     writeFileSync(path, encryptedData);
@@ -63,14 +67,19 @@ export class DocumentStorageService {
    * Get document URL
    */
   getDocumentUrl(filename: string): string {
-    const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+    const baseUrl =
+      this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
     return `${baseUrl}/verification-docs/${filename}`;
   }
 
   /**
    * Retrieve and decrypt document
    */
-  async getDecryptedDocument(filename: string, iv: string, authTag: string): Promise<Buffer> {
+  async getDecryptedDocument(
+    filename: string,
+    iv: string,
+    authTag: string,
+  ): Promise<Buffer> {
     this.logger.log(`Retrieving and decrypting document: ${filename}`);
     const path = join(this.uploadDir, filename);
 
@@ -79,7 +88,7 @@ export class DocumentStorageService {
     }
 
     const encryptedData = readFileSync(path);
-    
+
     return this.encryptionService.decrypt(
       encryptedData,
       Buffer.from(iv, 'hex'),
@@ -92,13 +101,15 @@ export class DocumentStorageService {
    */
   async deleteDocument(filename: string): Promise<void> {
     const path = join(this.uploadDir, filename);
-    
+
     try {
       const fs = require('fs').promises;
       await fs.unlink(path);
       this.logger.log(`Document deleted: ${filename}`);
     } catch (error) {
-      this.logger.error(`Failed to delete document ${filename}: ${error.message}`);
+      this.logger.error(
+        `Failed to delete document ${filename}: ${error.message}`,
+      );
     }
   }
 
@@ -121,7 +132,10 @@ export class DocumentStorageService {
   /**
    * Validate document size
    */
-  validateDocumentSize(file: Express.Multer.File, maxSize: number = 10 * 1024 * 1024): boolean {
+  validateDocumentSize(
+    file: Express.Multer.File,
+    maxSize: number = 10 * 1024 * 1024,
+  ): boolean {
     return file.size <= maxSize; // Default 10MB
   }
 

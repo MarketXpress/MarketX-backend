@@ -156,7 +156,12 @@ export class PerformanceMonitor {
           status: success ? 'success' : 'failure',
         });
 
-        this.logDuration(operationName, duration, tags, success ? 'success' : 'failure');
+        this.logDuration(
+          operationName,
+          duration,
+          tags,
+          success ? 'success' : 'failure',
+        );
       },
     };
   }
@@ -246,10 +251,7 @@ export class PerformanceMonitor {
     if (operationName) {
       const stats = this.getStatistics(operationName);
       if (stats) {
-        this.logger.info(
-          `Performance Statistics: ${operationName}`,
-          stats,
-        );
+        this.logger.info(`Performance Statistics: ${operationName}`, stats);
       }
     } else {
       // Log all operations

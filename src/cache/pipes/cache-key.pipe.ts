@@ -8,7 +8,9 @@ export class CacheKeyPipe implements PipeTransform {
     }
 
     if (value.includes(' ') || value.includes('\n') || value.includes('\r')) {
-      throw new BadRequestException('Cache key cannot contain whitespace characters');
+      throw new BadRequestException(
+        'Cache key cannot contain whitespace characters',
+      );
     }
 
     if (value.length > 250) {

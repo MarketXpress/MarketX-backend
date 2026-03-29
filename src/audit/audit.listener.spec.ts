@@ -74,7 +74,8 @@ describe('AuditEventListener', () => {
 
       await listener.handlePasswordChange(event as any);
 
-      const callArgs = (auditService.logStateChange as jest.Mock).mock.calls[0][0];
+      const callArgs = (auditService.logStateChange as jest.Mock).mock
+        .calls[0][0];
       expect(callArgs.statePreviousValue).toEqual({ passwordUpdated: true });
       expect(callArgs.stateNewValue).toEqual({ passwordUpdated: true });
     });
@@ -91,7 +92,9 @@ describe('AuditEventListener', () => {
       };
 
       // Should not throw, should log error instead
-      await expect(listener.handlePasswordChange(event as any)).resolves.not.toThrow();
+      await expect(
+        listener.handlePasswordChange(event as any),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -127,7 +130,8 @@ describe('AuditEventListener', () => {
         status: 'SUCCESS',
         metadata: {
           amount: 100,
-          destination: 'GBQQ5GFXLAJB3ZTBLZEXD34WVDZN3DXZFXN6LSPWJHH3TDZ2YIK5LDV',
+          destination:
+            'GBQQ5GFXLAJB3ZTBLZEXD34WVDZN3DXZFXN6LSPWJHH3TDZ2YIK5LDV',
         },
       };
 

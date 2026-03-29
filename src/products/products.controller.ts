@@ -59,7 +59,11 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(VerifiedSellerGuard)
   @ApiOperation({ summary: 'Update product price (verified owner only)' })
-  updatePrice(@Param('id') id: string, @Req() req, @Body() dto: UpdatePriceDto) {
+  updatePrice(
+    @Param('id') id: string,
+    @Req() req,
+    @Body() dto: UpdatePriceDto,
+  ) {
     return this.productsService.updatePrice(id, req.user.id.toString(), dto);
   }
 

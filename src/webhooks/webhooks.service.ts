@@ -44,7 +44,10 @@ export class WebhooksService {
     return webhook;
   }
 
-  async update(id: string, updateWebhookDto: UpdateWebhookDto): Promise<Webhook> {
+  async update(
+    id: string,
+    updateWebhookDto: UpdateWebhookDto,
+  ): Promise<Webhook> {
     await this.webhookRepository.update(id, updateWebhookDto);
     return await this.findOne(id);
   }
@@ -56,7 +59,9 @@ export class WebhooksService {
     }
   }
 
-  async findActiveWebhooksForEvent(eventType: WebhookEventType): Promise<Webhook[]> {
+  async findActiveWebhooksForEvent(
+    eventType: WebhookEventType,
+  ): Promise<Webhook[]> {
     return await this.webhookRepository.find({
       where: {
         isActive: true,
@@ -65,10 +70,15 @@ export class WebhooksService {
     });
   }
 
-  async dispatchEvent(eventType: WebhookEventType, payload: any): Promise<void> {
+  async dispatchEvent(
+    eventType: WebhookEventType,
+    payload: any,
+  ): Promise<void> {
     const webhooks = await this.findActiveWebhooksForEvent(eventType);
-    
-    this.logger.log(`Dispatching ${eventType} event to ${webhooks.length} webhooks`);
+
+    this.logger.log(
+      `Dispatching ${eventType} event to ${webhooks.length} webhooks`,
+    );
 
     for (const webhook of webhooks) {
       await this.scheduleDelivery(webhook, eventType, payload);
@@ -97,7 +107,7 @@ export class WebhooksService {
     };
 
     this.deliveryQueue.set(deliveryId, delivery);
-    
+
     // Start immediate delivery attempt
     setImmediate(() => this.attemptDelivery(deliveryId));
   }
@@ -111,8 +121,8 @@ export class WebhooksService {
 
     try {
       const webhook = await this.findOne(delivery.webhookId);
-      
-      const response = await firstValueFrom(
+
+      const response = (await firstValueFrom(
         this.httpService.post(
           webhook.url,
           {
@@ -131,25 +141,26 @@ export class WebhooksService {
             timeout: this.timeoutMs,
           },
         ),
-      ) as any; // Type assertion to allow property access
+      )) as any; // Type assertion to allow property access
 
       // Success
       delivery.status = 'success';
       delivery.response = {
-        statusCode: (response as any).status,
-        body: JSON.stringify((response as any).data),
-        headers: (response as any).headers as Record<string, string>,
+        statusCode: response.status,
+        body: JSON.stringify(response.data),
+        headers: response.headers as Record<string, string>,
       };
 
       await this.updateWebhookSuccess(webhook.id);
       this.logger.log(`Webhook delivery ${deliveryId} succeeded`);
-      
+
       // Remove from queue after success
       setTimeout(() => this.deliveryQueue.delete(deliveryId), 60000); // Keep for 1 minute for reference
-
     } catch (error) {
-      this.logger.warn(`Webhook delivery ${deliveryId} failed (attempt ${delivery.attempts}): ${error.message}`);
-      
+      this.logger.warn(
+        `Webhook delivery ${deliveryId} failed (attempt ${delivery.attempts}): ${error.message}`,
+      );
+
       delivery.response = {
         statusCode: error.response?.status || 0,
         body: error.message,
@@ -159,16 +170,20 @@ export class WebhooksService {
       if (delivery.attempts >= delivery.maxRetries) {
         delivery.status = 'exhausted';
         await this.updateWebhookFailure(delivery.webhookId);
-        this.logger.error(`Webhook delivery ${deliveryId} exhausted all retries`);
-        
+        this.logger.error(
+          `Webhook delivery ${deliveryId} exhausted all retries`,
+        );
+
         // Remove from queue after exhaustion
         setTimeout(() => this.deliveryQueue.delete(deliveryId), 300000); // Keep for 5 minutes
       } else {
         delivery.status = 'failed';
         const delay = this.calculateBackoffDelay(delivery.attempts);
         delivery.nextRetryAt = new Date(Date.now() + delay);
-        
-        this.logger.log(`Scheduling retry for delivery ${deliveryId} in ${delay}ms`);
+
+        this.logger.log(
+          `Scheduling retry for delivery ${deliveryId} in ${delay}ms`,
+        );
         setTimeout(() => this.attemptDelivery(deliveryId), delay);
       }
     }
@@ -181,10 +196,7 @@ export class WebhooksService {
 
   private generateSignature(payload: any, secret: string): string {
     const body = JSON.stringify(payload);
-    return crypto
-      .createHmac('sha256', secret)
-      .update(body)
-      .digest('hex');
+    return crypto.createHmac('sha256', secret).update(body).digest('hex');
   }
 
   private async updateWebhookSuccess(webhookId: string): Promise<void> {
@@ -205,9 +217,13 @@ export class WebhooksService {
     });
   }
 
-  async testWebhook(id: string, eventType: WebhookEventType, payload?: any): Promise<any> {
+  async testWebhook(
+    id: string,
+    eventType: WebhookEventType,
+    payload?: any,
+  ): Promise<any> {
     const webhook = await this.findOne(id);
-    
+
     const testPayload = payload || {
       test: true,
       message: 'This is a test webhook delivery',
@@ -216,7 +232,7 @@ export class WebhooksService {
 
     try {
       const signature = this.generateSignature(testPayload, webhook.secret);
-      
+
       const response = await firstValueFrom(
         this.httpService.post(
           webhook.url,
@@ -262,8 +278,8 @@ export class WebhooksService {
     const deliveries = Array.from(this.deliveryQueue.values());
     return {
       total: deliveries.length,
-      pending: deliveries.filter(d => d.status === 'pending').length,
-      failed: deliveries.filter(d => d.status === 'failed').length,
+      pending: deliveries.filter((d) => d.status === 'pending').length,
+      failed: deliveries.filter((d) => d.status === 'failed').length,
     };
   }
 
@@ -271,7 +287,7 @@ export class WebhooksService {
   private async cleanupOldDeliveries(): Promise<void> {
     const now = Date.now();
     const cutoff = 24 * 60 * 60 * 1000; // 24 hours
-    
+
     for (const [id, delivery] of this.deliveryQueue.entries()) {
       if (now - delivery.createdAt.getTime() > cutoff) {
         this.deliveryQueue.delete(id);
@@ -280,12 +296,16 @@ export class WebhooksService {
   }
 
   // Validate webhook signature (for incoming webhook validation)
-  validateSignature(payload: string, signature: string, secret: string): boolean {
+  validateSignature(
+    payload: string,
+    signature: string,
+    secret: string,
+  ): boolean {
     const expectedSignature = crypto
       .createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
-    
+
     return crypto.timingSafeEqual(
       Buffer.from(signature, 'hex'),
       Buffer.from(expectedSignature, 'hex'),

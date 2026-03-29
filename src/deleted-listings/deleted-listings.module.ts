@@ -10,4 +10,4 @@ import { Listing } from '../listing/entities/listing.entity';
   providers: [DeletedListingsService],
   exports: [DeletedListingsService],
 })
-export class DeletedListingsModule {} 
+export class DeletedListingsModule {}

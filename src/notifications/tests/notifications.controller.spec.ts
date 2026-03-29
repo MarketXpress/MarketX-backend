@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsController } from '../notifications.controller';
 import { NotificationsService } from '../notifications.service';
-import { NotificationType, NotificationChannel, NotificationPriority } from '../notification.entity';
+import {
+  NotificationType,
+  NotificationChannel,
+  NotificationPriority,
+} from '../notification.entity';
 
 describe.skip('NotificationsController', () => {
   let controller: NotificationsController;
@@ -71,16 +75,22 @@ describe.skip('NotificationsController', () => {
         currency: 'USD',
       };
 
-      const mockResult = { id: 'notification-123', title: 'Transaction Received' };
-      mockNotificationsService.sendTransactionReceivedNotification.mockResolvedValue(mockResult);
+      const mockResult = {
+        id: 'notification-123',
+        title: 'Transaction Received',
+      };
+      mockNotificationsService.sendTransactionReceivedNotification.mockResolvedValue(
+        mockResult,
+      );
 
-      const result = await controller.sendTransactionNotification(transactionDto);
+      const result =
+        await controller.sendTransactionNotification(transactionDto);
 
       expect(service.sendTransactionReceivedNotification).toHaveBeenCalledWith(
         transactionDto.userId,
         transactionDto.transactionId,
         transactionDto.amount,
-        transactionDto.currency
+        transactionDto.currency,
       );
       expect(result).toEqual(mockResult);
     });
@@ -96,11 +106,16 @@ describe.skip('NotificationsController', () => {
         unreadCount: 0,
       };
 
-      mockNotificationsService.getUserNotifications.mockResolvedValue(mockResult);
+      mockNotificationsService.getUserNotifications.mockResolvedValue(
+        mockResult,
+      );
 
       const result = await controller.getUserNotifications(userId, queryDto);
 
-      expect(service.getUserNotifications).toHaveBeenCalledWith(userId, queryDto);
+      expect(service.getUserNotifications).toHaveBeenCalledWith(
+        userId,
+        queryDto,
+      );
       expect(result).toEqual(mockResult);
     });
   });

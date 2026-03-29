@@ -12,7 +12,7 @@ export class ReportsService {
       return { type: 'csv', content: csv };
     } else if (type === 'pdf') {
       const doc = new PDFDocument();
-      let buffers: Buffer[] = [];
+      const buffers: Buffer[] = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => {});
       doc.text(JSON.stringify(data, null, 2));

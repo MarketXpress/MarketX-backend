@@ -16,7 +16,7 @@ import * as redisStore from 'cache-manager-ioredis';
         store: redisStore,
         host: config.get<string>('REDIS_HOST', 'localhost'),
         port: config.get<number>('REDIS_PORT', 6379),
-        ttl: 60,   // default TTL in seconds
+        ttl: 60, // default TTL in seconds
         max: 2000, // max items in cache
       }),
     }),
@@ -25,4 +25,4 @@ import * as redisStore from 'cache-manager-ioredis';
   controllers: [],
   exports: [RedisCacheService],
 })
-export class RedisCacheModule { }
+export class RedisCacheModule {}

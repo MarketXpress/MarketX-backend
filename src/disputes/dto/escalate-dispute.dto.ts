@@ -6,4 +6,4 @@ export class EscalateDisputeDto {
 
   @IsString()
   reason: string;
-} 
+}

@@ -23,7 +23,8 @@ describe.skip('UsersService', () => {
     phoneNumber: '+1234567890',
     profileImageUrl: 'https://example.com/profile.jpg',
     bio: 'Test bio',
-    stellarWalletAddress: 'GABC123456789012345678901234567890123456789012345678',
+    stellarWalletAddress:
+      'GABC123456789012345678901234567890123456789012345678',
     profileVisibility: ProfileVisibility.PUBLIC,
     sellerRating: 4.5,
     totalReviews: 10,
@@ -117,7 +118,8 @@ describe.skip('UsersService', () => {
 
     it('should throw ConflictException when stellar wallet is already in use', async () => {
       const walletUpdateDto: UpdateProfileDto = {
-        stellarWalletAddress: 'GXYZ987654321098765432109876543210987654321098765432',
+        stellarWalletAddress:
+          'GXYZ987654321098765432109876543210987654321098765432',
       };
 
       const otherUser = { ...mockUser, id: 'different-id' };
@@ -158,7 +160,10 @@ describe.skip('UsersService', () => {
     });
 
     it('should throw ForbiddenException for PRIVATE profile when requester is different', async () => {
-      const privateUser = { ...mockUser, profileVisibility: ProfileVisibility.PRIVATE };
+      const privateUser = {
+        ...mockUser,
+        profileVisibility: ProfileVisibility.PRIVATE,
+      };
       mockRepository.findOne.mockResolvedValue(privateUser);
 
       await expect(
@@ -167,7 +172,10 @@ describe.skip('UsersService', () => {
     });
 
     it('should allow owner to view their own PRIVATE profile', async () => {
-      const privateUser = { ...mockUser, profileVisibility: ProfileVisibility.PRIVATE };
+      const privateUser = {
+        ...mockUser,
+        profileVisibility: ProfileVisibility.PRIVATE,
+      };
       mockRepository.findOne.mockResolvedValue(privateUser);
 
       const result = await service.getPublicProfile(mockUser.id, mockUser.id);
@@ -227,9 +235,9 @@ describe.skip('UsersService', () => {
     it('should throw NotFoundException when user does not exist', async () => {
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getUserReviews('non-existent-id'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getUserReviews('non-existent-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

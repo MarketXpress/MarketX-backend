@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  Index,
+} from 'typeorm';
 
 export enum AuditActionType {
   CREATE = 'CREATE',
@@ -34,14 +40,14 @@ export class AuditLog {
   @Column({
     type: 'enum',
     enum: AuditActionType,
-    default: AuditActionType.SYSTEM
+    default: AuditActionType.SYSTEM,
   })
   action: AuditActionType;
 
   @Column({
     type: 'enum',
     enum: AuditStatus,
-    default: AuditStatus.SUCCESS
+    default: AuditStatus.SUCCESS,
   })
   status: AuditStatus;
 
@@ -83,4 +89,4 @@ export class AuditLog {
 
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date;
-} 
+}

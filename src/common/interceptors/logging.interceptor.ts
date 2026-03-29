@@ -39,13 +39,9 @@ export class LoggingInterceptor implements NestInterceptor {
 
         // Log performance metrics if response time is high
         if (duration > 1000) {
-          this.customLogger.logPerformance(
-            `${method} ${url}`,
-            duration,
-            {
-              threshold: '1000ms',
-            },
-          );
+          this.customLogger.logPerformance(`${method} ${url}`, duration, {
+            threshold: '1000ms',
+          });
         }
       }),
       catchError((error) => {

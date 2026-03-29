@@ -10,7 +10,12 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 import { PaymentsService } from './payments.service';
 import { PaymentMonitorService } from './payment-monitor.service';
@@ -39,7 +44,8 @@ export class PaymentsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Initiate a payment for an order',
-    description: 'Creates a pending payment and returns wallet address for payment',
+    description:
+      'Creates a pending payment and returns wallet address for payment',
   })
   @ApiResponse({
     status: 201,
@@ -67,7 +73,8 @@ export class PaymentsController {
       );
     }
 
-    const payment = await this.paymentsService.initiatePayment(initiatePaymentDto);
+    const payment =
+      await this.paymentsService.initiatePayment(initiatePaymentDto);
 
     // Start monitoring the payment
     try {
@@ -101,7 +108,9 @@ export class PaymentsController {
     status: 404,
     description: 'Payment not found',
   })
-  async getPaymentStatus(@Param('paymentId') paymentId: string): Promise<PaymentResponseDto> {
+  async getPaymentStatus(
+    @Param('paymentId') paymentId: string,
+  ): Promise<PaymentResponseDto> {
     this.logger.log(`Fetching payment status for ${paymentId}`);
     return await this.paymentsService.getPaymentById(paymentId);
   }
@@ -123,7 +132,9 @@ export class PaymentsController {
     status: 404,
     description: 'Payment not found for order',
   })
-  async getPaymentByOrderId(@Param('orderId') orderId: string): Promise<PaymentResponseDto> {
+  async getPaymentByOrderId(
+    @Param('orderId') orderId: string,
+  ): Promise<PaymentResponseDto> {
     this.logger.log(`Fetching payment for order ${orderId}`);
     return await this.paymentsService.getPaymentByOrderId(orderId);
   }
@@ -147,12 +158,20 @@ export class PaymentsController {
     status: 400,
     description: 'Invalid webhook data',
   })
-  async handleStellarWebhook(@Body() webhookData: PaymentWebhookDto): Promise<{ status: string }> {
-    this.logger.log(`Received Stellar webhook for transaction ${webhookData.transactionHash}`);
+  async handleStellarWebhook(
+    @Body() webhookData: PaymentWebhookDto,
+  ): Promise<{ status: string }> {
+    this.logger.log(
+      `Received Stellar webhook for transaction ${webhookData.transactionHash}`,
+    );
 
     try {
       // Validate webhook data
-      if (!webhookData.destinationAccount || !webhookData.amount || !webhookData.transactionHash) {
+      if (
+        !webhookData.destinationAccount ||
+        !webhookData.amount ||
+        !webhookData.transactionHash
+      ) {
         throw new BadRequestException('Missing required webhook fields');
       }
 
@@ -169,7 +188,10 @@ export class PaymentsController {
         status: 'received',
       };
     } catch (error) {
-      this.logger.error(`Error processing webhook: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error processing webhook: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -201,10 +223,15 @@ export class PaymentsController {
     this.logger.log(`Manual verification requested for payment ${paymentId}`);
 
     if (!transactionData.id || !transactionData.amount) {
-      throw new BadRequestException('Transaction data must include id and amount');
+      throw new BadRequestException(
+        'Transaction data must include id and amount',
+      );
     }
 
-    return await this.paymentsService.verifyAndConfirmPayment(paymentId, transactionData);
+    return await this.paymentsService.verifyAndConfirmPayment(
+      paymentId,
+      transactionData,
+    );
   }
 
   /**
@@ -223,7 +250,9 @@ export class PaymentsController {
     status: 404,
     description: 'Buyer not found',
   })
-  async getPaymentStats(@Param('buyerId') buyerId: string): Promise<Record<string, any>> {
+  async getPaymentStats(
+    @Param('buyerId') buyerId: string,
+  ): Promise<Record<string, any>> {
     this.logger.log(`Fetching payment stats for buyer ${buyerId}`);
     return await this.paymentsService.getPaymentStats(buyerId);
   }

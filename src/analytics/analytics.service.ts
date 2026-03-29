@@ -78,20 +78,21 @@ export class AnalyticsService {
   async getSellerSalesAnalytics(sellerId: string, dto: AnalyticsQueryDto) {
     const { startDate, endDate, granularity, limit } = dto;
     const cacheKey = `seller_sales:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}:${granularity}`;
-    
+
     const cached = await this.cacheManager.get(cacheKey);
     if (cached && !dto.export) return cached;
 
-    const queryBuilder = this.orderRepository.createQueryBuilder('order')
+    const queryBuilder = this.orderRepository
+      .createQueryBuilder('order')
       .where('order.sellerId = :sellerId', { sellerId })
-      .andWhere('order.status IN (:...statuses)', { 
-        statuses: [OrderStatus.COMPLETED, OrderStatus.DELIVERED] 
+      .andWhere('order.status IN (:...statuses)', {
+        statuses: [OrderStatus.COMPLETED, OrderStatus.DELIVERED],
       });
 
     if (startDate && endDate) {
-      queryBuilder.andWhere('order.createdAt BETWEEN :start AND :end', { 
-        start: startDate, 
-        end: endDate 
+      queryBuilder.andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: startDate,
+        end: endDate,
       });
     }
 
@@ -118,7 +119,7 @@ export class AnalyticsService {
       .orderBy('period', 'ASC')
       .getRawMany();
 
-    const formattedSeries = series.map(s => ({
+    const formattedSeries = series.map((s) => ({
       period: s.period,
       orders: Number(s.count),
       revenue: Number(s.revenue),
@@ -136,7 +137,9 @@ export class AnalyticsService {
     };
 
     if (dto.export === AnalyticsExportFormat.CSV) {
-      const parser = new Json2CsvParser({ fields: ['period', 'orders', 'revenue'] });
+      const parser = new Json2CsvParser({
+        fields: ['period', 'orders', 'revenue'],
+      });
       return { ...result, csv: parser.parse(formattedSeries) };
     }
 
@@ -161,14 +164,19 @@ export class AnalyticsService {
       where: {
         sellerId,
         status: In([OrderStatus.COMPLETED, OrderStatus.DELIVERED]),
-        ...(startDate && endDate ? { createdAt: Between(startDate, endDate) } : {})
-      }
+        ...(startDate && endDate
+          ? { createdAt: Between(startDate, endDate) }
+          : {}),
+      },
     });
 
-    const productMap = new Map<string, { title: string, unitsSold: number, revenue: number, orders: number }>();
+    const productMap = new Map<
+      string,
+      { title: string; unitsSold: number; revenue: number; orders: number }
+    >();
 
-    orders.forEach(order => {
-      order.items.forEach(item => {
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
         const existing = productMap.get(item.productId);
         if (existing) {
           existing.unitsSold += item.quantity;
@@ -179,7 +187,7 @@ export class AnalyticsService {
             title: item.productName,
             unitsSold: item.quantity,
             revenue: item.subtotal,
-            orders: 1
+            orders: 1,
           });
         }
       });
@@ -191,7 +199,9 @@ export class AnalyticsService {
       .slice(0, limit);
 
     if (dto.export === AnalyticsExportFormat.CSV) {
-      const parser = new Json2CsvParser({ fields: ['id', 'title', 'unitsSold', 'revenue', 'orders'] });
+      const parser = new Json2CsvParser({
+        fields: ['id', 'title', 'unitsSold', 'revenue', 'orders'],
+      });
       return { data: performance, csv: parser.parse(performance) };
     }
 
@@ -213,14 +223,19 @@ export class AnalyticsService {
       where: {
         sellerId,
         status: In([OrderStatus.COMPLETED, OrderStatus.DELIVERED]),
-        ...(startDate && endDate ? { createdAt: Between(startDate, endDate) } : {})
+        ...(startDate && endDate
+          ? { createdAt: Between(startDate, endDate) }
+          : {}),
       },
-      relations: ['buyer']
+      relations: ['buyer'],
     });
 
-    const customerMap = new Map<string, { name: string, email: string, orderCount: number, totalSpent: number }>();
+    const customerMap = new Map<
+      string,
+      { name: string; email: string; orderCount: number; totalSpent: number }
+    >();
 
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const buyer = order.buyer;
       if (!buyer) return;
 
@@ -230,26 +245,31 @@ export class AnalyticsService {
         existing.totalSpent += Number(order.totalAmount);
       } else {
         customerMap.set(buyer.id, {
-          name: `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() || 'Unknown',
+          name:
+            `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() ||
+            'Unknown',
           email: buyer.email,
           orderCount: 1,
-          totalSpent: Number(order.totalAmount)
+          totalSpent: Number(order.totalAmount),
         });
       }
     });
 
     const customers = Array.from(customerMap.values());
-    const repeatCustomers = customers.filter(c => c.orderCount > 1).length;
+    const repeatCustomers = customers.filter((c) => c.orderCount > 1).length;
 
     const result = {
       totalUniqueCustomers: customers.length,
       repeatCustomers,
-      topCustomers: customers.sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 10),
+      topCustomers: customers
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 10),
       summary: {
-        averageSpentPerCustomer: customers.length > 0 
-          ? customers.reduce((s, c) => s + c.totalSpent, 0) / customers.length 
-          : 0
-      }
+        averageSpentPerCustomer:
+          customers.length > 0
+            ? customers.reduce((s, c) => s + c.totalSpent, 0) / customers.length
+            : 0,
+      },
     };
 
     await this.cacheManager.set(cacheKey, result, 1800);

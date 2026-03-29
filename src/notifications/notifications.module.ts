@@ -28,7 +28,11 @@ import { CustomI18nModule } from '../i18n/i18n.module';
     CustomI18nModule,
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, NotificationEventListener, NotificationGateway],
+  providers: [
+    NotificationsService,
+    NotificationEventListener,
+    NotificationGateway,
+  ],
   exports: [NotificationsService, NotificationGateway],
 })
 export class NotificationsModule {}

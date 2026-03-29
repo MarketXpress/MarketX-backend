@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Query, Req, UseGuards, Patch, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Req,
+  UseGuards,
+  Patch,
+  Body,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { Request } from 'express';
 import { ChatParticipantGuard } from './chat-participant.guard';
@@ -25,4 +34,4 @@ export class ChatController {
   ) {
     return this.chatService.markAsRead(Number(messageId), Number(userId));
   }
-} 
+}

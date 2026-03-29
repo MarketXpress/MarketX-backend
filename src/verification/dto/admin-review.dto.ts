@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsEnum, IsOptional, IsNumber } from 'class-validator';
-import { VerificationStatus, VerificationLevel } from '../enums/verification.enums';
+import {
+  VerificationStatus,
+  VerificationLevel,
+} from '../enums/verification.enums';
 
 export class AdminReviewDto {
   @ApiProperty({ description: 'Verification ID' })
@@ -8,7 +11,11 @@ export class AdminReviewDto {
   verificationId: number;
 
   @ApiProperty({ description: 'Review action', enum: VerificationStatus })
-  @IsEnum([VerificationStatus.VERIFIED, VerificationStatus.REJECTED, VerificationStatus.REQUIRES_ACTION])
+  @IsEnum([
+    VerificationStatus.VERIFIED,
+    VerificationStatus.REJECTED,
+    VerificationStatus.REQUIRES_ACTION,
+  ])
   action: VerificationStatus;
 
   @ApiProperty({ description: 'Admin review notes', required: false })
@@ -16,17 +23,27 @@ export class AdminReviewDto {
   @IsString()
   adminNotes?: string;
 
-  @ApiProperty({ description: 'Rejection reason (if rejected)', required: false })
+  @ApiProperty({
+    description: 'Rejection reason (if rejected)',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   rejectionReason?: string;
 
-  @ApiProperty({ description: 'Verification level to assign', enum: VerificationLevel, required: false })
+  @ApiProperty({
+    description: 'Verification level to assign',
+    enum: VerificationLevel,
+    required: false,
+  })
   @IsOptional()
   @IsEnum(VerificationLevel)
   verificationLevel?: VerificationLevel;
 
-  @ApiProperty({ description: 'Verification expiry in days (default: 365)', required: false })
+  @ApiProperty({
+    description: 'Verification expiry in days (default: 365)',
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
   expiresInSeconds?: number;

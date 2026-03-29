@@ -50,7 +50,10 @@ export const RATE_LIMIT_CONFIG = {
   // Transactions - strict
   TRANSACTION: {
     limit: parseInt(process.env.RATE_LIMIT_TRANSACTION_LIMIT || '20', 10),
-    windowMs: parseInt(process.env.RATE_LIMIT_TRANSACTION_WINDOW || '60000', 10), // 1 minute
+    windowMs: parseInt(
+      process.env.RATE_LIMIT_TRANSACTION_WINDOW || '60000',
+      10,
+    ), // 1 minute
   },
 
   // Payments - strict

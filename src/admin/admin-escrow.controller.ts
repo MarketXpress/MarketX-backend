@@ -5,7 +5,12 @@ import { EscrowEntity, EscrowStatus } from '../escrowes/entities/escrow.entity';
 import { GetPendingEscrowsDto } from './dtos/get-pending-escrows.dto';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 /**
  * Admin Escrow Controller
@@ -34,8 +39,8 @@ export class AdminEscrowController {
   @ApiOperation({
     summary: 'Get paginated pending/aging escrows',
     description:
-      'Returns a paginated list of escrows that are pending, locked, frozen, or otherwise aging. '
-      + 'This helps admins and customer support identify issues requiring attention.',
+      'Returns a paginated list of escrows that are pending, locked, frozen, or otherwise aging. ' +
+      'This helps admins and customer support identify issues requiring attention.',
   })
   @ApiResponse({
     status: 200,
@@ -90,7 +95,10 @@ export class AdminEscrowController {
     // Order by oldest first to show most aging escrows
     queryBuilder.orderBy('escrow.createdAt', 'ASC');
 
-    const [escrows, total] = await queryBuilder.skip(skip).take(limit).getManyAndCount();
+    const [escrows, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     // Calculate aging information for each escrow
     const escrowsWithAging = escrows.map((escrow) => {
@@ -196,7 +204,8 @@ export class AdminEscrowController {
   @Roles('admin')
   @ApiOperation({
     summary: 'Get escrow statistics',
-    description: 'Returns aggregate statistics about escrow statuses for admin dashboard.',
+    description:
+      'Returns aggregate statistics about escrow statuses for admin dashboard.',
   })
   @ApiResponse({
     status: 200,
@@ -217,13 +226,16 @@ export class AdminEscrowController {
       .groupBy('escrow.status')
       .getRawMany();
 
-    const statusCounts = stats.reduce((acc, stat) => {
-      acc[stat.status] = {
-        count: parseInt(stat.count, 10),
-        totalAmount: parseFloat(stat.totalAmount || 0),
-      };
-      return acc;
-    }, {} as Record<string, { count: number; totalAmount: number }>);
+    const statusCounts = stats.reduce(
+      (acc, stat) => {
+        acc[stat.status] = {
+          count: parseInt(stat.count, 10),
+          totalAmount: parseFloat(stat.totalAmount || 0),
+        };
+        return acc;
+      },
+      {} as Record<string, { count: number; totalAmount: number }>,
+    );
 
     // Calculate additional metrics
     const totalEscrows = Object.values(statusCounts).reduce(

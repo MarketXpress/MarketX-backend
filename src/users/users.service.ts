@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -6,6 +7,12 @@ import { Users } from './users.entity';
 import { CreateUserDto } from './dto/create-user-dto.dto';
 import { CacheManagerService } from '../cache/cache-manager.service';
 import { Listing } from '../listing/entities/listing.entity';
+
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/notification.entity';
 
 @Injectable()
 export class UsersService {
@@ -15,11 +22,35 @@ export class UsersService {
     @InjectRepository(Listing)
     private readonly listingRepository: Repository<Listing>,
     private readonly cacheManager: CacheManagerService,
+    private readonly notificationsService: NotificationsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Users> {
     const user = this.userRepository.create(createUserDto);
-    return await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // Trigger welcome email
+    await this.notificationsService.createNotification({
+      userId: savedUser.id.toString(),
+      type: NotificationType.WELCOME,
+      title: 'Welcome to MarketX!',
+      message: `Hi ${savedUser.name || 'there'}, welcome to MarketX! We're glad to have you here.`,
+      channel: NotificationChannel.EMAIL,
+      metadata: {
+        name: savedUser.name || 'User',
+        email: savedUser.email,
+      },
+    } as any);
+
+    this.eventEmitter.emit('user.created', {
+      id: savedUser.id.toString(),
+      email: savedUser.email,
+      name: savedUser.name,
+      createdAt: new Date().toISOString(),
+    });
+
+    return savedUser;
   }
 
   async findAll(): Promise<Users[]> {
@@ -86,7 +117,10 @@ export class UsersService {
     }
 
     // Mark user as deleted
-    await this.userRepository.update(id, { status: 'deleted', isActive: false });
+    await this.userRepository.update(id, {
+      status: 'deleted',
+      isActive: false,
+    });
     await this.userRepository.softDelete(id);
 
     // Cascade soft-delete to all listings owned by this user
@@ -135,7 +169,10 @@ export class UsersService {
     return true;
   }
 
-  async updateRefreshToken(userId: number, token: string | null): Promise<void> {
+  async updateRefreshToken(
+    userId: number,
+    token: string | null,
+  ): Promise<void> {
     await this.userRepository.update(userId, { refreshToken: token } as any);
   }
 }

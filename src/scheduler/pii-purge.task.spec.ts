@@ -89,7 +89,11 @@ describe('PiiPurgeTask', () => {
 
     it('continues processing remaining users if one fails', async () => {
       const bad = makeUser({ id: 1, deletedAt: daysAgo(35) });
-      const good = makeUser({ id: 2, deletedAt: daysAgo(35), email: 'good@example.com' });
+      const good = makeUser({
+        id: 2,
+        deletedAt: daysAgo(35),
+        email: 'good@example.com',
+      });
 
       userRepo.find.mockResolvedValue([bad, good]);
       userRepo.save

@@ -10,7 +10,7 @@ export class CacheControlGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const cacheControl = this.reflector.get<string>(
       CACHE_CONTROL_KEY,
-      context.getHandler()
+      context.getHandler(),
     );
 
     if (!cacheControl) {

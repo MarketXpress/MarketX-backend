@@ -108,7 +108,10 @@ export class Coupon {
       return false;
     }
 
-    if (this.totalUsageLimit > 0 && this.currentUsageCount >= this.totalUsageLimit) {
+    if (
+      this.totalUsageLimit > 0 &&
+      this.currentUsageCount >= this.totalUsageLimit
+    ) {
       return false;
     }
 
@@ -123,7 +126,9 @@ export class Coupon {
   }
 
   isDepleted(): boolean {
-    return this.totalUsageLimit > 0 && this.currentUsageCount >= this.totalUsageLimit;
+    return (
+      this.totalUsageLimit > 0 && this.currentUsageCount >= this.totalUsageLimit
+    );
   }
 
   calculateDiscount(orderAmount: number): number {
@@ -136,7 +141,10 @@ export class Coupon {
     }
 
     // Apply maximum discount restriction if set
-    if (this.restrictions?.maximumDiscountAmount && discount > this.restrictions.maximumDiscountAmount) {
+    if (
+      this.restrictions?.maximumDiscountAmount &&
+      discount > this.restrictions.maximumDiscountAmount
+    ) {
       discount = this.restrictions.maximumDiscountAmount;
     }
 

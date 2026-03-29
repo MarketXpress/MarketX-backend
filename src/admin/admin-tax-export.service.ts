@@ -30,8 +30,10 @@ export class AdminTaxExportService {
     this.s3 = new S3Client({
       region: this.config.getOrThrow<string>('AWS_REGION'),
       credentials: {
-        accessKeyId:     this.config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.config.getOrThrow<string>('AWS_SECRET_ACCESS_KEY'),
+        accessKeyId: this.config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.config.getOrThrow<string>(
+          'AWS_SECRET_ACCESS_KEY',
+        ),
       },
     });
     this.bucket = this.config.getOrThrow<string>('TAX_EXPORT_S3_BUCKET');
@@ -59,7 +61,9 @@ export class AdminTaxExportService {
     jobId: string,
     dto: TaxExportRequestDto,
   ): Promise<void> {
-    this.logger.log(`[${jobId}] Starting tax export for seller ${dto.sellerId}`);
+    this.logger.log(
+      `[${jobId}] Starting tax export for seller ${dto.sellerId}`,
+    );
 
     // 1. Fetch all matching orders in paginated chunks to avoid OOM
     const orders = await this.fetchOrdersInChunks(dto);
@@ -81,7 +85,9 @@ export class AdminTaxExportService {
     this.logger.log(`[${jobId}] Email dispatched to ${dto.sellerEmail}`);
   }
 
-  private async fetchOrdersInChunks(dto: TaxExportRequestDto): Promise<Order[]> {
+  private async fetchOrdersInChunks(
+    dto: TaxExportRequestDto,
+  ): Promise<Order[]> {
     const CHUNK_SIZE = 1_000;
     const results: Order[] = [];
     let skip = 0;
@@ -107,16 +113,16 @@ export class AdminTaxExportService {
 
   private buildCsv(orders: Order[]): Buffer {
     const rows = orders.map((o) => ({
-      order_id:        o.id,
-      created_at:      o.createdAt.toISOString(),
-      seller_id:       o.sellerId,
-      buyer_id:        o.buyerId,
-      subtotal:        o.subtotal,
-      tax_amount:      o.taxAmount,
-      total:           o.total,
-      currency:        o.currency,
-      status:          o.status,
-      payment_method:  o.paymentMethod,
+      order_id: o.id,
+      created_at: o.createdAt.toISOString(),
+      seller_id: o.sellerId,
+      buyer_id: o.buyerId,
+      subtotal: o.subtotal,
+      tax_amount: o.taxAmount,
+      total: o.total,
+      currency: o.currency,
+      status: o.status,
+      payment_method: o.paymentMethod,
     }));
 
     const csv = stringify(rows, { header: true });
@@ -126,11 +132,11 @@ export class AdminTaxExportService {
   private async uploadToS3(key: string, body: Buffer): Promise<void> {
     await this.s3.send(
       new PutObjectCommand({
-        Bucket:              this.bucket,
-        Key:                 key,
-        Body:                body,
-        ContentType:         'text/csv',
-        StorageClass:        'STANDARD_IA', // cold storage cost tier
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: 'text/csv',
+        StorageClass: 'STANDARD_IA', // cold storage cost tier
         ServerSideEncryption: 'AES256',
       }),
     );
@@ -147,7 +153,7 @@ export class AdminTaxExportService {
     jobId: string,
   ): Promise<void> {
     await this.mailer.sendMail({
-      to:      email,
+      to: email,
       subject: 'Your tax data export is ready',
       html: `
         <p>Your tax data export (Job ID: <strong>${jobId}</strong>) has been processed.</p>

@@ -15,7 +15,10 @@ export class SyncWalletBalanceTask {
       await this.walletService.syncAllWalletBalances();
       this.logger.log('Wallet balance sync completed.');
     } catch (error) {
-      this.logger.error('Wallet balance sync failed', error.stack || error.message);
+      this.logger.error(
+        'Wallet balance sync failed',
+        error.stack || error.message,
+      );
     }
   }
 }

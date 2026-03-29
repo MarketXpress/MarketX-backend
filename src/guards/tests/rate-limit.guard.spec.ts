@@ -2,8 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RateLimitGuard } from '../rate-limit.guard';
-import { RateLimitService, UserTier } from '../../rate-limiting/rate-limit.service';
-import { RATE_LIMIT_KEY, RateLimitOptions } from '../../decorators/rate-limit.decorator';
+import {
+  RateLimitService,
+  UserTier,
+} from '../../rate-limiting/rate-limit.service';
+import {
+  RATE_LIMIT_KEY,
+  RateLimitOptions,
+} from '../../decorators/rate-limit.decorator';
 
 describe('RateLimitGuard', () => {
   let guard: RateLimitGuard;
@@ -38,7 +44,11 @@ describe('RateLimitGuard', () => {
     reflector = module.get(Reflector);
   });
 
-  const createMockContext = (user?: any, ip = '127.0.0.1', path = '/api/test'): ExecutionContext => {
+  const createMockContext = (
+    user?: any,
+    ip = '127.0.0.1',
+    path = '/api/test',
+  ): ExecutionContext => {
     const request = {
       user,
       ip,
@@ -91,7 +101,7 @@ describe('RateLimitGuard', () => {
       windowMs: 60000,
       maxRequests: 10,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -113,7 +123,7 @@ describe('RateLimitGuard', () => {
       'ip:127.0.0.1',
       UserTier.FREE,
       '/api/test',
-      { windowMs: 60000, maxRequests: 10 }
+      { windowMs: 60000, maxRequests: 10 },
     );
   });
 
@@ -123,7 +133,7 @@ describe('RateLimitGuard', () => {
       maxRequests: 10,
       message: 'Custom rate limit message',
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: false,
@@ -141,7 +151,7 @@ describe('RateLimitGuard', () => {
     const context = createMockContext();
 
     await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
-    
+
     try {
       await guard.canActivate(context);
     } catch (error) {
@@ -161,7 +171,7 @@ describe('RateLimitGuard', () => {
       windowMs: 60000,
       maxRequests: 10,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -178,7 +188,7 @@ describe('RateLimitGuard', () => {
       'user:123',
       UserTier.FREE,
       '/api/test',
-      { windowMs: 60000, maxRequests: 10 }
+      { windowMs: 60000, maxRequests: 10 },
     );
   });
 
@@ -187,7 +197,7 @@ describe('RateLimitGuard', () => {
       windowMs: 60000,
       maxRequests: 10,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -204,7 +214,7 @@ describe('RateLimitGuard', () => {
       'user:123',
       UserTier.ADMIN,
       '/api/test',
-      { windowMs: 60000, maxRequests: 10 }
+      { windowMs: 60000, maxRequests: 10 },
     );
   });
 
@@ -213,7 +223,7 @@ describe('RateLimitGuard', () => {
       windowMs: 60000,
       maxRequests: 10,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -230,7 +240,7 @@ describe('RateLimitGuard', () => {
       'user:123',
       UserTier.PREMIUM,
       '/api/test',
-      { windowMs: 60000, maxRequests: 10 }
+      { windowMs: 60000, maxRequests: 10 },
     );
   });
 
@@ -240,7 +250,7 @@ describe('RateLimitGuard', () => {
       maxRequests: 10,
       keyGenerator: (req) => `custom:${req.user?.id || req.ip}`,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -257,7 +267,7 @@ describe('RateLimitGuard', () => {
       'custom:123',
       UserTier.FREE,
       '/api/test',
-      { windowMs: 60000, maxRequests: 10 }
+      { windowMs: 60000, maxRequests: 10 },
     );
   });
 
@@ -270,7 +280,7 @@ describe('RateLimitGuard', () => {
         [UserTier.ENTERPRISE]: { maxRequests: 200 },
       },
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -287,7 +297,7 @@ describe('RateLimitGuard', () => {
       'user:123',
       UserTier.PREMIUM,
       '/api/test',
-      { windowMs: 60000, maxRequests: 50 }
+      { windowMs: 60000, maxRequests: 50 },
     );
   });
 
@@ -296,7 +306,7 @@ describe('RateLimitGuard', () => {
       windowMs: 60000,
       maxRequests: 10,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
     rateLimitService.checkRateLimit.mockResolvedValue({
       success: true,
@@ -331,7 +341,7 @@ describe('RateLimitGuard', () => {
       'ip:192.168.1.1',
       UserTier.FREE,
       '/api/test',
-      { windowMs: 60000, maxRequests: 10 }
+      { windowMs: 60000, maxRequests: 10 },
     );
   });
 
@@ -340,9 +350,11 @@ describe('RateLimitGuard', () => {
       windowMs: 60000,
       maxRequests: 10,
     };
-    
+
     reflector.getAllAndOverride.mockReturnValue(rateLimitOptions);
-    rateLimitService.checkRateLimit.mockRejectedValue(new Error('Unexpected error'));
+    rateLimitService.checkRateLimit.mockRejectedValue(
+      new Error('Unexpected error'),
+    );
 
     const context = createMockContext();
     const result = await guard.canActivate(context);

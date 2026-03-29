@@ -25,7 +25,10 @@ describe('PriceService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PriceService,
-        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(null) } },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue(null) },
+        },
       ],
     }).compile();
 
@@ -79,23 +82,39 @@ describe('PriceService', () => {
     });
 
     it('should convert XLM to USD', () => {
-      const result = service.convert(SupportedCurrency.XLM, SupportedCurrency.USD, 100);
+      const result = service.convert(
+        SupportedCurrency.XLM,
+        SupportedCurrency.USD,
+        100,
+      );
       expect(result.result).toBeCloseTo(12, 1);
     });
 
     it('should convert USD to XLM', () => {
-      const result = service.convert(SupportedCurrency.USD, SupportedCurrency.XLM, 12);
+      const result = service.convert(
+        SupportedCurrency.USD,
+        SupportedCurrency.XLM,
+        12,
+      );
       expect(result.result).toBeCloseTo(100, 1);
     });
 
     it('should return 1:1 rate for same currency', () => {
-      const result = service.convert(SupportedCurrency.XLM, SupportedCurrency.XLM, 50);
+      const result = service.convert(
+        SupportedCurrency.XLM,
+        SupportedCurrency.XLM,
+        50,
+      );
       expect(result.result).toBe(50);
       expect(result.rate).toBe(1);
     });
 
     it('should convert XLM to USDC', () => {
-      const result = service.convert(SupportedCurrency.XLM, SupportedCurrency.USDC, 100);
+      const result = service.convert(
+        SupportedCurrency.XLM,
+        SupportedCurrency.USDC,
+        100,
+      );
       expect(result.result).toBeCloseTo(12, 1);
     });
   });

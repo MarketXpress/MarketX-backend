@@ -3,7 +3,11 @@ import { INestApplication, HttpStatus } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../app.module';
 import { AuditService } from './audit.service';
-import { AuditLog, AuditActionType, AuditStatus } from './entities/audit-log.entity';
+import {
+  AuditLog,
+  AuditActionType,
+  AuditStatus,
+} from './entities/audit-log.entity';
 
 describe('Audit Module E2E Tests', () => {
   let app: INestApplication;
@@ -94,7 +98,9 @@ describe('Audit Module E2E Tests', () => {
         if (response.body.data.length > 0) {
           response.body.data.forEach((log: AuditLog) => {
             const logDate = new Date(log.createdAt);
-            expect(logDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
+            expect(logDate.getTime()).toBeGreaterThanOrEqual(
+              startDate.getTime(),
+            );
             expect(logDate.getTime()).toBeLessThanOrEqual(endDate.getTime());
           });
         }
@@ -121,7 +127,10 @@ describe('Audit Module E2E Tests', () => {
       if (response.status === HttpStatus.OK) {
         expect(response.body).toHaveProperty('id', auditLog.id);
         expect(response.body).toHaveProperty('userId', 'test-user');
-        expect(response.body).toHaveProperty('action', AuditActionType.PASSWORD_CHANGE);
+        expect(response.body).toHaveProperty(
+          'action',
+          AuditActionType.PASSWORD_CHANGE,
+        );
       }
     });
 
@@ -130,7 +139,9 @@ describe('Audit Module E2E Tests', () => {
         '/admin/audit-logs/non-existent-id',
       );
 
-      expect([HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND]).toContain(response.status);
+      expect([HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND]).toContain(
+        response.status,
+      );
     });
   });
 
@@ -229,12 +240,15 @@ describe('Audit Module E2E Tests', () => {
         stateNewValue: { balance: 5000, withdrawn: true },
         metadata: {
           amount: 5000,
-          destination: 'GBQQ5GFXLAJB3ZTBLZEXD34WVDZN3DXZFXN6LSPWJHH3TDZ2YIK5LDV',
+          destination:
+            'GBQQ5GFXLAJB3ZTBLZEXD34WVDZN3DXZFXN6LSPWJHH3TDZ2YIK5LDV',
           transactionHash: 'tx_12345',
         },
       };
 
-      const auditLog = await auditService.logStateChange(withdrawalEvent as any);
+      const auditLog = await auditService.logStateChange(
+        withdrawalEvent as any,
+      );
 
       // Verify withdrawal tracking
       expect(auditLog.action).toBe(AuditActionType.WITHDRAWAL);
@@ -341,7 +355,9 @@ describe('Audit Module E2E Tests', () => {
         metadata: { reason: 'user_initiated' },
       };
 
-      const passwordLog = await auditService.logStateChange(passwordChangeEvent as any);
+      const passwordLog = await auditService.logStateChange(
+        passwordChangeEvent as any,
+      );
 
       // Retrieve logs for this user
       const userLogs = await auditService.getAuditLogs({
@@ -351,9 +367,7 @@ describe('Audit Module E2E Tests', () => {
       });
 
       // Verify we can find the password change event
-      const foundLog = userLogs.data.find(
-        (log) => log.id === passwordLog.id,
-      );
+      const foundLog = userLogs.data.find((log) => log.id === passwordLog.id);
 
       expect(foundLog).toBeDefined();
       expect(foundLog?.action).toBe(AuditActionType.PASSWORD_CHANGE);

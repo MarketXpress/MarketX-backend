@@ -39,11 +39,14 @@ export function ExecutionTime() {
         const duration = Date.now() - startTime;
         if (logger) {
           if (duration > 1000) {
-            logger.warn(`[${context.class}] ${context.method} - Completed (SLOW)`, {
-              duration: `${duration}ms`,
-              context,
-              threshold: '1000ms',
-            });
+            logger.warn(
+              `[${context.class}] ${context.method} - Completed (SLOW)`,
+              {
+                duration: `${duration}ms`,
+                context,
+                threshold: '1000ms',
+              },
+            );
           } else {
             logger.debug(`[${context.class}] ${context.method} - Completed`, {
               duration: `${duration}ms`,

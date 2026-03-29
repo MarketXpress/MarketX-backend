@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
@@ -22,7 +34,7 @@ export class WalletController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to fetch wallet balance',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -42,7 +54,10 @@ export class WalletController {
       const wallet = await this.walletService.regenerateWalletKeys(user.userId);
       return { message: 'Wallet keys regenerated successfully', wallet };
     } catch (error) {
-      throw new HttpException(error.message || 'Wallet regeneration failed', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        error.message || 'Wallet regeneration failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

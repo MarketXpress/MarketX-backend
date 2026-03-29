@@ -1,4 +1,10 @@
-import { IsString, IsEnum, IsObject, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { NotificationType } from '../notification.entity';
 
 export class CreateNotificationDto {

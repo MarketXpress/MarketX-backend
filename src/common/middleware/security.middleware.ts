@@ -23,7 +23,8 @@ export class SecurityMiddleware implements NestMiddleware {
 
   private readonly maxRequestSize = process.env.MAX_REQUEST_SIZE || '10mb';
   private readonly maxJsonSize = process.env.MAX_JSON_SIZE || '10mb';
-  private readonly maxUrlEncodedSize = process.env.MAX_URLENCODED_SIZE || '10mb';
+  private readonly maxUrlEncodedSize =
+    process.env.MAX_URLENCODED_SIZE || '10mb';
   private readonly maxFileSize = process.env.MAX_FILE_SIZE || '50mb';
 
   // Security headers configuration
@@ -61,7 +62,9 @@ export class SecurityMiddleware implements NestMiddleware {
       next();
     } catch (error) {
       if (error instanceof BadRequestException) {
-        this.logger.warn(`Security violation: ${error.message} from ${this.getClientIP(req)}`);
+        this.logger.warn(
+          `Security violation: ${error.message} from ${this.getClientIP(req)}`,
+        );
         res.status(error.getStatus()).json({
           statusCode: error.getStatus(),
           message: error.message,
@@ -80,7 +83,10 @@ export class SecurityMiddleware implements NestMiddleware {
     const clientIP = this.getClientIP(req);
 
     // Check whitelist if enabled
-    if (this.ipBlockConfig.whitelist && this.ipBlockConfig.whitelist.length > 0) {
+    if (
+      this.ipBlockConfig.whitelist &&
+      this.ipBlockConfig.whitelist.length > 0
+    ) {
       const isWhitelisted = this.ipBlockConfig.whitelist.some((ip) =>
         this.ipMatches(clientIP, ip),
       );
@@ -104,10 +110,7 @@ export class SecurityMiddleware implements NestMiddleware {
    * Validate request payload size
    */
   private validateRequestSize(req: Request): void {
-    const contentLength = parseInt(
-      req.headers['content-length'] || '0',
-      10,
-    );
+    const contentLength = parseInt(req.headers['content-length'] || '0', 10);
 
     // Convert size limits to bytes
     const maxJsonBytes = this.parseSize(this.maxJsonSize);
@@ -116,7 +119,9 @@ export class SecurityMiddleware implements NestMiddleware {
 
     let maxAllowed = maxJsonBytes;
 
-    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+    if (
+      req.headers['content-type']?.includes('application/x-www-form-urlencoded')
+    ) {
       maxAllowed = maxUrlEncodedBytes;
     } else if (req.headers['content-type']?.includes('multipart/form-data')) {
       maxAllowed = maxFileBytes;
@@ -250,9 +255,7 @@ export class SecurityMiddleware implements NestMiddleware {
     if (pattern === ip) return true;
 
     // Support CIDR notation or wildcards in simple cases
-    const patternRegex = pattern
-      .replace(/\./g, '\\.')
-      .replace(/\*/g, '.*');
+    const patternRegex = pattern.replace(/\./g, '\\.').replace(/\*/g, '.*');
     return new RegExp(`^${patternRegex}$`).test(ip);
   }
 

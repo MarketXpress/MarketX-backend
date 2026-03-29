@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './user.entity';
@@ -47,7 +51,10 @@ export class UsersService {
     return await this.userRepository.save(user);
   }
 
-  async updateRefreshToken(userId: string, refreshToken: string | null): Promise<void> {
+  async updateRefreshToken(
+    userId: string,
+    refreshToken: string | null,
+  ): Promise<void> {
     const hashedToken = refreshToken
       ? await bcrypt.hash(refreshToken, 10)
       : null;
@@ -62,9 +69,12 @@ export class UsersService {
     await this.userRepository.remove(user);
   }
 
-  async validateRefreshToken(userId: string, refreshToken: string): Promise<boolean> {
+  async validateRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<boolean> {
     const user = await this.findOne(userId);
-    
+
     if (!user.refreshToken) {
       return false;
     }

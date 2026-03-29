@@ -1,7 +1,23 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum, IsObject, IsDateString, IsUUID, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsEnum,
+  IsObject,
+  IsDateString,
+  IsUUID,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { NotificationType, NotificationChannel, NotificationPriority } from '../notification.entity';
+import {
+  NotificationType,
+  NotificationChannel,
+  NotificationPriority,
+} from '../notification.entity';
 
 export class CreateNotificationDto {
   @ApiProperty({ description: 'User ID who will receive the notification' })
@@ -19,17 +35,26 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   message: string;
 
-  @ApiPropertyOptional({ description: 'Type of notification', enum: NotificationType })
+  @ApiPropertyOptional({
+    description: 'Type of notification',
+    enum: NotificationType,
+  })
   @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;
 
-  @ApiPropertyOptional({ description: 'Notification channel', enum: NotificationChannel })
+  @ApiPropertyOptional({
+    description: 'Notification channel',
+    enum: NotificationChannel,
+  })
   @IsOptional()
   @IsEnum(NotificationChannel)
   channel?: NotificationChannel;
 
-  @ApiPropertyOptional({ description: 'Notification priority', enum: NotificationPriority })
+  @ApiPropertyOptional({
+    description: 'Notification priority',
+    enum: NotificationPriority,
+  })
   @IsOptional()
   @IsEnum(NotificationPriority)
   priority?: NotificationPriority;
@@ -71,7 +96,9 @@ export class UpdateNotificationDto {
   @IsString()
   message?: string;
 
-  @ApiPropertyOptional({ description: 'Whether the notification has been read' })
+  @ApiPropertyOptional({
+    description: 'Whether the notification has been read',
+  })
   @IsOptional()
   @IsBoolean()
   read?: boolean;
@@ -104,12 +131,18 @@ export class NotificationQueryDto {
   @IsBoolean()
   read?: boolean;
 
-  @ApiPropertyOptional({ description: 'Filter by notification type', enum: NotificationType })
+  @ApiPropertyOptional({
+    description: 'Filter by notification type',
+    enum: NotificationType,
+  })
   @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;
 
-  @ApiPropertyOptional({ description: 'Filter by priority', enum: NotificationPriority })
+  @ApiPropertyOptional({
+    description: 'Filter by priority',
+    enum: NotificationPriority,
+  })
   @IsOptional()
   @IsEnum(NotificationPriority)
   priority?: NotificationPriority;
@@ -129,7 +162,11 @@ export class NotificationQueryDto {
   @IsString()
   sortBy?: string = 'createdAt';
 
-  @ApiPropertyOptional({ description: 'Sort order', enum: ['ASC', 'DESC'], default: 'DESC' })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    enum: ['ASC', 'DESC'],
+    default: 'DESC',
+  })
   @IsOptional()
   @IsEnum(['ASC', 'DESC'])
   sortOrder?: 'ASC' | 'DESC' = 'DESC';

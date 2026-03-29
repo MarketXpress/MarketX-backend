@@ -39,17 +39,25 @@ export class FraudService {
     const shippingAddress = input.metadata?.shippingAddress;
     if (input.ip && shippingAddress) {
       try {
-        const ipLocation = await this.geolocationService.getLocationFromIp(input.ip);
-        const shipLocation = await this.geolocationService.geocodeAddress(shippingAddress);
+        const ipLocation = await this.geolocationService.getLocationFromIp(
+          input.ip,
+        );
+        const shipLocation =
+          await this.geolocationService.geocodeAddress(shippingAddress);
 
         if (ipLocation && shipLocation) {
-          const distance = this.geolocationService.distanceMiles(ipLocation, shipLocation);
+          const distance = this.geolocationService.distanceMiles(
+            ipLocation,
+            shipLocation,
+          );
           input.metadata.geoDistanceMiles = distance;
           input.metadata.ipGeoPoint = ipLocation;
           input.metadata.shippingGeoPoint = shipLocation;
         }
       } catch (err) {
-        this.logger.warn(`Geolocation enrichment failed: ${err?.message || err}`);
+        this.logger.warn(
+          `Geolocation enrichment failed: ${err?.message || err}`,
+        );
       }
     }
 
@@ -61,8 +69,8 @@ export class FraudService {
         result.riskScore >= 90
           ? 'suspended'
           : result.riskScore >= 75
-          ? 'manual_review'
-          : 'pending';
+            ? 'manual_review'
+            : 'pending';
 
       const alert = this.repo.create({
         userId: input.userId,
@@ -99,22 +107,30 @@ export class FraudService {
                 name: user.name || user.firstName || 'User',
               });
 
-              this.logger.warn(`Account LOCKED for user ${input.userId} after ${flagCount} flags`);
+              this.logger.warn(
+                `Account LOCKED for user ${input.userId} after ${flagCount} flags`,
+              );
             }
           } catch (err) {
-            this.logger.error(`Failed to lock account for user ${input.userId}: ${err.message}`);
+            this.logger.error(
+              `Failed to lock account for user ${input.userId}: ${err.message}`,
+            );
           }
         }
       }
 
       // Real-time Admin Webhook for High Risk Events (#231)
       if (result.riskScore >= 90) {
-        await this.adminWebhookService.notifyAdmin('High Risk Fraud Detected', {
-          userId: input.userId,
-          riskScore: result.riskScore,
-          rulesTriggered: result.triggeredRules.join(', '),
-          ip: input.ip,
-        }, result.riskScore);
+        await this.adminWebhookService.notifyAdmin(
+          'High Risk Fraud Detected',
+          {
+            userId: input.userId,
+            riskScore: result.riskScore,
+            rulesTriggered: result.triggeredRules.join(', '),
+            ip: input.ip,
+          },
+          result.riskScore,
+        );
       }
       // -------------------------------------------------
 
@@ -137,12 +153,16 @@ export class FraudService {
         try {
           await this.adminService.suspendUser(String(input.userId));
         } catch (err) {
-          this.logger.warn(`Unable to auto-suspend user ${input.userId}: ${err?.message || err}`);
+          this.logger.warn(
+            `Unable to auto-suspend user ${input.userId}: ${err?.message || err}`,
+          );
         }
       }
 
       if (result.riskScore >= 90) {
-        this.logger.warn(`Auto-suspended user ${input.userId} (score=${result.riskScore})`);
+        this.logger.warn(
+          `Auto-suspended user ${input.userId} (score=${result.riskScore})`,
+        );
       }
 
       return { flagged: true, alert: result };
@@ -163,7 +183,10 @@ export class FraudService {
     return { items, total, page, pageSize };
   }
 
-  async reviewAlert(id: string, action: { mark: 'safe' | 'reviewed' | 'suspended'; reviewer?: string }) {
+  async reviewAlert(
+    id: string,
+    action: { mark: 'safe' | 'reviewed' | 'suspended'; reviewer?: string },
+  ) {
     const alert = await this.repo.findOneBy({ id } as any);
     if (!alert) return null;
     alert.status = action.mark;

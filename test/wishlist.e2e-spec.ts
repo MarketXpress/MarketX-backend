@@ -68,7 +68,7 @@ describe('Wishlist Controller (e2e)', () => {
       .post('/wishlists')
       .send(createWishlistDto)
       .expect(201)
-      .then(response => {
+      .then((response) => {
         expect(response.body.name).toBe(createWishlistDto.name);
         expect(response.body.description).toBe(createWishlistDto.description);
         expect(response.body.isPublic).toBe(createWishlistDto.isPublic);
@@ -79,7 +79,7 @@ describe('Wishlist Controller (e2e)', () => {
     return request(app.getHttpServer())
       .get('/wishlists')
       .expect(200)
-      .then(response => {
+      .then((response) => {
         expect(Array.isArray(response.body)).toBeTruthy();
       });
   });
@@ -91,7 +91,7 @@ describe('Wishlist Controller (e2e)', () => {
         userId: 'test-user-id',
         name: 'Test Wishlist for Items',
         isPublic: false,
-      })
+      }),
     );
 
     // Create a test product
@@ -105,7 +105,7 @@ describe('Wishlist Controller (e2e)', () => {
         available: 5,
         isActive: true,
         userId: 'test-user-id',
-      })
+      }),
     );
 
     const addItemDto = {
@@ -120,7 +120,7 @@ describe('Wishlist Controller (e2e)', () => {
       .post(`/wishlists/${wishlist.id}/items`)
       .send(addItemDto)
       .expect(201)
-      .then(response => {
+      .then((response) => {
         expect(response.body.productId).toBe(addItemDto.productId);
         expect(response.body.productName).toBe(addItemDto.productName);
         expect(response.body.currentPrice).toBe(addItemDto.currentPrice);
@@ -135,7 +135,7 @@ describe('Wishlist Controller (e2e)', () => {
         name: 'Public Test Wishlist',
         isPublic: true,
         shareToken: 'test-share-token-12345',
-      })
+      }),
     );
 
     // Add an item to the wishlist
@@ -147,13 +147,13 @@ describe('Wishlist Controller (e2e)', () => {
         priceAtAdded: 100,
         currentPrice: 100,
         isAvailable: true,
-      })
+      }),
     );
 
     return request(app.getHttpServer())
       .get(`/wishlists/share/${wishlist.shareToken}`)
       .expect(200)
-      .then(response => {
+      .then((response) => {
         expect(response.body.id).toBe(wishlist.id);
         expect(response.body.isPublic).toBe(true);
         expect(Array.isArray(response.body.items)).toBeTruthy();
@@ -167,7 +167,7 @@ describe('Wishlist Controller (e2e)', () => {
         userId: 'test-user-id',
         name: 'Wishlist to Delete',
         isPublic: false,
-      })
+      }),
     );
 
     return request(app.getHttpServer())

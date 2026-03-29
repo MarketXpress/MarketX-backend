@@ -50,9 +50,8 @@ export class LoggerService {
         const result: any = {};
         for (const [key, value] of Object.entries(obj)) {
           // Check if key matches any sensitive pattern
-          const isSensitive = SENSITIVE_KEYS.some(
-            (sensitiveKey) =>
-              key.toLowerCase().includes(sensitiveKey.toLowerCase()),
+          const isSensitive = SENSITIVE_KEYS.some((sensitiveKey) =>
+            key.toLowerCase().includes(sensitiveKey.toLowerCase()),
           );
 
           if (isSensitive) {
@@ -224,11 +223,7 @@ export class LoggerService {
   /**
    * Log performance metrics
    */
-  logPerformance(
-    action: string,
-    duration: number,
-    metadata?: any,
-  ): void {
+  logPerformance(action: string, duration: number, metadata?: any): void {
     const level = duration > 1000 ? 'warn' : 'info';
     this.logger[level as keyof typeof this.logger](
       `Performance Metrics: ${action}`,
@@ -283,8 +278,8 @@ export class LoggerService {
       if (obj !== null && typeof obj === 'object') {
         const result: any = {};
         for (const [key, value] of Object.entries(obj)) {
-          const isSensitive = SENSITIVE_KEYS.some(
-            (sk) => key.toLowerCase().includes(sk.toLowerCase()),
+          const isSensitive = SENSITIVE_KEYS.some((sk) =>
+            key.toLowerCase().includes(sk.toLowerCase()),
           );
           result[key] = isSensitive ? '***REDACTED***' : sanitize(value);
         }

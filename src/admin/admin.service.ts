@@ -24,7 +24,9 @@ export class AdminService {
 
   /** Suspend a user by ID */
   async suspendUser(userId: string): Promise<Users> {
-    const user = await this.userRepository.findOne({ where: { id: parseInt(userId) } });
+    const user = await this.userRepository.findOne({
+      where: { id: parseInt(userId) },
+    });
     if (!user) throw new ForbiddenException('User not found');
     user.role = 'SUSPENDED'; // simple approach, adjust as needed
     return this.userRepository.save(user);
@@ -32,7 +34,9 @@ export class AdminService {
 
   /** Activate a suspended user */
   async activateUser(userId: string): Promise<Users> {
-    const user = await this.userRepository.findOne({ where: { id: parseInt(userId) } });
+    const user = await this.userRepository.findOne({
+      where: { id: parseInt(userId) },
+    });
     if (!user) throw new ForbiddenException('User not found');
     user.role = 'USER';
     return this.userRepository.save(user);
@@ -46,7 +50,9 @@ export class AdminService {
   /** Generate platform statistics */
   async getPlatformStats(): Promise<AdminStatsDto> {
     const totalUsers = await this.userRepository.count();
-    const activeUsers = await this.userRepository.count({ where: { role: 'USER' } });
+    const activeUsers = await this.userRepository.count({
+      where: { role: 'USER' },
+    });
     const totalSales = await this.orderRepository
       .createQueryBuilder('order')
       .select('SUM(order.amount)', 'sum')

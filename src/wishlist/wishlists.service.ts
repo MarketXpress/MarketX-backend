@@ -17,7 +17,11 @@ import {
   UpdateWishlistItemDto,
 } from './dtos/wishlist.dto';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType, NotificationChannel, NotificationPriority } from '../notifications/notification.entity';
+import {
+  NotificationType,
+  NotificationChannel,
+  NotificationPriority,
+} from '../notifications/notification.entity';
 
 const MAX_ITEMS_PER_WISHLIST = 100;
 
@@ -175,7 +179,11 @@ export class WishlistsService {
    * Pass in the latest prices fetched from your product catalogue.
    */
   async syncPrices(
-    updates: Array<{ productId: string; newPrice: number; isAvailable: boolean }>,
+    updates: Array<{
+      productId: string;
+      newPrice: number;
+      isAvailable: boolean;
+    }>,
     notificationService?: NotificationsService,
   ): Promise<void> {
     if (!updates.length) return;
@@ -250,7 +258,7 @@ export class WishlistsService {
         notifications.map(async ({ userId, item, oldPrice, newPrice }) => {
           const savings = oldPrice - newPrice;
           const savingsPercent = Math.round((savings / oldPrice) * 100);
-          
+
           // Create notification using the actual notification service
           await serviceToUse.createNotification({
             userId,
