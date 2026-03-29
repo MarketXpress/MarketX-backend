@@ -1,10 +1,10 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppValidationPipe } from './common/pipes/validation.pipe';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './common/logger/logger.service';
-import { Logger } from '@nestjs/common';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
 import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
@@ -12,6 +12,7 @@ import { RequestResponseMiddleware } from './common/middleware/request-response.
 import * as express from 'express';
 import { join } from 'path';
 import { DynamicThrottlerGuard } from './common/guards/dynamic-throttler.guard';
+import { configureGlobalApiVersioning } from './common/versioning/api-versioning';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,8 @@ async function bootstrap() {
 
   // Get logger service
   const loggerService = app.get(LoggerService);
+
+  configureGlobalApiVersioning(app);
 
   // Enable CORS with security configuration
   app.enableCors({
