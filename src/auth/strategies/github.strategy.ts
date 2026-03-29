@@ -29,9 +29,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
 
     // GitHub may return emails as an array; pick the primary one
     const email: string =
-      emails?.find((e: any) => e.primary)?.value ??
-      emails?.[0]?.value ??
-      '';
+      emails?.find((e: any) => e.primary)?.value ?? emails?.[0]?.value ?? '';
 
     const name: string = displayName ?? username ?? '';
     const avatarUrl: string = photos?.[0]?.value ?? '';

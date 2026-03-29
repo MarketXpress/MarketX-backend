@@ -89,7 +89,7 @@ export class UserVerification {
       type: string;
       uploadedAt: Date;
       verified: boolean;
-      iv?: string;      // Encryption Initialization Vector
+      iv?: string; // Encryption Initialization Vector
       authTag?: string; // Encryption Auth Tag
     };
   };

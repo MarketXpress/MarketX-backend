@@ -6,11 +6,19 @@ import {
   HttpStatus,
   Res,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
 import { CurrentUser } from '../Authentication/current-user.decorator';
 import { AnalyticsService } from './analytics.service';
-import { AnalyticsQueryDto, AnalyticsExportFormat } from './dto/analytics-query.dto';
+import {
+  AnalyticsQueryDto,
+  AnalyticsExportFormat,
+} from './dto/analytics-query.dto';
 import { Response } from 'express';
 
 @ApiTags('Analytics')
@@ -18,18 +26,24 @@ import { Response } from 'express';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) { }
+  constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('sales')
   @ApiOperation({ summary: 'Get seller sales metrics and revenue tracking' })
-  @ApiResponse({ status: 200, description: 'Sales metrics and time-series data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Sales metrics and time-series data',
+  })
   async getSalesAnalytics(
     @CurrentUser() user: any,
     @Query() query: AnalyticsQueryDto,
     @Res() res: Response,
   ) {
     const sellerId = user.id.toString();
-    const result = await this.analyticsService.getSellerSalesAnalytics(sellerId, query) as any;
+    const result = (await this.analyticsService.getSellerSalesAnalytics(
+      sellerId,
+      query,
+    )) as any;
 
     if (query.export === AnalyticsExportFormat.CSV && result.csv) {
       res.setHeader('Content-Type', 'text/csv');
@@ -44,7 +58,9 @@ export class AnalyticsController {
   }
 
   @Get('products')
-  @ApiOperation({ summary: 'Get best-selling products and performance metrics' })
+  @ApiOperation({
+    summary: 'Get best-selling products and performance metrics',
+  })
   @ApiResponse({ status: 200, description: 'Product performance data' })
   async getProductAnalytics(
     @CurrentUser() user: any,
@@ -52,7 +68,10 @@ export class AnalyticsController {
     @Res() res: Response,
   ) {
     const sellerId = user.id.toString();
-    const result = await this.analyticsService.getSellerProductPerformance(sellerId, query) as any;
+    const result = (await this.analyticsService.getSellerProductPerformance(
+      sellerId,
+      query,
+    )) as any;
 
     if (query.export === AnalyticsExportFormat.CSV && result.csv) {
       res.setHeader('Content-Type', 'text/csv');
@@ -68,7 +87,10 @@ export class AnalyticsController {
 
   @Get('customers')
   @ApiOperation({ summary: 'Get customer insights and demographics' })
-  @ApiResponse({ status: 200, description: 'Customer demographics and behavior' })
+  @ApiResponse({
+    status: 200,
+    description: 'Customer demographics and behavior',
+  })
   async getCustomerInsights(
     @CurrentUser() user: any,
     @Query() query: AnalyticsQueryDto,

@@ -11,14 +11,26 @@ describe('PricingService', () => {
   // ── existing conversion tests ──────────────────────────────────────────────
 
   it('converts USD to XLM with configured precision', () => {
-    const result = service.convertAmount(12.34, SupportedCurrency.USD, SupportedCurrency.XLM);
+    const result = service.convertAmount(
+      12.34,
+      SupportedCurrency.USD,
+      SupportedCurrency.XLM,
+    );
     expect(result).toBe(102.8333333);
   });
 
   it('keeps precision for XLM -> USD round conversion within currency rounding bounds', () => {
     const xlm = 10.1234567;
-    const usd = service.convertAmount(xlm, SupportedCurrency.XLM, SupportedCurrency.USD);
-    const backToXlm = service.convertAmount(usd, SupportedCurrency.USD, SupportedCurrency.XLM);
+    const usd = service.convertAmount(
+      xlm,
+      SupportedCurrency.XLM,
+      SupportedCurrency.USD,
+    );
+    const backToXlm = service.convertAmount(
+      usd,
+      SupportedCurrency.USD,
+      SupportedCurrency.XLM,
+    );
     expect(usd).toBe(1.21);
     expect(backToXlm).toBe(10.0833333);
   });
@@ -30,35 +42,55 @@ describe('PricingService', () => {
   });
 
   it('rejects out-of-range prices', () => {
-    expect(() => service.validatePrice(0, SupportedCurrency.USDC)).toThrow(BadRequestException);
+    expect(() => service.validatePrice(0, SupportedCurrency.USDC)).toThrow(
+      BadRequestException,
+    );
   });
 
   // ── same-currency conversions ──────────────────────────────────────────────
 
   it('returns exact amount when source and target currency are the same', () => {
-    expect(service.convertAmount(50.25, SupportedCurrency.USD, SupportedCurrency.USD)).toBe(50.25);
-    expect(service.convertAmount(1.5000000, SupportedCurrency.XLM, SupportedCurrency.XLM)).toBe(1.5);
-    expect(service.convertAmount(99.99, SupportedCurrency.USDC, SupportedCurrency.USDC)).toBe(99.99);
+    expect(
+      service.convertAmount(
+        50.25,
+        SupportedCurrency.USD,
+        SupportedCurrency.USD,
+      ),
+    ).toBe(50.25);
+    expect(
+      service.convertAmount(1.5, SupportedCurrency.XLM, SupportedCurrency.XLM),
+    ).toBe(1.5);
+    expect(
+      service.convertAmount(
+        99.99,
+        SupportedCurrency.USDC,
+        SupportedCurrency.USDC,
+      ),
+    ).toBe(99.99);
   });
 
   it('getConversionRate returns 1 for identical currencies', () => {
-    expect(service.getConversionRate(SupportedCurrency.USD, SupportedCurrency.USD)).toBe(1);
+    expect(
+      service.getConversionRate(SupportedCurrency.USD, SupportedCurrency.USD),
+    ).toBe(1);
   });
 
   // ── XLM precision edge cases ───────────────────────────────────────────────
 
   it('accepts XLM minimum price (0.0000001)', () => {
-    expect(() => service.validatePrice(0.0000001, SupportedCurrency.XLM)).not.toThrow();
+    expect(() =>
+      service.validatePrice(0.0000001, SupportedCurrency.XLM),
+    ).not.toThrow();
   });
 
   it('rejects XLM price with more than 7 decimal places', () => {
-    expect(() => service.validatePrice(0.00000001, SupportedCurrency.XLM)).toThrow(
-      BadRequestException,
-    );
+    expect(() =>
+      service.validatePrice(0.00000001, SupportedCurrency.XLM),
+    ).toThrow(BadRequestException);
   });
 
   it('rejects price below XLM minimum', () => {
-    expect(() => service.validatePrice(0.0000000, SupportedCurrency.XLM)).toThrow(
+    expect(() => service.validatePrice(0.0, SupportedCurrency.XLM)).toThrow(
       BadRequestException,
     );
   });
@@ -66,35 +98,49 @@ describe('PricingService', () => {
   // ── USD/USDC precision edge cases ─────────────────────────────────────────
 
   it('accepts USD price with exactly 2 decimal places', () => {
-    expect(() => service.validatePrice(1.99, SupportedCurrency.USD)).not.toThrow();
+    expect(() =>
+      service.validatePrice(1.99, SupportedCurrency.USD),
+    ).not.toThrow();
   });
 
   it('rejects USD price with 3 decimal places', () => {
-    expect(() => service.validatePrice(1.999, SupportedCurrency.USD)).toThrow(BadRequestException);
+    expect(() => service.validatePrice(1.999, SupportedCurrency.USD)).toThrow(
+      BadRequestException,
+    );
   });
 
   it('accepts USDC minimum price (0.01)', () => {
-    expect(() => service.validatePrice(0.01, SupportedCurrency.USDC)).not.toThrow();
+    expect(() =>
+      service.validatePrice(0.01, SupportedCurrency.USDC),
+    ).not.toThrow();
   });
 
   it('rejects USDC price below 0.01', () => {
-    expect(() => service.validatePrice(0.001, SupportedCurrency.USDC)).toThrow(BadRequestException);
+    expect(() => service.validatePrice(0.001, SupportedCurrency.USDC)).toThrow(
+      BadRequestException,
+    );
   });
 
   // ── large value handling ───────────────────────────────────────────────────
 
   it('accepts maximum price boundary (1,000,000,000)', () => {
-    expect(() => service.validatePrice(1_000_000_000, SupportedCurrency.USD)).not.toThrow();
+    expect(() =>
+      service.validatePrice(1_000_000_000, SupportedCurrency.USD),
+    ).not.toThrow();
   });
 
   it('rejects price above maximum', () => {
-    expect(() => service.validatePrice(1_000_000_001, SupportedCurrency.USD)).toThrow(
-      BadRequestException,
-    );
+    expect(() =>
+      service.validatePrice(1_000_000_001, SupportedCurrency.USD),
+    ).toThrow(BadRequestException);
   });
 
   it('converts large XLM amount to USD without floating-point error', () => {
-    const result = service.convertAmount(1_000_000, SupportedCurrency.XLM, SupportedCurrency.USD);
+    const result = service.convertAmount(
+      1_000_000,
+      SupportedCurrency.XLM,
+      SupportedCurrency.USD,
+    );
     // 1,000,000 XLM * 0.12 = 120,000 USD
     expect(result).toBe(120000);
   });
@@ -134,7 +180,9 @@ describe('PricingService', () => {
   it('converts XLM to minor units (stroops) and back', () => {
     const minor = service.toMinorUnits(1.0000001, SupportedCurrency.XLM);
     expect(minor).toBe(10000001n);
-    expect(service.fromMinorUnits(minor, SupportedCurrency.XLM)).toBe(1.0000001);
+    expect(service.fromMinorUnits(minor, SupportedCurrency.XLM)).toBe(
+      1.0000001,
+    );
   });
 
   // ── multiplyAmount / addAmounts ───────────────────────────────────────────
@@ -155,7 +203,7 @@ describe('PricingService', () => {
 
   it('calculates single-item order total in same currency', () => {
     const total = service.calculateOrderTotal(
-      [{ price: 10.00, currency: SupportedCurrency.USD, quantity: 3 }],
+      [{ price: 10.0, currency: SupportedCurrency.USD, quantity: 3 }],
       SupportedCurrency.USD,
     );
     expect(total).toBe('30.00');
@@ -168,7 +216,7 @@ describe('PricingService', () => {
     const total = service.calculateOrderTotal(
       [
         { price: 5, currency: SupportedCurrency.XLM, quantity: 2 },
-        { price: 1.00, currency: SupportedCurrency.USD, quantity: 1 },
+        { price: 1.0, currency: SupportedCurrency.USD, quantity: 1 },
       ],
       SupportedCurrency.USD,
     );
@@ -178,7 +226,7 @@ describe('PricingService', () => {
   it('calculates order total in XLM target currency', () => {
     // 1.20 USD / 0.12 = 10 XLM; qty 1 → 10.0000000 XLM
     const total = service.calculateOrderTotal(
-      [{ price: 1.20, currency: SupportedCurrency.USD, quantity: 1 }],
+      [{ price: 1.2, currency: SupportedCurrency.USD, quantity: 1 }],
       SupportedCurrency.XLM,
     );
     expect(total).toBe('10.0000000');

@@ -5,9 +5,11 @@ import {
   NotFoundException,
   Inject,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
+import { Queue } from 'bull';
 import {
   ProductImage,
   ImageFormat,
@@ -18,6 +20,11 @@ import { ImageProcessingService } from './services/image-processing.service';
 import { StorageProvider } from './interfaces/storage-provider.interface';
 import { ModerationService } from './services/moderation.service';
 import * as crypto from 'crypto';
+import {
+  IMAGE_JOB_PROCESS,
+  IMAGE_PROCESSING_QUEUE,
+} from '../job-processing/queue.constants';
+import { ImageProcessingJobData, QueuedImageUploadResult } from './media.jobs';
 
 export interface UploadedImageResult {
   id: string;
@@ -41,6 +48,8 @@ export class MediaService {
     private readonly configService: ConfigService,
     @Inject('STORAGE_PROVIDER')
     private readonly storage: StorageProvider,
+    @InjectQueue(IMAGE_PROCESSING_QUEUE)
+    private readonly imageProcessingQueue: Queue,
   ) {
     this.storageProvider =
       this.configService.get<string>('STORAGE_PROVIDER') || 'local';
@@ -53,12 +62,12 @@ export class MediaService {
     productId: string,
     files: Express.Multer.File[],
     dto?: UploadImageDto,
-  ): Promise<UploadedImageResult[]> {
+  ): Promise<QueuedImageUploadResult[]> {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files provided');
     }
 
-    const results: UploadedImageResult[] = [];
+    const results: QueuedImageUploadResult[] = [];
 
     // Get current max display order for the product
     const maxOrderResult = await this.imageRepository
@@ -70,24 +79,51 @@ export class MediaService {
     let currentOrder = (maxOrderResult?.maxOrder ?? -1) + 1;
 
     for (const file of files) {
-      try {
-        const result = await this.uploadSingleImage(
-          productId,
-          file,
-          dto,
-          currentOrder++,
-        );
-        results.push(result);
-      } catch (error) {
-        this.logger.error(
-          `Failed to upload image: ${file.originalname}`,
-          error,
-        );
-        throw error;
-      }
+      const job = await this.imageProcessingQueue.add(IMAGE_JOB_PROCESS, {
+        productId,
+        file: {
+          bufferBase64: file.buffer.toString('base64'),
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+        },
+        dto,
+        displayOrder: currentOrder++,
+      });
+
+      results.push({
+        jobId: String(job.id),
+        status: 'queued',
+        productId,
+        originalName: file.originalname,
+      });
     }
 
     return results;
+  }
+
+  async processQueuedImage(
+    job: ImageProcessingJobData,
+  ): Promise<UploadedImageResult> {
+    const file: Express.Multer.File = {
+      fieldname: 'files',
+      originalname: job.file.originalname,
+      encoding: '7bit',
+      mimetype: job.file.mimetype,
+      size: job.file.size,
+      buffer: Buffer.from(job.file.bufferBase64, 'base64'),
+      stream: undefined as never,
+      destination: '',
+      filename: '',
+      path: '',
+    };
+
+    return this.uploadSingleImage(
+      job.productId,
+      file,
+      job.dto,
+      job.displayOrder,
+    );
   }
 
   /**
@@ -130,10 +166,14 @@ export class MediaService {
 
     // 2. Requirement: Image Validation and Transformation (3 sizes)
     // processImage internally validates size (5MB) and dimensions
-    const processedVariants = await this.imageProcessingService.processImage(
+    const optimizedImage = await this.imageProcessingService.createMarketXAsset(
       file.buffer,
-      file.originalname,
     );
+    const processedVariants = {
+      thumbnail: optimizedImage,
+      medium: optimizedImage,
+      original: optimizedImage,
+    };
 
     // 3. Cloud Storage Integration
     const variants: Partial<ImageVariants> = {};
@@ -171,10 +211,10 @@ export class MediaService {
       productId,
       originalName: file.originalname,
       format: this.getFormatFromMimeType(file.mimetype),
-      mimeType: file.mimetype,
+      mimeType: 'image/webp',
       originalWidth: processedVariants.original.width,
       originalHeight: processedVariants.original.height,
-      originalSize: file.size,
+      originalSize: processedVariants.original.size,
       variants: variants as ImageVariants,
       altText: dto?.altText,
       displayOrder: dto?.displayOrder ?? displayOrder,

@@ -1,6 +1,6 @@
 export class MarkReadResponseDto {
   message: string;
-  
+
   notification: {
     id: number;
     title: string;
@@ -9,4 +9,3 @@ export class MarkReadResponseDto {
     readAt: Date;
   };
 }
-

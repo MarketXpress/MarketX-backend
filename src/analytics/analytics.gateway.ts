@@ -1,7 +1,4 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 
 @WebSocketGateway({ cors: true, namespace: '/analytics' })
@@ -16,4 +13,4 @@ export class AnalyticsGateway {
   emitPlatformAnalyticsUpdate(data: any) {
     this.server.emit('platformAnalyticsUpdate', data);
   }
-} 
+}

@@ -251,7 +251,9 @@ describe('EscrowAutoReleaseTask', () => {
       mockEscrowRepository.find.mockResolvedValue([mockEscrow]);
       mockOrderRepository.findOne.mockResolvedValue(mockOrder);
       mockDisputeRepository.findOne.mockResolvedValue(null);
-      mockEscrowService.releaseFunds.mockRejectedValue(new Error('Blockchain error'));
+      mockEscrowService.releaseFunds.mockRejectedValue(
+        new Error('Blockchain error'),
+      );
 
       // Should not throw
       await expect(task.handleEscrowAutoRelease()).resolves.not.toThrow();

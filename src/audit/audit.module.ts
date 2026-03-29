@@ -7,12 +7,9 @@ import { AuditEventListener } from './audit.listener';
 import { AuditLog } from './entities/audit-log.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([AuditLog]),
-    EventEmitterModule,
-  ],
+  imports: [TypeOrmModule.forFeature([AuditLog]), EventEmitterModule],
   controllers: [AuditController],
   providers: [AuditService, AuditEventListener],
   exports: [AuditService],
 })
-export class AuditModule {} 
+export class AuditModule {}

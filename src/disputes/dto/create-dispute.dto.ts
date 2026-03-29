@@ -24,4 +24,4 @@ export class CreateDisputeDto {
   @IsOptional()
   @IsString()
   imageUrls?: string;
-} 
+}

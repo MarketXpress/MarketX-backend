@@ -12,7 +12,8 @@ export const Translate = createParamDecorator(
 
     return async (key: string, args?: Record<string, unknown>) => {
       const i18n = I18nContext.current(ctx);
-      const lang = request?.user?.language || i18n?.lang || request?.locale || 'en';
+      const lang =
+        request?.user?.language || i18n?.lang || request?.locale || 'en';
 
       const translated = await i18n?.translate(key, {
         lang,

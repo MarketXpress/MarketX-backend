@@ -39,7 +39,10 @@ export class CreateReturnRequestDto {
   @IsString()
   reasonDescription?: string;
 
-  @ApiPropertyOptional({ enum: RefundType, description: 'Full or partial refund' })
+  @ApiPropertyOptional({
+    enum: RefundType,
+    description: 'Full or partial refund',
+  })
   @IsOptional()
   @IsEnum(RefundType)
   refundType?: RefundType = RefundType.FULL;
@@ -58,7 +61,9 @@ export class CreateReturnRequestDto {
   @Max(90)
   returnWindowDays?: number = 30;
 
-  @ApiPropertyOptional({ description: 'Evidence hash (IPFS CID) for dispute resolution' })
+  @ApiPropertyOptional({
+    description: 'Evidence hash (IPFS CID) for dispute resolution',
+  })
   @IsOptional()
   @IsString()
   evidenceHash?: string;
@@ -88,7 +93,9 @@ export class ReviewReturnRequestDto {
   @IsString()
   notes?: string;
 
-  @ApiPropertyOptional({ description: 'For partial refunds, the approved amount' })
+  @ApiPropertyOptional({
+    description: 'For partial refunds, the approved amount',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)

@@ -113,7 +113,10 @@ export class BackupService {
     if (stderr) this.logger.warn(`pg_dump stderr: ${stderr}`);
   }
 
-  private async uploadToS3(localPath: string, filename: string): Promise<string> {
+  private async uploadToS3(
+    localPath: string,
+    filename: string,
+  ): Promise<string> {
     const bucket = this.config.get('AWS_S3_BACKUP_BUCKET');
     const prefix = this.config.get('AWS_S3_BACKUP_PREFIX', 'postgres-backups');
     const s3Key = `${prefix}/${filename}`;
@@ -141,7 +144,8 @@ export class BackupService {
       .promise();
 
     return (result.Contents || []).sort(
-      (a, b) => (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0),
+      (a, b) =>
+        (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0),
     );
   }
 

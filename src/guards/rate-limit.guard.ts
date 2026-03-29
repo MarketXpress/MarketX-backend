@@ -8,8 +8,14 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request, Response } from 'express';
-import { RateLimitService, UserTier } from '../rate-limiting/rate-limit.service';
-import { RATE_LIMIT_KEY, RateLimitOptions } from '../decorators/rate-limit.decorator';
+import {
+  RateLimitService,
+  UserTier,
+} from '../rate-limiting/rate-limit.service';
+import {
+  RATE_LIMIT_KEY,
+  RateLimitOptions,
+} from '../decorators/rate-limit.decorator';
 
 interface AuthenticatedUser {
   id?: string;
@@ -51,19 +57,19 @@ export class RateLimitGuard implements CanActivate {
     try {
       // Generate identifier for rate limiting
       const identifier = this.generateIdentifier(request, rateLimitOptions);
-      
+
       // Get user tier
       const userTier = this.getUserTier(request);
-      
+
       // Get endpoint path
       const endpoint = this.getEndpointPath(request);
-      
+
       // Get effective rate limit configuration
       const effectiveConfig = this.getEffectiveConfig(
         rateLimitOptions,
         userTier,
       );
-      
+
       // Check rate limit
       const result = await this.rateLimitService.checkRateLimit(
         identifier,
@@ -118,7 +124,7 @@ export class RateLimitGuard implements CanActivate {
       }
 
       this.logger.error('Rate limit guard error:', error);
-      
+
       // Fail open - allow request if there's an unexpected error
       // This ensures the API remains available even if rate limiting fails
       return true;
@@ -154,19 +160,19 @@ export class RateLimitGuard implements CanActivate {
     const forwarded = request.headers['x-forwarded-for'];
     const realIp = request.headers['x-real-ip'];
     const cfConnectingIp = request.headers['cf-connecting-ip'];
-    
+
     if (typeof forwarded === 'string') {
       return forwarded.split(',')[0].trim();
     }
-    
+
     if (typeof realIp === 'string') {
       return realIp;
     }
-    
+
     if (typeof cfConnectingIp === 'string') {
       return cfConnectingIp;
     }
-    
+
     return (
       request.connection?.remoteAddress ||
       request.socket?.remoteAddress ||
@@ -179,7 +185,7 @@ export class RateLimitGuard implements CanActivate {
    */
   private getUserTier(request: RequestWithUser): UserTier {
     const user = request.user;
-    
+
     if (!user) {
       return UserTier.FREE;
     }

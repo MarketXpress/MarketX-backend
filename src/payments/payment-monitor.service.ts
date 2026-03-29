@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -67,14 +72,19 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
   /**
    * Start monitoring a payment for incoming transactions
    */
-  async monitorPayment(paymentId: string, destinationAddress: string): Promise<void> {
+  async monitorPayment(
+    paymentId: string,
+    destinationAddress: string,
+  ): Promise<void> {
     // Check if already monitoring
     if (this.activeStreams.has(paymentId)) {
       this.logger.warn(`Already monitoring payment ${paymentId}`);
       return;
     }
 
-    this.logger.log(`Starting payment monitor for ${paymentId} on address ${destinationAddress}`);
+    this.logger.log(
+      `Starting payment monitor for ${paymentId} on address ${destinationAddress}`,
+    );
 
     try {
       // Stream transactions to this address
@@ -83,7 +93,11 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
         .forAccount(destinationAddress)
         .stream({
           onmessage: (transaction: any) => {
-            this.handleIncomingTransaction(paymentId, transaction, destinationAddress);
+            this.handleIncomingTransaction(
+              paymentId,
+              transaction,
+              destinationAddress,
+            );
           },
           onerror: (event: any) => {
             this.logger.error(
@@ -132,7 +146,9 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
     transaction: any,
     destinationAddress: string,
   ): Promise<void> {
-    this.logger.log(`Received transaction for payment ${paymentId}: ${transaction.id}`);
+    this.logger.log(
+      `Received transaction for payment ${paymentId}: ${transaction.id}`,
+    );
 
     try {
       const payment = await this.paymentsRepository.findOne({
@@ -146,7 +162,9 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
 
       // Skip if payment already confirmed/failed
       if (payment.status !== PaymentStatus.PENDING) {
-        this.logger.log(`Payment ${paymentId} is already ${payment.status}, skipping`);
+        this.logger.log(
+          `Payment ${paymentId} is already ${payment.status}, skipping`,
+        );
         return;
       }
 
@@ -155,7 +173,10 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
 
       for (const operation of operations.records) {
         // Look for payment operations
-        if (operation.type === 'payment' || operation.type === 'path_payment_strict_receive') {
+        if (
+          operation.type === 'payment' ||
+          operation.type === 'path_payment_strict_receive'
+        ) {
           const isRelevantPayment = await this.checkPaymentOperation(
             payment,
             operation,
@@ -181,7 +202,10 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
             };
 
             // Verify and confirm payment
-            await this.paymentsService.verifyAndConfirmPayment(paymentId, transactionData);
+            await this.paymentsService.verifyAndConfirmPayment(
+              paymentId,
+              transactionData,
+            );
 
             // Stop monitoring once confirmed
             this.stopMonitoringPayment(paymentId);
@@ -245,7 +269,9 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
    * Set up timeout for a payment
    */
   private setupPaymentTimeout(paymentId: string): void {
-    const payment = this.paymentsRepository.findOne({ where: { id: paymentId } });
+    const payment = this.paymentsRepository.findOne({
+      where: { id: paymentId },
+    });
 
     if (!payment) {
       return;
@@ -288,9 +314,12 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
    */
   private setupTimeoutMonitoring(): void {
     // Run every 5 minutes to check for expired payments
-    const intervalHandle = setInterval(async () => {
-      await this.checkAndHandleExpiredPayments();
-    }, 5 * 60 * 1000);
+    const intervalHandle = setInterval(
+      async () => {
+        await this.checkAndHandleExpiredPayments();
+      },
+      5 * 60 * 1000,
+    );
 
     try {
       this.schedulerRegistry.addInterval(
@@ -333,14 +362,19 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
       where: { status: PaymentStatus.PENDING },
     });
 
-    this.logger.log(`Found ${pendingPayments.length} pending payments to resume monitoring`);
+    this.logger.log(
+      `Found ${pendingPayments.length} pending payments to resume monitoring`,
+    );
 
     for (const payment of pendingPayments) {
       // Check if not expired
       const now = new Date();
       if (payment.expiresAt && payment.expiresAt > now) {
         try {
-          await this.monitorPayment(payment.id, payment.destinationWalletAddress);
+          await this.monitorPayment(
+            payment.id,
+            payment.destinationWalletAddress,
+          );
         } catch (error) {
           this.logger.error(
             `Failed to resume monitoring for payment ${payment.id}: ${error.message}`,
@@ -363,7 +397,9 @@ export class PaymentMonitorService implements OnModuleInit, OnModuleDestroy {
           stream.closeFunction();
           this.logger.log(`Closed stream for payment ${paymentId}`);
         } catch (error) {
-          this.logger.error(`Error closing stream for payment ${paymentId}: ${error.message}`);
+          this.logger.error(
+            `Error closing stream for payment ${paymentId}: ${error.message}`,
+          );
         }
       }
     }

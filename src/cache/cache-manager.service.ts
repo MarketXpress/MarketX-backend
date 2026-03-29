@@ -11,7 +11,7 @@ export class CacheManagerService {
   async getOrSet<T>(
     key: string,
     factory: () => Promise<T>,
-    config: CacheConfig = { ttl: 3600 }
+    config: CacheConfig = { ttl: 3600 },
   ): Promise<T> {
     try {
       const cached = await this.cacheService.get<T>(key, config);
@@ -31,9 +31,12 @@ export class CacheManagerService {
   async invalidatePattern(pattern: string): Promise<void> {
     try {
       const keys = await this.getKeysByPattern(pattern);
-      await Promise.all(keys.map(key => this.cacheService.delete(key)));
+      await Promise.all(keys.map((key) => this.cacheService.delete(key)));
     } catch (error) {
-      this.logger.error(`Cache invalidate pattern error for ${pattern}:`, error);
+      this.logger.error(
+        `Cache invalidate pattern error for ${pattern}:`,
+        error,
+      );
     }
   }
 
@@ -44,19 +47,21 @@ export class CacheManagerService {
   async invalidateListing(listingId: string): Promise<void> {
     await Promise.all([
       this.invalidatePattern(`listing:${listingId}:*`),
-      this.cacheService.deleteByTags(['listings', `listing:${listingId}`])
+      this.cacheService.deleteByTags(['listings', `listing:${listingId}`]),
     ]);
   }
 
   async invalidateMarketplace(marketplaceId: string): Promise<void> {
     await Promise.all([
       this.invalidatePattern(`marketplace:${marketplaceId}:*`),
-      this.cacheService.deleteByTags(['marketplaces', `marketplace:${marketplaceId}`])
+      this.cacheService.deleteByTags([
+        'marketplaces',
+        `marketplace:${marketplaceId}`,
+      ]),
     ]);
   }
 
   private async getKeysByPattern(pattern: string): Promise<string[]> {
-    return []; 
+    return [];
   }
 }
-

@@ -3,7 +3,10 @@ import { OrdersService } from './orders.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { OrderStatus } from './dto/create-order.dto';
-import { PricingService, SupportedCurrency } from '../products/services/pricing.service';
+import {
+  PricingService,
+  SupportedCurrency,
+} from '../products/services/pricing.service';
 
 describe.skip('OrdersService', () => {
   let service: OrdersService;
@@ -21,7 +24,9 @@ describe.skip('OrdersService', () => {
     mockPricingService = {
       convertAmount: jest.fn((amount) => amount),
       multiplyAmount: jest.fn((amount, quantity) => amount * quantity),
-      addAmounts: jest.fn((amounts) => amounts.reduce((sum, item) => sum + item, 0)),
+      addAmounts: jest.fn((amounts) =>
+        amounts.reduce((sum, item) => sum + item, 0),
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -95,10 +100,12 @@ describe.skip('OrdersService', () => {
     });
 
     it('should calculate totals in requested payment currency', async () => {
-      mockPricingService.convertAmount.mockImplementation((amount, _from, to) =>
-        to === SupportedCurrency.XLM ? 50 : amount,
+      mockPricingService.convertAmount.mockImplementation(
+        (amount, _from, to) => (to === SupportedCurrency.XLM ? 50 : amount),
       );
-      mockPricingService.multiplyAmount.mockImplementation((amount, quantity) => amount * quantity);
+      mockPricingService.multiplyAmount.mockImplementation(
+        (amount, quantity) => amount * quantity,
+      );
       mockPricingService.addAmounts.mockImplementation((amounts) =>
         amounts.reduce((sum, item) => sum + item, 0),
       );
@@ -216,7 +223,10 @@ describe.skip('OrdersService', () => {
       };
 
       mockRepository.findOne.mockResolvedValue(order);
-      mockRepository.save.mockResolvedValue({ ...order, status: OrderStatus.PAID });
+      mockRepository.save.mockResolvedValue({
+        ...order,
+        status: OrderStatus.PAID,
+      });
 
       const result = await service.updateStatus('1', updateDto);
 
@@ -239,7 +249,7 @@ describe.skip('OrdersService', () => {
       mockRepository.findOne.mockResolvedValue(order);
 
       await expect(service.updateStatus('1', updateDto)).rejects.toThrow(
-        'Invalid state transition from delivered to pending'
+        'Invalid state transition from delivered to pending',
       );
     });
   });
@@ -255,7 +265,10 @@ describe.skip('OrdersService', () => {
       };
 
       mockRepository.findOne.mockResolvedValue(order);
-      mockRepository.save.mockResolvedValue({ ...order, status: OrderStatus.CANCELLED });
+      mockRepository.save.mockResolvedValue({
+        ...order,
+        status: OrderStatus.CANCELLED,
+      });
 
       const result = await service.cancelOrder('1', 'user123');
 
@@ -274,7 +287,7 @@ describe.skip('OrdersService', () => {
       mockRepository.findOne.mockResolvedValue(order);
 
       await expect(service.cancelOrder('1', 'user123')).rejects.toThrow(
-        'Cannot cancel order with status delivered. Only pending or paid orders can be cancelled.'
+        'Cannot cancel order with status delivered. Only pending or paid orders can be cancelled.',
       );
     });
   });

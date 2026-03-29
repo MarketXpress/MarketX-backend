@@ -22,9 +22,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ secrets.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -33,12 +33,13 @@ jobs:
       - name: Build, tag & push image to ECR
         id: build-image
         env:
-          ECR_REGISTRY:   ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG:      ${{ github.sha }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build \
             --build-arg NODE_ENV=production \
+            -f Dockerfile \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             .
@@ -58,16 +59,16 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
-          container-name:  ${{ secrets.ECS_CONTAINER_NAME }}
-          image:           ${{ steps.build-image.outputs.image }}
+          container-name: ${{ secrets.ECS_CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
 
       - name: Deploy to ECS (rolling zero-downtime)
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition:  ${{ steps.task-def.outputs.task-definition }}
-          service:          ${{ secrets.ECS_SERVICE }}
-          cluster:          ${{ secrets.ECS_CLUSTER }}
-          wait-for-service-stability: true   # blocks until old tasks drain
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE }}
+          cluster: ${{ secrets.ECS_CLUSTER }}
+          wait-for-service-stability: true # blocks until old tasks drain
 
   # ──────────────────────────────────────────────
   # Deploy to Heroku (rolling dyno restart)
@@ -96,6 +97,7 @@ jobs:
         run: |
           docker build \
             --build-arg NODE_ENV=production \
+            -f Dockerfile \
             -t registry.heroku.com/$HEROKU_APP_NAME/web \
             .
           docker push registry.heroku.com/$HEROKU_APP_NAME/web

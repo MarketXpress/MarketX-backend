@@ -1,7 +1,12 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { CreateWalletDto, WalletResponseDto, ValidateAddressDto, BalanceResponseDto } from './dto/wallet.dto';
+import {
+  CreateWalletDto,
+  WalletResponseDto,
+  ValidateAddressDto,
+  BalanceResponseDto,
+} from './dto/wallet.dto';
 
 @Injectable()
 export class StellarService {
@@ -13,18 +18,18 @@ export class StellarService {
     this.network = this.configService.get<string>('STELLAR_NETWORK', 'testnet');
     const horizonUrl = this.configService.get<string>(
       'STELLAR_HORIZON_URL',
-      'https://horizon-testnet.stellar.org'
+      'https://horizon-testnet.stellar.org',
     );
-    
+
     this.server = new StellarSdk.Horizon.Server(horizonUrl);
-    
+
     // Set network passphrase
     if (this.network === 'testnet') {
       StellarSdk.Networks.TESTNET;
     } else {
       StellarSdk.Networks.PUBLIC;
     }
-    
+
     this.logger.log(`Stellar service initialized with ${this.network} network`);
   }
 
@@ -34,9 +39,9 @@ export class StellarService {
   async createWallet(): Promise<WalletResponseDto> {
     try {
       const pair = StellarSdk.Keypair.random();
-      
+
       this.logger.log(`New wallet created: ${pair.publicKey()}`);
-      
+
       return {
         publicKey: pair.publicKey(),
         secretKey: pair.secret(),
@@ -52,13 +57,16 @@ export class StellarService {
   /**
    * Validate if a Stellar address is valid
    */
-  validateAddress(dto: ValidateAddressDto): { valid: boolean; message: string } {
+  validateAddress(dto: ValidateAddressDto): {
+    valid: boolean;
+    message: string;
+  } {
     try {
       const { address } = dto;
-      
+
       // Check if it's a valid Stellar public key
       const isValid = StellarSdk.StrKey.isValidEd25519PublicKey(address);
-      
+
       if (isValid) {
         this.logger.log(`Address validated: ${address}`);
         return {
@@ -116,13 +124,14 @@ export class StellarService {
           publicKey,
           exists: false,
           balances: [],
-          message: 'Account does not exist on the network. It may need to be funded first.',
+          message:
+            'Account does not exist on the network. It may need to be funded first.',
         };
       }
 
       // Load account details
       const account = await this.server.loadAccount(publicKey);
-      
+
       const balances = account.balances.map((balance: any) => ({
         asset_type: balance.asset_type,
         asset_code: balance.asset_code || 'XLM',
@@ -131,7 +140,7 @@ export class StellarService {
       }));
 
       this.logger.log(`Retrieved balance for: ${publicKey}`);
-      
+
       return {
         publicKey,
         exists: true,
@@ -150,7 +159,9 @@ export class StellarService {
   /**
    * Fund a testnet account (testnet only)
    */
-  async fundTestnetAccount(publicKey: string): Promise<{ success: boolean; message: string }> {
+  async fundTestnetAccount(
+    publicKey: string,
+  ): Promise<{ success: boolean; message: string }> {
     if (this.network !== 'testnet') {
       throw new BadRequestException('Funding is only available on testnet');
     }
@@ -162,7 +173,7 @@ export class StellarService {
       }
 
       const response = await fetch(
-        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`
+        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`,
       );
 
       if (response.ok) {

@@ -103,7 +103,9 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Soft-delete user by ID (preserves financial history)' })
+  @ApiOperation({
+    summary: 'Soft-delete user by ID (preserves financial history)',
+  })
   @ApiResponse({ status: 200, description: 'User soft-deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(@Param('id') id: string): Promise<{ message: string }> {

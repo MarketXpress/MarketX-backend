@@ -1,4 +1,3 @@
-
 import { IsOptional, IsString, IsNumber, Min, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SupportedCurrency } from '../services/pricing.service';

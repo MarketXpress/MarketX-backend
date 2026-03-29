@@ -6,7 +6,7 @@ import { MarketPlace } from './entities/market-place.entity';
 import { ListingsModule } from 'src/listing/listing.module';
 
 @Module({
-  imports: [ListingsModule,TypeOrmModule.forFeature([MarketPlace])],
+  imports: [ListingsModule, TypeOrmModule.forFeature([MarketPlace])],
   controllers: [MarketPlaceController],
   providers: [MarketPlaceService],
   exports: [MarketPlaceService],

@@ -68,13 +68,13 @@ describe('Inventory Management System (e2e)', () => {
         userId: 'test-user-id',
         location: 'POINT(-122.4194 37.7749)',
         shareLocation: true,
-      })
+      }),
     );
 
     return request(app.getHttpServer())
       .get(`/inventory/${listing.id}`)
       .expect(200)
-      .then(response => {
+      .then((response) => {
         expect(response.body.quantity).toBe(10);
         expect(response.body.reserved).toBe(2);
         expect(response.body.available).toBe(8);
@@ -96,7 +96,7 @@ describe('Inventory Management System (e2e)', () => {
         userId: 'test-user-id',
         location: 'POINT(-122.4194 37.7749)',
         shareLocation: true,
-      })
+      }),
     );
 
     const reserveDto = {
@@ -109,9 +109,9 @@ describe('Inventory Management System (e2e)', () => {
       .post('/inventory/reserve')
       .send(reserveDto)
       .expect(201)
-      .then(response => {
+      .then((response) => {
         expect(response.body.available).toBe(7); // 10 - 3 = 7
-        expect(response.body.reserved).toBe(3);  // 0 + 3 = 3
+        expect(response.body.reserved).toBe(3); // 0 + 3 = 3
       });
   });
 
@@ -130,7 +130,7 @@ describe('Inventory Management System (e2e)', () => {
         userId: 'test-user-id',
         location: 'POINT(-122.4194 37.7749)',
         shareLocation: true,
-      })
+      }),
     );
 
     const releaseDto = {
@@ -143,9 +143,9 @@ describe('Inventory Management System (e2e)', () => {
       .post('/inventory/release')
       .send(releaseDto)
       .expect(201)
-      .then(response => {
+      .then((response) => {
         expect(response.body.available).toBe(7); // 5 + 2 = 7
-        expect(response.body.reserved).toBe(3);  // 5 - 2 = 3
+        expect(response.body.reserved).toBe(3); // 5 - 2 = 3
       });
   });
 
@@ -164,7 +164,7 @@ describe('Inventory Management System (e2e)', () => {
         userId: 'test-user-id',
         location: 'POINT(-122.4194 37.7749)',
         shareLocation: true,
-      })
+      }),
     );
 
     const adjustDto = {
@@ -178,8 +178,8 @@ describe('Inventory Management System (e2e)', () => {
       .post('/inventory/adjust')
       .send(adjustDto)
       .expect(201)
-      .then(response => {
-        expect(response.body.quantity).toBe(15);  // 10 + 5 = 15
+      .then((response) => {
+        expect(response.body.quantity).toBe(15); // 10 + 5 = 15
         expect(response.body.available).toBe(15); // 10 + 5 = 15
       });
   });
@@ -199,7 +199,7 @@ describe('Inventory Management System (e2e)', () => {
         userId: 'test-user-id',
         location: 'POINT(-122.4194 37.7749)',
         shareLocation: true,
-      })
+      }),
     );
 
     // Make an adjustment to create history
@@ -216,7 +216,7 @@ describe('Inventory Management System (e2e)', () => {
     return request(app.getHttpServer())
       .get(`/inventory/${listing.id}/history`)
       .expect(200)
-      .then(response => {
+      .then((response) => {
         expect(Array.isArray(response.body)).toBeTruthy();
         expect(response.body.length).toBeGreaterThan(0);
         expect(response.body[0].type).toBe('ADJUSTMENT');
@@ -240,14 +240,14 @@ describe('Inventory Management System (e2e)', () => {
         userId: 'test-user-id',
         location: 'POINT(-122.4194 37.7749)',
         shareLocation: true,
-      })
+      }),
     );
 
     // Check initial inventory
     let response = await request(app.getHttpServer())
       .get(`/inventory/${listing.id}`)
       .expect(200);
-      
+
     expect(response.body.available).toBe(5);
 
     // Create an order (this should reserve inventory)
@@ -270,9 +270,9 @@ describe('Inventory Management System (e2e)', () => {
     response = await request(app.getHttpServer())
       .get(`/inventory/${listing.id}`)
       .expect(200);
-      
+
     expect(response.body.available).toBe(3); // 5 - 2 = 3
-    expect(response.body.reserved).toBe(2);  // 0 + 2 = 2
+    expect(response.body.reserved).toBe(2); // 0 + 2 = 2
 
     // Update order status to paid (should confirm inventory and reduce quantity)
     await request(app.getHttpServer())
@@ -284,9 +284,9 @@ describe('Inventory Management System (e2e)', () => {
     response = await request(app.getHttpServer())
       .get(`/inventory/${listing.id}`)
       .expect(200);
-      
-    expect(response.body.quantity).toBe(3);    // 5 - 2 = 3
-    expect(response.body.available).toBe(3);   // 3 (no more reserved)
-    expect(response.body.reserved).toBe(0);    // 2 - 2 = 0
+
+    expect(response.body.quantity).toBe(3); // 5 - 2 = 3
+    expect(response.body.available).toBe(3); // 3 (no more reserved)
+    expect(response.body.reserved).toBe(0); // 2 - 2 = 0
   });
 });

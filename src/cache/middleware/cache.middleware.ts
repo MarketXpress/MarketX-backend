@@ -20,9 +20,9 @@ export class CacheMiddleware implements NestMiddleware {
     }
 
     res.setHeader('X-Cache', 'MISS');
-    
+
     const originalJson = res.json;
-    res.json = function(data) {
+    res.json = function (data) {
       this.cacheService.set(cacheKey, data, { ttl: 300 });
       return originalJson.call(this, data);
     }.bind({ cacheService: this.cacheService });

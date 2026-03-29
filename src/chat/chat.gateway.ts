@@ -56,9 +56,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     // Check if user is a participant in any chat for this listing
-    const chats = await this.chatService.getChatHistory(data.listingId, data.userId);
+    const chats = await this.chatService.getChatHistory(
+      data.listingId,
+      data.userId,
+    );
     if (chats.length === 0) {
-      client.emit('error', { message: 'You are not a participant in this chat' });
+      client.emit('error', {
+        message: 'You are not a participant in this chat',
+      });
       client.disconnect();
       return;
     }
@@ -69,7 +74,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
-    @MessageBody() data: {
+    @MessageBody()
+    data: {
       listingId: string;
       senderId: number;
       receiverId: number;
@@ -78,9 +84,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     // Check if sender is a participant
-    const chats = await this.chatService.getChatHistory(data.listingId, data.senderId);
+    const chats = await this.chatService.getChatHistory(
+      data.listingId,
+      data.senderId,
+    );
     if (chats.length === 0) {
-      client.emit('error', { message: 'You are not a participant in this chat' });
+      client.emit('error', {
+        message: 'You are not a participant in this chat',
+      });
       client.disconnect();
       return;
     }
@@ -101,7 +112,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { messageId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    const updated = await this.chatService.updateStatus(data.messageId, 'delivered');
+    const updated = await this.chatService.updateStatus(
+      data.messageId,
+      'delivered',
+    );
     this.server.emit('messageStatusUpdated', updated);
     return updated;
   }
@@ -111,8 +125,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { messageId: number; userId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    const updated = await this.chatService.markAsRead(data.messageId, data.userId);
+    const updated = await this.chatService.markAsRead(
+      data.messageId,
+      data.userId,
+    );
     this.server.emit('messageStatusUpdated', updated);
     return updated;
   }
-} 
+}

@@ -1,15 +1,21 @@
-import { Controller, Get, Post, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { DeletedListingsService } from './deleted-listings.service';
 
 @Controller('deleted-listings')
 export class DeletedListingsController {
-  constructor(private readonly deletedListingsService: DeletedListingsService) {}
+  constructor(
+    private readonly deletedListingsService: DeletedListingsService,
+  ) {}
 
   @Get()
-  findAllDeleted(
-    @Query('take') take?: string,
-    @Query('skip') skip?: string,
-  ) {
+  findAllDeleted(@Query('take') take?: string, @Query('skip') skip?: string) {
     const parsedTake = take ? parseInt(take, 10) : 10;
     const parsedSkip = skip ? parseInt(skip, 10) : 0;
     return this.deletedListingsService.findAllDeleted(parsedTake, parsedSkip);
@@ -24,4 +30,4 @@ export class DeletedListingsController {
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.deletedListingsService.restore(id);
   }
-} 
+}

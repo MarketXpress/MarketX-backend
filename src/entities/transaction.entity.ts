@@ -167,6 +167,9 @@ export class Transaction {
   }
 
   get isPending(): boolean {
-    return this.status === TransactionStatus.PENDING || this.status === TransactionStatus.PROCESSING;
+    return (
+      this.status === TransactionStatus.PENDING ||
+      this.status === TransactionStatus.PROCESSING
+    );
   }
 }

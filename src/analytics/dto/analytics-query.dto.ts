@@ -1,10 +1,4 @@
-import {
-  IsOptional,
-  IsEnum,
-  IsDate,
-  IsNumber,
-  Min,
-} from 'class-validator';
+import { IsOptional, IsEnum, IsDate, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -49,7 +43,10 @@ export class AnalyticsQueryDto {
   @IsEnum(AnalyticsExportFormat)
   export?: AnalyticsExportFormat;
 
-  @ApiPropertyOptional({ description: 'Limit results (e.g., top products)', default: 10 })
+  @ApiPropertyOptional({
+    description: 'Limit results (e.g., top products)',
+    default: 10,
+  })
   @IsOptional()
   @IsNumber()
   @Min(1)

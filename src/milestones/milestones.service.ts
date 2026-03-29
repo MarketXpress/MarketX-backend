@@ -1,11 +1,23 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Milestone } from './entities/milestone.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
-import { TransactionStatus, TransactionType } from '../transactions/entities/transaction.entity';
-import { MilestoneStatus, MilestoneType, MilestoneTrigger } from './enums/milestone.enums';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '../transactions/entities/transaction.entity';
+import {
+  MilestoneStatus,
+  MilestoneType,
+  MilestoneTrigger,
+} from './enums/milestone.enums';
 import { TransactionsService } from '../transactions/transactions.service';
 
 export interface CreateMilestoneDto {
@@ -60,8 +72,13 @@ export class MilestonesService {
   /**
    * Create milestones for an order
    */
-  async createMilestones(orderId: string, milestones: CreateMilestoneDto[]): Promise<Milestone[]> {
-    this.logger.log(`Creating ${milestones.length} milestones for order ${orderId}`);
+  async createMilestones(
+    orderId: string,
+    milestones: CreateMilestoneDto[],
+  ): Promise<Milestone[]> {
+    this.logger.log(
+      `Creating ${milestones.length} milestones for order ${orderId}`,
+    );
 
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order) {
@@ -69,9 +86,14 @@ export class MilestonesService {
     }
 
     // Validate total milestone amounts don't exceed order total
-    const totalMilestoneAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
+    const totalMilestoneAmount = milestones.reduce(
+      (sum, m) => sum + m.amount,
+      0,
+    );
     if (totalMilestoneAmount > order.totalAmount) {
-      throw new BadRequestException('Total milestone amounts cannot exceed order total');
+      throw new BadRequestException(
+        'Total milestone amounts cannot exceed order total',
+      );
     }
 
     const createdMilestones = milestones.map((milestoneData, index) => {
@@ -119,14 +141,19 @@ export class MilestonesService {
    */
   async releaseMilestone(
     milestoneId: string,
-    releaseData: ReleaseMilestoneDto
+    releaseData: ReleaseMilestoneDto,
   ): Promise<Milestone> {
     this.logger.log(`Releasing milestone ${milestoneId}`);
 
     const milestone = await this.getMilestoneById(milestoneId);
 
-    if (milestone.status !== MilestoneStatus.PENDING && milestone.status !== MilestoneStatus.APPROVED) {
-      throw new BadRequestException('Milestone cannot be released in current status');
+    if (
+      milestone.status !== MilestoneStatus.PENDING &&
+      milestone.status !== MilestoneStatus.APPROVED
+    ) {
+      throw new BadRequestException(
+        'Milestone cannot be released in current status',
+      );
     }
 
     // Update milestone status
@@ -136,7 +163,7 @@ export class MilestonesService {
 
     // Add uploaded documents if provided
     if (releaseData.documents) {
-      milestone.uploadedDocuments = releaseData.documents.map(doc => ({
+      milestone.uploadedDocuments = releaseData.documents.map((doc) => ({
         ...doc,
         uploadedAt: new Date(),
       }));
@@ -159,14 +186,16 @@ export class MilestonesService {
   async approveMilestone(
     milestoneId: string,
     approvedBy: string,
-    notes?: string
+    notes?: string,
   ): Promise<Milestone> {
     this.logger.log(`Approving milestone ${milestoneId}`);
 
     const milestone = await this.getMilestoneById(milestoneId);
 
     if (milestone.status !== MilestoneStatus.PENDING) {
-      throw new BadRequestException('Milestone cannot be approved in current status');
+      throw new BadRequestException(
+        'Milestone cannot be approved in current status',
+      );
     }
 
     milestone.status = MilestoneStatus.APPROVED;
@@ -180,14 +209,19 @@ export class MilestonesService {
    */
   async rejectMilestone(
     milestoneId: string,
-    rejectionData: UpdateMilestoneStatusDto
+    rejectionData: UpdateMilestoneStatusDto,
   ): Promise<Milestone> {
     this.logger.log(`Rejecting milestone ${milestoneId}`);
 
     const milestone = await this.getMilestoneById(milestoneId);
 
-    if (milestone.status !== MilestoneStatus.PENDING && milestone.status !== MilestoneStatus.APPROVED) {
-      throw new BadRequestException('Milestone cannot be rejected in current status');
+    if (
+      milestone.status !== MilestoneStatus.PENDING &&
+      milestone.status !== MilestoneStatus.APPROVED
+    ) {
+      throw new BadRequestException(
+        'Milestone cannot be rejected in current status',
+      );
     }
 
     milestone.status = MilestoneStatus.REJECTED;
@@ -202,20 +236,20 @@ export class MilestonesService {
    */
   async updateMilestoneStatus(
     milestoneId: string,
-    updateData: UpdateMilestoneStatusDto
+    updateData: UpdateMilestoneStatusDto,
   ): Promise<Milestone> {
     const milestone = await this.getMilestoneById(milestoneId);
 
     milestone.status = updateData.status;
-    
+
     if (updateData.adminNotes) {
       milestone.adminNotes = updateData.adminNotes;
     }
-    
+
     if (updateData.rejectionReason) {
       milestone.rejectionReason = updateData.rejectionReason;
     }
-    
+
     if (updateData.disputeDetails) {
       milestone.disputeDetails = {
         ...updateData.disputeDetails,
@@ -250,13 +284,19 @@ export class MilestonesService {
           approvedBy: 'system',
           notes: 'Automatic release based on trigger conditions',
         });
-        this.logger.log(`Auto-released milestone ${milestone.id} for order ${milestone.orderId}`);
+        this.logger.log(
+          `Auto-released milestone ${milestone.id} for order ${milestone.orderId}`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to auto-release milestone ${milestone.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to auto-release milestone ${milestone.id}: ${error.message}`,
+        );
       }
     }
 
-    this.logger.log(`Processed ${pendingMilestones.length} automatic milestone releases`);
+    this.logger.log(
+      `Processed ${pendingMilestones.length} automatic milestone releases`,
+    );
   }
 
   /**
@@ -275,15 +315,23 @@ export class MilestonesService {
 
     const stats = {
       totalMilestones: milestones.length,
-      pendingMilestones: milestones.filter(m => m.status === MilestoneStatus.PENDING).length,
-      approvedMilestones: milestones.filter(m => m.status === MilestoneStatus.APPROVED).length,
-      releasedMilestones: milestones.filter(m => m.status === MilestoneStatus.RELEASED).length,
-      rejectedMilestones: milestones.filter(m => m.status === MilestoneStatus.REJECTED).length,
+      pendingMilestones: milestones.filter(
+        (m) => m.status === MilestoneStatus.PENDING,
+      ).length,
+      approvedMilestones: milestones.filter(
+        (m) => m.status === MilestoneStatus.APPROVED,
+      ).length,
+      releasedMilestones: milestones.filter(
+        (m) => m.status === MilestoneStatus.RELEASED,
+      ).length,
+      rejectedMilestones: milestones.filter(
+        (m) => m.status === MilestoneStatus.REJECTED,
+      ).length,
       totalReleasedAmount: milestones
-        .filter(m => m.status === MilestoneStatus.RELEASED)
+        .filter((m) => m.status === MilestoneStatus.RELEASED)
         .reduce((sum, m) => sum + Number(m.amount), 0),
       totalPendingAmount: milestones
-        .filter(m => m.status === MilestoneStatus.PENDING)
+        .filter((m) => m.status === MilestoneStatus.PENDING)
         .reduce((sum, m) => sum + Number(m.amount), 0),
     };
 
@@ -293,9 +341,11 @@ export class MilestonesService {
   /**
    * Create transaction for milestone release
    */
-  private async createMilestoneTransaction(milestone: Milestone): Promise<Transaction> {
+  private async createMilestoneTransaction(
+    milestone: Milestone,
+  ): Promise<Transaction> {
     const order = milestone.order;
-    
+
     const transactionData = {
       amount: Number(milestone.amount),
       description: `Milestone release: ${milestone.title}`,
@@ -317,11 +367,15 @@ export class MilestonesService {
   /**
    * Update order released amount
    */
-  private async updateOrderReleasedAmount(orderId: string, amount: number): Promise<void> {
+  private async updateOrderReleasedAmount(
+    orderId: string,
+    amount: number,
+  ): Promise<void> {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (order) {
       order.releasedAmount = Number(order.releasedAmount) + amount;
-      order.remainingAmount = Number(order.totalAmount) - Number(order.releasedAmount);
+      order.remainingAmount =
+        Number(order.totalAmount) - Number(order.releasedAmount);
       await this.orderRepo.save(order);
     }
   }

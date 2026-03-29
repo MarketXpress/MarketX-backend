@@ -1,9 +1,9 @@
 /**
  * Application Event Dictionary
- * 
+ *
  * This file contains all application events with strict typing.
  * Events are organized by domain and follow the pattern: domain.action
- * 
+ *
  * Usage:
  * - Controllers should emit events using EventEmitter2
  * - Listeners should use @OnEvent decorator to handle side-effects
@@ -280,9 +280,7 @@ export class RefundFailedEvent {
 }
 
 export class RefundInventoryRestoreEvent {
-  constructor(
-    public readonly orderId: string,
-  ) {}
+  constructor(public readonly orderId: string) {}
 }
 
 // ============================================================================
@@ -463,4 +461,4 @@ export const EventNames = {
   ACCOUNT_MODIFIED: 'account.modified',
 } as const;
 
-export type EventName = typeof EventNames[keyof typeof EventNames];
+export type EventName = (typeof EventNames)[keyof typeof EventNames];

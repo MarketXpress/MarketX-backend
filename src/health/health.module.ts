@@ -15,13 +15,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     CacheModule.register(),
   ],
   controllers: [HealthController],
-  providers: [
-    DatabaseIndicator,
-    StellarIndicator,
-  ],
-  exports: [
-    DatabaseIndicator,
-    StellarIndicator,
-  ],
+  providers: [DatabaseIndicator, StellarIndicator],
+  exports: [DatabaseIndicator, StellarIndicator],
 })
 export class HealthModule {}

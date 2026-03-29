@@ -1,4 +1,8 @@
-import { SubscriptionTier, SubscriptionTierConfig, SubscriptionFeature } from '../enums/subscription.enums';
+import {
+  SubscriptionTier,
+  SubscriptionTierConfig,
+  SubscriptionFeature,
+} from '../enums/subscription.enums';
 
 export const SUBSCRIPTION_TIERS: SubscriptionTierConfig[] = [
   {
@@ -46,7 +50,8 @@ export const SUBSCRIPTION_TIERS: SubscriptionTierConfig[] = [
   {
     tier: SubscriptionTier.PREMIUM,
     name: 'Premium',
-    description: 'Complete solution for professional sellers with unlimited possibilities',
+    description:
+      'Complete solution for professional sellers with unlimited possibilities',
     monthlyPrice: 29.99,
     yearlyPrice: 299.99,
     features: {
@@ -66,12 +71,16 @@ export const SUBSCRIPTION_TIERS: SubscriptionTierConfig[] = [
   },
 ];
 
-export const getTierConfig = (tier: SubscriptionTier): SubscriptionTierConfig | undefined => {
-  return SUBSCRIPTION_TIERS.find(config => config.tier === tier);
+export const getTierConfig = (
+  tier: SubscriptionTier,
+): SubscriptionTierConfig | undefined => {
+  return SUBSCRIPTION_TIERS.find((config) => config.tier === tier);
 };
 
 export const getAllActiveTiers = (): SubscriptionTierConfig[] => {
-  return SUBSCRIPTION_TIERS.filter(config => config.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+  return SUBSCRIPTION_TIERS.filter((config) => config.isActive).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 };
 
 export const getTierLimits = (tier: SubscriptionTier): any => {
@@ -79,21 +88,27 @@ export const getTierLimits = (tier: SubscriptionTier): any => {
   return config?.features || {};
 };
 
-export const canUpgrade = (currentTier: SubscriptionTier, targetTier: SubscriptionTier): boolean => {
+export const canUpgrade = (
+  currentTier: SubscriptionTier,
+  targetTier: SubscriptionTier,
+): boolean => {
   const current = getTierConfig(currentTier);
   const target = getTierConfig(targetTier);
-  
+
   if (!current || !target) return false;
-  
+
   return target.sortOrder > current.sortOrder;
 };
 
-export const getUpgradePath = (currentTier: SubscriptionTier): SubscriptionTier[] => {
+export const getUpgradePath = (
+  currentTier: SubscriptionTier,
+): SubscriptionTier[] => {
   const current = getTierConfig(currentTier);
   if (!current) return [];
-  
-  return SUBSCRIPTION_TIERS
-    .filter(config => config.isActive && config.sortOrder > current.sortOrder)
+
+  return SUBSCRIPTION_TIERS.filter(
+    (config) => config.isActive && config.sortOrder > current.sortOrder,
+  )
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map(config => config.tier);
+    .map((config) => config.tier);
 };

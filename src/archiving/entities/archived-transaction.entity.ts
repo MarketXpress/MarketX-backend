@@ -7,7 +7,10 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { TransactionStatus, TransactionType } from '../../transactions/entities/transaction.entity';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '../../transactions/entities/transaction.entity';
 
 @Entity('archived_transactions')
 @Index(['senderId', 'createdAt'])

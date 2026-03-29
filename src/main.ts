@@ -2,17 +2,21 @@ import { Logger } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppValidationPipe } from './common/pipes/validation.pipe';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LoggingInterceptor, ETagInterceptor } from './common/interceptors';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './common/logger/logger.service';
 import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
-import { REQUEST_SIZE_LIMITS, CORS_CONFIG } from './common/config/rate-limit.config';
+import {
+  REQUEST_SIZE_LIMITS,
+  CORS_CONFIG,
+} from './common/config/rate-limit.config';
 import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
 import * as express from 'express';
 import { join } from 'path';
 import { DynamicThrottlerGuard } from './common/guards/dynamic-throttler.guard';
 import { configureGlobalApiVersioning } from './common/versioning/api-versioning';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -66,8 +70,11 @@ async function bootstrap() {
   // Apply global exception filter
   app.useGlobalFilters(new HttpExceptionFilter(loggerService));
 
-  // Apply global logging interceptor
-  app.useGlobalInterceptors(new LoggingInterceptor(loggerService));
+  // Apply global ETag and logging interceptors
+  app.useGlobalInterceptors(
+    new ETagInterceptor(),
+    new LoggingInterceptor(loggerService),
+  );
 
   // Apply locale middleware
   app.use(LocaleMiddleware.prototype.use);

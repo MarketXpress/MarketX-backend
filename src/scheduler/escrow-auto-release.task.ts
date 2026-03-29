@@ -12,14 +12,14 @@ import { PaymentReleasedEvent, EventNames } from '../common/events';
 
 /**
  * Daily Background Worker for Auto-Releasing Escrows
- * 
+ *
  * This worker traverses all active Escrow records and automatically releases
  * escrows that meet the following criteria:
  * - Status is LOCKED
  * - Related Order status is DELIVERED
  * - Exactly 7 days have passed since delivery
  * - dispute_flag is false (no active dispute)
- * 
+ *
  * When releasing, it:
  * 1. Executes a payout to the Seller's Wallet ledger
  * 2. Emits a payment.released system event
@@ -27,7 +27,7 @@ import { PaymentReleasedEvent, EventNames } from '../common/events';
 @Injectable()
 export class EscrowAutoReleaseTask {
   private readonly logger = new Logger(EscrowAutoReleaseTask.name);
-  
+
   // 7 days in milliseconds
   private readonly AUTO_RELEASE_GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -49,15 +49,17 @@ export class EscrowAutoReleaseTask {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: 'escrow-auto-release' })
   async handleEscrowAutoRelease(): Promise<void> {
     this.logger.log('Starting daily escrow auto-release job...');
-    
+
     try {
       const eligibleEscrows = await this.findEligibleEscrows();
-      
-      this.logger.log(`Found ${eligibleEscrows.length} escrows eligible for auto-release`);
-      
+
+      this.logger.log(
+        `Found ${eligibleEscrows.length} escrows eligible for auto-release`,
+      );
+
       let successCount = 0;
       let failureCount = 0;
-      
+
       for (const escrow of eligibleEscrows) {
         try {
           await this.processAutoRelease(escrow);
@@ -66,18 +68,18 @@ export class EscrowAutoReleaseTask {
           failureCount++;
           this.logger.error(
             `Failed to auto-release escrow ${escrow.id}: ${error.message}`,
-            error.stack
+            error.stack,
           );
         }
       }
-      
+
       this.logger.log(
-        `Escrow auto-release job completed. Success: ${successCount}, Failures: ${failureCount}`
+        `Escrow auto-release job completed. Success: ${successCount}, Failures: ${failureCount}`,
       );
     } catch (error) {
       this.logger.error(
         `Escrow auto-release job failed: ${error.message}`,
-        error.stack
+        error.stack,
       );
     }
   }
@@ -99,7 +101,9 @@ export class EscrowAutoReleaseTask {
     });
 
     const eligibleEscrows: EscrowEntity[] = [];
-    const sevenDaysAgo = new Date(Date.now() - this.AUTO_RELEASE_GRACE_PERIOD_MS);
+    const sevenDaysAgo = new Date(
+      Date.now() - this.AUTO_RELEASE_GRACE_PERIOD_MS,
+    );
 
     for (const escrow of lockedEscrows) {
       // Find the related order
@@ -108,7 +112,9 @@ export class EscrowAutoReleaseTask {
       });
 
       if (!order) {
-        this.logger.warn(`Order not found for escrow ${escrow.id}: ${escrow.orderId}`);
+        this.logger.warn(
+          `Order not found for escrow ${escrow.id}: ${escrow.orderId}`,
+        );
         continue;
       }
 
@@ -120,20 +126,22 @@ export class EscrowAutoReleaseTask {
       // Check if 7 days have passed since delivery
       const deliveredAt = order.deliveredAt;
       if (!deliveredAt) {
-        this.logger.warn(`Order ${order.id} is DELIVERED but has no deliveredAt date`);
+        this.logger.warn(
+          `Order ${order.id} is DELIVERED but has no deliveredAt date`,
+        );
         continue;
       }
 
       const deliveryDate = new Date(deliveredAt);
       const daysSinceDelivery = Math.floor(
-        (Date.now() - deliveryDate.getTime()) / (24 * 60 * 60 * 1000)
+        (Date.now() - deliveryDate.getTime()) / (24 * 60 * 60 * 1000),
       );
 
       // Only release if exactly 7 or more days have passed
       if (daysSinceDelivery >= 7) {
         eligibleEscrows.push(escrow);
         this.logger.log(
-          `Escrow ${escrow.id} eligible for release: ${daysSinceDelivery} days since delivery`
+          `Escrow ${escrow.id} eligible for release: ${daysSinceDelivery} days since delivery`,
         );
       }
     }
@@ -154,17 +162,19 @@ export class EscrowAutoReleaseTask {
     const activeDispute = await this.disputeRepository.findOne({
       where: {
         escrowId: escrow.id,
-        status: Not(In([
-          DisputeStatus.RESOLVED,
-          DisputeStatus.REJECTED,
-          DisputeStatus.AUTO_RESOLVED
-        ])),
+        status: Not(
+          In([
+            DisputeStatus.RESOLVED,
+            DisputeStatus.REJECTED,
+            DisputeStatus.AUTO_RESOLVED,
+          ]),
+        ),
       },
     });
 
     if (activeDispute) {
       this.logger.log(
-        `Skipping escrow ${escrow.id} - active dispute found: ${activeDispute.id}`
+        `Skipping escrow ${escrow.id} - active dispute found: ${activeDispute.id}`,
       );
       // Set the dispute flag on escrow to prevent future auto-releases
       escrow.disputeFlag = true;
@@ -176,15 +186,17 @@ export class EscrowAutoReleaseTask {
       // Release the funds using the EscrowService
       const releasedEscrow = await this.escrowService.releaseFunds({
         escrowId: escrow.id,
-        deliveryProof: 'auto-release: 7-day grace period elapsed without dispute',
+        deliveryProof:
+          'auto-release: 7-day grace period elapsed without dispute',
       });
 
       // Get the transaction hash (it could be null if not yet set)
-      const transactionHash = releasedEscrow.releaseTransactionHash || 'pending';
-      
+      const transactionHash =
+        releasedEscrow.releaseTransactionHash || 'pending';
+
       if (!releasedEscrow.releaseTransactionHash) {
         this.logger.warn(
-          `Escrow ${escrow.id} released but transaction hash not available yet`
+          `Escrow ${escrow.id} released but transaction hash not available yet`,
         );
       }
 
@@ -196,12 +208,12 @@ export class EscrowAutoReleaseTask {
 
       this.logger.log(
         `Successfully auto-released escrow ${escrow.id} - ` +
-        `Transaction: ${transactionHash}`
+          `Transaction: ${transactionHash}`,
       );
     } catch (error) {
       // If release fails, log the error but don't throw - we'll retry tomorrow
       this.logger.error(
-        `Failed to release escrow ${escrow.id}: ${error.message}`
+        `Failed to release escrow ${escrow.id}: ${error.message}`,
       );
       throw error;
     }
@@ -219,26 +231,26 @@ export class EscrowAutoReleaseTask {
       // Find the seller's wallet
       // Note: We need to find the seller by their public key
       // The wallet lookup depends on how the system maps public keys to users
-      
+
       this.logger.log(
         `Executing payout for escrow ${escrow.id}: ` +
-        `Amount: ${escrow.amount} XLM to ${escrow.sellerPublicKey}`
+          `Amount: ${escrow.amount} XLM to ${escrow.sellerPublicKey}`,
       );
 
       // The actual payout is handled by the Stellar blockchain transaction
       // which is executed in the escrowService.releaseFunds() method
       // The releaseTransactionHash confirms the on-chain transfer
-      
+
       // If there's an internal wallet system that needs to be updated,
       // that would be done here. For now, the Stellar transaction is the source of truth.
-      
+
       this.logger.log(
         `Payout executed for escrow ${escrow.id}: ` +
-        `Stellar TX: ${transactionHash}`
+          `Stellar TX: ${transactionHash}`,
       );
     } catch (error) {
       this.logger.error(
-        `Failed to execute payout for escrow ${escrow.id}: ${error.message}`
+        `Failed to execute payout for escrow ${escrow.id}: ${error.message}`,
       );
       throw error;
     }
@@ -264,7 +276,7 @@ export class EscrowAutoReleaseTask {
     this.eventEmitter.emit(EventNames.PAYMENT_RELEASED, event);
 
     this.logger.log(
-      `Emitted ${EventNames.PAYMENT_RELEASED} event for escrow ${escrow.id}`
+      `Emitted ${EventNames.PAYMENT_RELEASED} event for escrow ${escrow.id}`,
     );
   }
 
@@ -274,7 +286,7 @@ export class EscrowAutoReleaseTask {
    */
   async triggerManualRelease(): Promise<{ released: number; failed: number }> {
     this.logger.log('Manual escrow release triggered');
-    
+
     const eligibleEscrows = await this.findEligibleEscrows();
     let released = 0;
     let failed = 0;

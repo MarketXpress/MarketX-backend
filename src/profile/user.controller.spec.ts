@@ -18,7 +18,8 @@ describe.skip('UsersController', () => {
     phoneNumber: '+1234567890',
     profileImageUrl: 'https://example.com/profile.jpg',
     bio: 'Test bio',
-    stellarWalletAddress: 'GABC123456789012345678901234567890123456789012345678',
+    stellarWalletAddress:
+      'GABC123456789012345678901234567890123456789012345678',
     profileVisibility: ProfileVisibility.PUBLIC,
     sellerRating: 4.5,
     totalReviews: 10,
@@ -124,7 +125,8 @@ describe.skip('UsersController', () => {
 
     it('should update stellar wallet address', async () => {
       const updateDto: UpdateProfileDto = {
-        stellarWalletAddress: 'GXYZ987654321098765432109876543210987654321098765432',
+        stellarWalletAddress:
+          'GXYZ987654321098765432109876543210987654321098765432',
       };
 
       const mockRequest = {

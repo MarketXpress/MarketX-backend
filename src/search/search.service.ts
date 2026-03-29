@@ -31,20 +31,25 @@ export class SearchService implements OnModuleInit {
   async onModuleInit() {
     const typesenseHost = this.configService.get<string>('TYPESENSE_HOST');
     const typesensePort = this.configService.get<number>('TYPESENSE_PORT');
-    const typesenseProtocol = this.configService.get<string>('TYPESENSE_PROTOCOL') || 'http';
+    const typesenseProtocol =
+      this.configService.get<string>('TYPESENSE_PROTOCOL') || 'http';
     const typesenseApiKey = this.configService.get<string>('TYPESENSE_API_KEY');
 
     if (!typesenseHost) {
-      this.logger.warn('Typesense host not configured. Search functionality will be disabled.');
+      this.logger.warn(
+        'Typesense host not configured. Search functionality will be disabled.',
+      );
       return;
     }
 
     this.client = new TypeSense.Client({
-      nodes: [{
-        host: typesenseHost,
-        port: typesensePort || 8108,
-        protocol: typesenseProtocol,
-      }],
+      nodes: [
+        {
+          host: typesenseHost,
+          port: typesensePort || 8108,
+          protocol: typesenseProtocol,
+        },
+      ],
       apiKey: typesenseApiKey || 'xyz',
       connectionTimeoutSeconds: 2,
     });
@@ -56,7 +61,9 @@ export class SearchService implements OnModuleInit {
     try {
       // Check if collection exists
       await this.client.collections(this.collectionName).retrieve();
-      this.logger.log(`Typesense collection '${this.collectionName}' already exists`);
+      this.logger.log(
+        `Typesense collection '${this.collectionName}' already exists`,
+      );
     } catch (error: any) {
       // Collection doesn't exist, create it
       if (error.status === 404) {
@@ -83,9 +90,13 @@ export class SearchService implements OnModuleInit {
             token_separators: ['&', '-', '.', ' ', '_'],
             enable_default_fallback: true,
           });
-          this.logger.log(`Created Typesense collection '${this.collectionName}'`);
+          this.logger.log(
+            `Created Typesense collection '${this.collectionName}'`,
+          );
         } catch (createError: any) {
-          this.logger.error(`Failed to create Typesense collection: ${createError.message}`);
+          this.logger.error(
+            `Failed to create Typesense collection: ${createError.message}`,
+          );
         }
       } else {
         this.logger.error(`Failed to initialize Typesense: ${error.message}`);
@@ -100,21 +111,31 @@ export class SearchService implements OnModuleInit {
     }
 
     try {
-      await this.client.collections(this.collectionName).documents.upsert(listing);
+      await this.client
+        .collections(this.collectionName)
+        .documents.upsert(listing);
       this.logger.debug(`Indexed listing: ${listing.id}`);
     } catch (error: any) {
-      this.logger.error(`Failed to index listing ${listing.id}: ${error.message}`);
+      this.logger.error(
+        `Failed to index listing ${listing.id}: ${error.message}`,
+      );
     }
   }
 
-  async updateListing(id: string, updates: Partial<ListingDocument>): Promise<void> {
+  async updateListing(
+    id: string,
+    updates: Partial<ListingDocument>,
+  ): Promise<void> {
     if (!this.client) {
       this.logger.warn('Typesense not initialized. Skipping update.');
       return;
     }
 
     try {
-      await this.client.collections(this.collectionName).documents(id).update(updates);
+      await this.client
+        .collections(this.collectionName)
+        .documents(id)
+        .update(updates);
       this.logger.debug(`Updated listing in index: ${id}`);
     } catch (error: any) {
       this.logger.error(`Failed to update listing ${id}: ${error.message}`);
@@ -135,20 +156,30 @@ export class SearchService implements OnModuleInit {
     }
   }
 
-  async search(query: string, options: {
-    limit?: number;
-    offset?: number;
-    category?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    location?: string;
-  } = {}): Promise<{ results: ListingDocument[]; total: number }> {
+  async search(
+    query: string,
+    options: {
+      limit?: number;
+      offset?: number;
+      category?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      location?: string;
+    } = {},
+  ): Promise<{ results: ListingDocument[]; total: number }> {
     if (!this.client) {
       this.logger.warn('Typesense not initialized. Returning empty results.');
       return { results: [], total: 0 };
     }
 
-    const { limit = 20, offset = 0, category, minPrice, maxPrice, location } = options;
+    const {
+      limit = 20,
+      offset = 0,
+      category,
+      minPrice,
+      maxPrice,
+      location,
+    } = options;
 
     const filterConditions: string[] = [];
     if (category) {

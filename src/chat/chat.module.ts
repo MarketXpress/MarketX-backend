@@ -12,4 +12,4 @@ import { ChatParticipantGuard } from './chat-participant.guard';
   controllers: [ChatController],
   exports: [ChatService],
 })
-export class ChatModule {} 
+export class ChatModule {}

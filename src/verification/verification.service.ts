@@ -143,7 +143,7 @@ export class VerificationService {
     for (const file of files) {
       const documentType = this.getDocumentTypeFromFilename(file.originalname);
       const metadata = await this.documentStorage.storeDocument(file);
-      
+
       documents[documentType] = {
         url: metadata.filename, // Store filename, we can generate URL or retrieve via service
         type: documentType,
@@ -407,7 +407,8 @@ export class VerificationService {
       verificationLevel: highestLevel,
       isVerifiedSeller,
       trustScore,
-      verificationExpiryAt: this.getEarliestExpiryDate(verifications) ?? undefined,
+      verificationExpiryAt:
+        this.getEarliestExpiryDate(verifications) ?? undefined,
     });
   }
 

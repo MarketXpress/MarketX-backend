@@ -36,14 +36,10 @@ export class EscrowController {
         throw new BadRequestException('buyerSecretKey is required');
       }
 
-      const buyerKeypair = StellarSdk.Keypair.fromSecret(
-        dto.buyerSecretKey,
-      );
+      const buyerKeypair = StellarSdk.Keypair.fromSecret(dto.buyerSecretKey);
 
       if (buyerKeypair.publicKey() !== dto.buyerPublicKey) {
-        throw new BadRequestException(
-          'Secret key does not match public key',
-        );
+        throw new BadRequestException('Secret key does not match public key');
       }
 
       return await this.escrowService.createEscrow(dto);
@@ -140,9 +136,7 @@ export class EscrowController {
    * =========================
    */
   @Get(':id')
-  async getEscrow(
-    @Param('id') escrowId: string,
-  ): Promise<EscrowResponseDto> {
+  async getEscrow(@Param('id') escrowId: string): Promise<EscrowResponseDto> {
     return this.escrowService.getEscrow(escrowId);
   }
 

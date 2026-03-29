@@ -1,4 +1,14 @@
-import { Controller, Post, Body, Get, Param, Query, UseInterceptors, UploadedFile, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  Req,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DisputesService } from './disputes.service';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
@@ -42,4 +52,4 @@ export class DisputesController {
     const userId = req.user?.id || 1;
     return this.disputesService.escalateDispute(dto, userId);
   }
-} 
+}

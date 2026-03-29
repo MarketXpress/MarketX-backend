@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between } from 'typeorm';
 import { Transaction, TransactionStatus } from './entities/transaction.entity';
 import { ConfigService } from '@nestjs/config';
-import { Horizon, Transaction as StellarTransaction } from '@stellar/stellar-sdk';
+import {
+  Horizon,
+  Transaction as StellarTransaction,
+} from '@stellar/stellar-sdk';
 
 @Injectable()
 export class TransactionsService {

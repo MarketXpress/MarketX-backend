@@ -37,9 +37,7 @@ describe('OrdersController (e2e)', () => {
   });
 
   it('/GET orders (findAll)', () => {
-    return request(app.getHttpServer())
-      .get('/orders')
-      .expect(200);
+    return request(app.getHttpServer()).get('/orders').expect(200);
   });
 
   it('/GET orders/:id (findOne)', () => {
@@ -57,7 +55,7 @@ describe('OrdersController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/orders')
       .send(createOrderDto)
-      .then(response => {
+      .then((response) => {
         const orderId = response.body.id;
         return request(app.getHttpServer())
           .get(`/orders/${orderId}`)
@@ -80,7 +78,7 @@ describe('OrdersController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/orders')
       .send(createOrderDto)
-      .then(response => {
+      .then((response) => {
         const orderId = response.body.id;
         return request(app.getHttpServer())
           .patch(`/orders/${orderId}/status`)

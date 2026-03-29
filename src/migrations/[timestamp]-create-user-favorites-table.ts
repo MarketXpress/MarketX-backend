@@ -6,9 +6,7 @@ import {
   TableIndex,
 } from 'typeorm';
 
-export class CreateUserFavoritesTable1678901234567
-  implements MigrationInterface
-{
+export class CreateUserFavoritesTable1678901234567 implements MigrationInterface {
   name = 'CreateUserFavoritesTable1678901234567';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

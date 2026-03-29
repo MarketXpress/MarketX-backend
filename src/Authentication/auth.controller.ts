@@ -10,7 +10,14 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto, ForgotPasswordDto, ResetPasswordDto } from './auth.dto';
+import {
+  LoginDto,
+  RegisterDto,
+  RefreshTokenDto,
+  AuthResponseDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './auth.dto';
 import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth-guard';
 import { JwtRefreshGuard } from './jwt-refresh.guard';
@@ -20,7 +27,7 @@ import { CurrentUser } from './current-user.decorator';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * Register a new user
@@ -71,7 +78,9 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout and invalidate refresh token' })
-  async logout(@CurrentUser('userId') userId: string): Promise<{ message: string }> {
+  async logout(
+    @CurrentUser('userId') userId: string,
+  ): Promise<{ message: string }> {
     await this.authService.logout(userId);
     return { message: 'Logged out successfully' };
   }
@@ -96,7 +105,9 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request a password reset link (dispatches email)' })
-  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     return this.authService.requestPasswordReset(dto);
   }
 
@@ -109,7 +120,9 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password using emailed token' })
-  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     return this.authService.resetPassword(dto);
   }
 }
