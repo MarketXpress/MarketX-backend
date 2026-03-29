@@ -297,9 +297,11 @@ export class NotificationsService {
         return 'order-confirmation';
       case NotificationType.ORDER_UPDATED:
         return 'shipping-update';
+      case NotificationType.WELCOME:
+        return 'welcome';
       case NotificationType.SYSTEM_ALERT:
       default:
-        return 'default'; // We might need a default template
+        return 'default';
     }
   }
 

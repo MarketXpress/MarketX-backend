@@ -220,78 +220,45 @@ export class EmailService implements OnModuleInit {
   // ── Webhook / delivery tracking ────────────────────────────────────────────
 
   /**
-   * Handle SendGrid delivery status webhook events and update the email log.
+   * Render a Handlebars template with layout support
    */
-  async trackDeliveryEvent(event: SendGridWebhookEventDto): Promise<void> {
-    const messageId = event.sg_message_id?.split('.')?.[0]; // strip filter suffix
-    if (!messageId) return;
+  private async renderTemplate(templateName: string, context: any): Promise<string> {
+    const templateSource = await this.getTemplateSource(templateName);
+    const template = handlebars.compile(templateSource);
+    const content = template({
+      ...context,
+      year: new Date().getFullYear(),
+    });
 
-    const log = await this.emailLogRepository.findOne({ where: { messageId } });
-    if (!log) {
-      this.logger.debug(`No email log for messageId "${messageId}" (event: ${event.event})`);
-      return;
+    // Check if we should use the base layout
+    if (templateName !== 'base-layout') {
+      try {
+        const layoutSource = await this.getTemplateSource('base-layout');
+        const layout = handlebars.compile(layoutSource);
+        return layout({
+          ...context,
+          body: content,
+          year: new Date().getFullYear(),
+        });
+      } catch (error) {
+        this.logger.warn(`Base layout not found, sending template ${templateName} without layout.`);
+        return content;
+      }
     }
 
-    switch (event.event) {
-      case 'delivered':
-        log.status = EmailStatus.DELIVERED;
-        log.deliveredAt = new Date(event.timestamp * 1000);
-        break;
-      case 'bounce':
-        log.status = EmailStatus.BOUNCED;
-        log.errorMessage = event.reason ?? 'Bounced';
-        break;
-      case 'spamreport':
-        log.status = EmailStatus.SPAM;
-        break;
-      default:
-        // open, click etc. — no status change needed
-        return;
-    }
-
-    await this.emailLogRepository.save(log);
-    this.logger.debug(`Email log ${log.id} updated to "${log.status}" via webhook`);
+    return content;
   }
 
-  // ── Template rendering ─────────────────────────────────────────────────────
-
-  private async renderTemplate(templateName: string, context: Record<string, any>): Promise<string> {
-    const distPath = path.join(this.templatesPath, `${templateName}.hbs`);
-    const srcPath = path.join(process.cwd(), 'src', 'email', 'templates', `${templateName}.hbs`);
-
-    let source: string;
-    if (fs.existsSync(distPath)) {
-      source = fs.readFileSync(distPath, 'utf8');
-    } else if (fs.existsSync(srcPath)) {
-      source = fs.readFileSync(srcPath, 'utf8');
+  private async getTemplateSource(templateName: string): Promise<string> {
+    const filePath = path.join(this.templatesPath, `${templateName}.hbs`);
+    const sourcePath = path.join(process.cwd(), 'src', 'email', 'templates', `${templateName}.hbs`);
+    
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, 'utf8');
+    } else if (fs.existsSync(sourcePath)) {
+      return fs.readFileSync(sourcePath, 'utf8');
     } else {
       throw new Error(`Email template "${templateName}" not found at ${distPath} or ${srcPath}`);
-    }
-
-    const compiled = handlebars.compile(source);
-    return compiled({ ...context, year: new Date().getFullYear() });
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  private async updateLog(
-    logId: string | undefined,
-    status: EmailStatus,
-    messageId?: string | null,
-    errorMessage?: string,
-  ): Promise<void> {
-    if (!logId) return;
-    try {
-      const log = await this.emailLogRepository.findOne({ where: { id: logId } });
-      if (!log) return;
-      log.status = status;
-      if (messageId !== undefined) log.messageId = messageId;
-      if (errorMessage) log.errorMessage = errorMessage;
-      if (status === EmailStatus.SENT) log.sentAt = new Date();
-      log.attempts += 1;
-      await this.emailLogRepository.save(log);
-    } catch (err) {
-      this.logger.warn(`Failed to update email log ${logId}: ${err.message}`);
     }
   }
 }
