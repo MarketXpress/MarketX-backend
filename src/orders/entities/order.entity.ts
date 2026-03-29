@@ -42,6 +42,7 @@ export class Order {
   @Column({ type: 'json', default: [] })
   items: Array<{
     productId: string;
+    variantId?: string;
     productName: string;
     quantity: number;
     price: number;

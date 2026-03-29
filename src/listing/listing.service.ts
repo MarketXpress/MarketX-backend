@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { Listing } from './entities/listing.entity';
+import { ListingVariant } from './entities/listing-variant.entity';
 import { ConfigService } from '@nestjs/config';
 import { SearchSyncService } from '../search/search-sync.service';
 
@@ -19,54 +20,138 @@ export class ListingsService {
     private readonly searchSyncService: SearchSyncService,
   ) {}
 
+  private buildVariant(dto: Partial<ListingVariant>): ListingVariant {
+    const variant = new ListingVariant();
+    variant.sku = dto.sku;
+    variant.attributes = dto.attributes;
+    variant.price = dto.price ?? 0;
+    variant.currency = dto.currency ?? 'USD';
+    variant.quantity = dto.quantity ?? 1;
+    variant.reserved = dto.reserved ?? 0;
+    variant.available = variant.quantity - variant.reserved;
+    if (variant.available < 0) {
+      variant.available = 0;
+    }
+    return variant;
+  }
+
+  private aggregateListing(listing: Listing): Listing {
+    if (listing.variants && listing.variants.length > 0) {
+      const totalQuantity = listing.variants.reduce(
+        (sum, variant) => sum + (variant.quantity ?? 0),
+        0,
+      );
+      const totalReserved = listing.variants.reduce(
+        (sum, variant) => sum + (variant.reserved ?? 0),
+        0,
+      );
+      const totalAvailable = listing.variants.reduce(
+        (sum, variant) => sum + (variant.available ?? 0),
+        0,
+      );
+      const minPrice = Math.min(
+        ...listing.variants.map((variant) => Number(variant.price)),
+      );
+
+      listing.quantity = totalQuantity;
+      listing.reserved = totalReserved;
+      listing.available = totalAvailable;
+      listing.price = minPrice;
+      listing.currency = listing.variants[0].currency || 'USD';
+    } else {
+      // preserve fallback root-level values, and compute available
+      listing.available = Math.max(0, listing.quantity - listing.reserved);
+    }
+    return listing;
+  }
+
+  private prepareVariants(dto: CreateListingDto | UpdateListingDto): ListingVariant[] {
+    if (dto.variants && dto.variants.length > 0) {
+      return dto.variants.map((variantData) =>
+        this.buildVariant({
+          price: variantData.price,
+          currency: variantData.currency,
+          quantity: variantData.quantity ?? 1,
+          reserved: variantData.reserved ?? 0,
+          sku: variantData.sku,
+          attributes: variantData.attributes,
+        }),
+      );
+    }
+
+    // fallback single-variant behavior for legacy payloads
+    if (dto.price !== undefined) {
+      return [
+        this.buildVariant({
+          price: dto.price,
+          currency: dto.currency ?? 'USD',
+          quantity: dto.quantity ?? 1,
+          reserved: dto.reserved ?? 0,
+        }),
+      ];
+    }
+
+    return [];
+  }
+
   async create(dto: CreateListingDto, userId: string) {
-    const expiryDays = this.configService.get<number>(
-      'LISTING_EXPIRY_DAYS',
-      30,
-    );
+    const expiryDays = this.configService.get<number>('LISTING_EXPIRY_DAYS', 30);
     const now = new Date();
-    const expiresAt = new Date(
-      now.getTime() + expiryDays * 24 * 60 * 60 * 1000,
-    );
+    const expiresAt = new Date(now.getTime() + expiryDays * 24 * 60 * 60 * 1000);
+
     const listing = this.listingRepo.create({ ...dto, userId, expiresAt });
+    const variants = this.prepareVariants(dto);
+    if (variants.length > 0) {
+      listing.variants = variants;
+      this.aggregateListing(listing);
+    }
+
     const saved = await this.listingRepo.save(listing);
 
     // Index in search service
     try {
       await this.searchSyncService.syncSingleListing(saved, 'index');
     } catch (error) {
-      this.logger.warn(
-        `Failed to index listing ${saved.id} in search: ${error.message}`,
-      );
+      this.logger.warn(`Failed to index listing ${saved.id} in search: ${error.message}`);
     }
 
-    return saved;
+    return this.aggregateListing(saved);
   }
 
   async findOne(id: string) {
-    const listing = await this.listingRepo.findOneBy({ id });
+    const listing = await this.listingRepo.findOne({
+      where: { id },
+      relations: ['variants'],
+    });
     if (!listing) throw new NotFoundException('Listing not found');
+
     // Increment views count
     listing.views = (listing.views || 0) + 1;
     await this.listingRepo.save(listing);
-    return listing;
+
+    return this.aggregateListing(listing);
   }
 
   async update(id: string, dto: UpdateListingDto) {
     const listing = await this.findOne(id);
+
+    if (dto.variants) {
+      listing.variants = this.prepareVariants(dto);
+    }
+
     Object.assign(listing, dto);
+    this.aggregateListing(listing);
+
     const saved = await this.listingRepo.save(listing);
 
     // Update search index
     try {
       await this.searchSyncService.syncSingleListing(saved, 'update');
     } catch (error) {
-      this.logger.warn(
-        `Failed to update listing ${saved.id} in search: ${error.message}`,
-      );
+      this.logger.warn(`Failed to update listing ${saved.id} in search: ${error.message}`);
     }
 
-    return saved;
+    return this.aggregateListing(saved);
   }
 
   async delete(id: string) {
@@ -89,21 +174,18 @@ export class ListingsService {
     const now = new Date();
     const query = this.listingRepo
       .createQueryBuilder('listing')
-      .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
+      .leftJoin('listing.user', 'user')
+      .leftJoinAndSelect('listing.variants', 'variant')
       .where('listing.isActive = :isActive', { isActive: true })
       .andWhere('listing.deletedAt IS NULL')
-      .andWhere('(listing.expiresAt IS NULL OR listing.expiresAt > :now)', {
-        now,
-      });
+      .andWhere('(listing.expiresAt IS NULL OR listing.expiresAt > :now)', { now });
 
     if (category) {
       query.andWhere('listing.category = :category', { category });
     }
 
     if (location) {
-      query.andWhere('listing.location ILIKE :location', {
-        location: `%${location}%`,
-      });
+      query.andWhere('listing.location ILIKE :location', { location: `%${location}%` });
     }
 
     if (minPrice !== undefined) {
@@ -115,19 +197,17 @@ export class ListingsService {
     }
 
     if (q) {
-      query.andWhere(
-        '(listing.title ILIKE :q OR listing.description ILIKE :q)',
-        { q: `%${q}%` },
-      );
+      query.andWhere('(listing.title ILIKE :q OR listing.description ILIKE :q)', { q: `%${q}%` });
     }
 
-    query.orderBy('listing.createdAt', 'DESC');
-    query.take(take);
-    query.skip(skip);
+    query.orderBy('listing.createdAt', 'DESC').take(take).skip(skip);
 
     const [listings, total] = await query.getManyAndCount();
 
-    return { listings, total };
+    return {
+      listings: listings.map((l) => this.aggregateListing(l)),
+      total,
+    };
   }
 
   async findAll(page?: number, limit?: number, category?: string) {
@@ -136,7 +216,8 @@ export class ListingsService {
 
     const query = this.listingRepo
       .createQueryBuilder('listing')
-      .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
+      .leftJoin('listing.user', 'user')
+      .leftJoinAndSelect('listing.variants', 'variant')
       .where('listing.isActive = :isActive', { isActive: true })
       .andWhere('listing.deletedAt IS NULL');
 
@@ -147,18 +228,26 @@ export class ListingsService {
     query.orderBy('listing.createdAt', 'DESC').take(take).skip(skip);
 
     const [listings, total] = await query.getManyAndCount();
-    return { listings, total, page: page || 1, limit: take };
+    return {
+      listings: listings.map((l) => this.aggregateListing(l)),
+      total,
+      page: page || 1,
+      limit: take,
+    };
   }
 
   async findFeatured() {
-    return this.listingRepo
+    const listings = await this.listingRepo
       .createQueryBuilder('listing')
-      .innerJoin('listing.user', 'user', 'user.deletedAt IS NULL')
+      .leftJoin('listing.user', 'user')
+      .leftJoinAndSelect('listing.variants', 'variant')
       .where('listing.isActive = :isActive', { isActive: true })
       .andWhere('listing.deletedAt IS NULL')
       .orderBy('listing.createdAt', 'DESC')
       .take(10)
       .getMany();
+
+    return listings.map((l) => this.aggregateListing(l));
   }
 
   async remove(id: string) {

@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Listing } from '../listing/entities/listing.entity';
+import { ListingVariant } from '../listing/entities/listing-variant.entity';
 import {
   InventoryHistory,
   InventoryChangeType,
@@ -24,33 +25,124 @@ export class InventoryService {
     @InjectRepository(Listing)
     private readonly listingRepo: Repository<Listing>,
     @InjectRepository(InventoryHistory)
-    private readonly historyRepo: Repository<InventoryHistory>,
+    private readonly hListingVariant)
+    private readonly variantRepo: Repository<ListingVariant>,
+    @InjectRepository(istoryRepo: Repository<InventoryHistory>,
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  private async syncListingAggregate(listing: Listing, manager: EntityManager) {
+    const variants = await manager.find(ListingVariant, {
+      where: { listingId: listing.id },
+    });
 
-  async adjustInventory(
-    listingId: string,
+    if (variants.length > 0) {
+      listing.quantity = variants.reduce((sum, v) => sum + (v.quantity ?? 0), 0);
+      listing.reserved = variants.reduce((sum, v) => sum + (v.reserved ?? 0), 0);
+      listing.available = variants.reduce((sum, v) => sum + (v.available ?? 0), 0);
+      listing.price = Math.min(...variants.map((v) => Number(v.price)));
+      listing.currency = variants[0].currency;
+    } else {
+      listing.available = listing.quantity - listing.reserved;
+    }
+
+    await manager.save(listing);
+  }
+
+  async adjustVariantInventory(
+    variantId: string,
     userId: string,
     change: number,
     type: InventoryChangeType,
     note?: string,
   ) {
     return this.dataSource.transaction(async (manager) => {
-      const listing = await manager.findOne(Listing, {
-        where: { id: listingId },
+      const variant = await manager.findOne(ListingVariant, {
+        where: { id: variantId },
       });
-      if (!listing) throw new NotFoundException('Listing not found');
-      listing.quantity += change;
-      listing.available = listing.quantity - listing.reserved;
-      if (listing.available < 0)
-        throw new BadRequestException('Insufficient inventory');
-      await manager.save(listing);
+
+      if (!variant) {
+        throw new NotFoundException('Variant not found');
+      }
+
+      variant.quantity += change;
+      variant.available = variant.quantity - variant.reserved;
+      if (variant.available < 0) {
+        throw new BadRequestException('Insufficient inventory for variant');
+      }
+
+      await manager.save(variant);
+      const listing = await manager.findOne(Listing, {
+        where: { id: variant.listingId },
+      });
+      if (listing) {
+        await this.syncListingAggregate(listing, manager);
+      }
+
       const history = manager.create(InventoryHistory, {
+        listingId: variant.listingId,
+        userId,
+        change,
+        type,
+        note,
+      });
+      await manager.save(history);
+
+      if (variant.available <= 5 && listing) {
+        await this.notifyLowStock(listing);
+      }
+
+      return variant;
+    });
+  }
+
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  async adjustInventory(
+    listingId: string,
+    userlet listing: Listing | null = null;
+        let variant: ListingVariant | null = null;
+
+        if ('variantId' in item && item.variantId) {
+          variant = await manager.findOne(ListingVariant, {
+            where: { id: item.variantId },
+          });
+          if (!variant) {
+            throw new NotFoundException(`Variant ${item.variantId} not found`);
+          }
+          listing = await manager.findOne(Listing, {
+            where: { id: variant.listingId },
+          });
+        } else {
+          listing = await manager.findOne(Listing, {
+            where: { id: item.productId },
+          });
+        }
+
+        if (!listing) {
+          throw new NotFoundException(`Listing ${item.productId} not found`);
+        }
+
+        const available = variant ? variant.available : listing.available;
+        if (available < item.quantity) {
+          throw new BadRequestException(
+            `Not enough inventory for ${item.productName}. Available: ${available}, Requested: ${item.quantity}`,
+          );
+        }
+
+        if (variant) {
+          variant.reserved += item.quantity;
+          variant.available = variant.quantity - variant.reserved;
+          await manager.save(variant);
+          await this.syncListingAggregate(listing, manager);
+        } else {
+          listing.reserved += item.quantity;
+          listing.available = listing.quantity - listing.reserved;
+          await manager.save(listing);
+        }(InventoryHistory, {
         listingId,
         userId,
         change,

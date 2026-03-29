@@ -1,4 +1,5 @@
 import { Users } from '../../users/users.entity';
+import { ListingVariant } from './listing-variant.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,6 +10,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   ManyToMany,
+  OneToMany,
   Index,
 } from 'typeorm';
 
@@ -82,8 +84,49 @@ export class Listing {
   @ManyToMany(() => Users, (user) => user.favoriteListings)
   favoritedBy: Users[];
 
+  @OneToMany(() => ListingVariant, (variant) => variant.listing, {
+    cascade: true,
+    eager: true,
+  })
+  variants?: ListingVariant[];
+
   @Column({ type: 'int', default: 0 })
   views: number;
+
+  get aggregatedQuantity(): number {
+    if (!this.variants || this.variants.length === 0) {
+      return this.quantity;
+    }
+    return this.variants.reduce((sum, variant) => sum + variant.quantity, 0);
+  }
+
+  get aggregatedReserved(): number {
+    if (!this.variants || this.variants.length === 0) {
+      return this.reserved;
+    }
+    return this.variants.reduce((sum, variant) => sum + variant.reserved, 0);
+  }
+
+  get aggregatedAvailable(): number {
+    if (!this.variants || this.variants.length === 0) {
+      return this.available;
+    }
+    return this.variants.reduce((sum, variant) => sum + variant.available, 0);
+  }
+
+  get minVariantPrice(): number {
+    if (!this.variants || this.variants.length === 0) {
+      return Number(this.price);
+    }
+    return Math.min(...this.variants.map((variant) => Number(variant.price)));
+  }
+
+  get variantCurrency(): string {
+    if (!this.variants || this.variants.length === 0) {
+      return this.currency;
+    }
+    return this.variants[0].currency;
+  }
 
   @Column({ default: false })
   isFeatured: boolean;
