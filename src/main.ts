@@ -1,7 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppValidationPipe } from './common/pipes/validation.pipe';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LoggingInterceptor, ETagInterceptor } from './common/interceptors';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './common/logger/logger.service';
 import { Logger } from '@nestjs/common';
@@ -63,8 +63,11 @@ async function bootstrap() {
   // Apply global exception filter
   app.useGlobalFilters(new HttpExceptionFilter(loggerService));
 
-  // Apply global logging interceptor
-  app.useGlobalInterceptors(new LoggingInterceptor(loggerService));
+  // Apply global ETag and logging interceptors
+  app.useGlobalInterceptors(
+    new ETagInterceptor(),
+    new LoggingInterceptor(loggerService),
+  );
 
   // Apply locale middleware
   app.use(LocaleMiddleware.prototype.use);
