@@ -10,7 +10,14 @@ import {
   Req,
   Query,
   UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { mkdir, unlink } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { ListingsService } from './listing.service';
@@ -35,6 +42,58 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 })
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
+
+  @Post('bulk-import')
+  @UseGuards(JwtAuthGuard)
+  @RateLimit({
+    windowMs: 5 * 60 * 1000,
+    maxRequests: 2,
+    tierLimits: {
+      [UserTier.ENTERPRISE]: { maxRequests: 10 },
+    },
+    message: 'Too many bulk imports. Please wait before uploading another CSV.',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: async (_req, _file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'bulk-csv');
+          try {
+            await mkdir(uploadPath, { recursive: true });
+            cb(null, uploadPath);
+          } catch (error) {
+            cb(error as Error, uploadPath);
+          }
+        },
+        filename: (_req, file, cb) => {
+          const extension = extname(file.originalname || '').toLowerCase();
+          cb(null, `${Date.now()}-${randomUUID()}${extension || '.csv'}`);
+        },
+      }),
+      fileFilter: (_req, file, cb) => {
+        const extension = extname(file.originalname || '').toLowerCase();
+        if (extension !== '.csv') {
+          cb(new BadRequestException('Only .csv files are supported'), false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async bulkImport(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req,
+  ) {
+    if (!file?.path) {
+      throw new BadRequestException('CSV file is required');
+    }
+
+    try {
+      return await this.listingsService.importFromCsv(file.path, req.user.id);
+    } finally {
+      await unlink(file.path).catch(() => undefined);
+    }
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)
