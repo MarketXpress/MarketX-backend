@@ -46,8 +46,14 @@ export class WishlistPriceScheduler {
    */
   private async fetchCurrentPrices(
     productIds: string[],
-  ): Promise<Array<{ productId: string; newPrice: number; isAvailable: boolean }>> {
-    const updates: Array<{ productId: string; newPrice: number; isAvailable: boolean }> = [];
+  ): Promise<
+    Array<{ productId: string; newPrice: number; isAvailable: boolean }>
+  > {
+    const updates: Array<{
+      productId: string;
+      newPrice: number;
+      isAvailable: boolean;
+    }> = [];
 
     for (const productId of productIds) {
       try {
@@ -60,7 +66,8 @@ export class WishlistPriceScheduler {
           updates.push({
             productId,
             newPrice: Number(dbProduct.price),
-            isAvailable: dbProduct.status === 'active' && dbProduct.available > 0,
+            isAvailable:
+              dbProduct.status === 'active' && dbProduct.available > 0,
           });
         } else {
           // If not in database, try the mock service as fallback

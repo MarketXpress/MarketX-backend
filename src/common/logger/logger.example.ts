@@ -125,11 +125,7 @@ export class ExampleLoggingService {
       const duration = Date.now() - startTime;
 
       // Only logged in development mode
-      this.logger.logDatabaseQuery(
-        'SELECT * FROM users',
-        [],
-        duration,
-      );
+      this.logger.logDatabaseQuery('SELECT * FROM users', [], duration);
 
       return [];
     } catch (error) {

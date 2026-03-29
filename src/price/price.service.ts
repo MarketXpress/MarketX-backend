@@ -44,14 +44,17 @@ export class PriceService implements OnModuleInit {
         ? { 'x-cg-demo-api-key': apiKey }
         : {};
 
-      const { data } = await axios.get<Record<string, { usd: number }>>(this.COINGECKO_URL, {
-        headers,
-        params: {
-          ids: 'stellar,usd-coin',
-          vs_currencies: 'usd',
+      const { data } = await axios.get<Record<string, { usd: number }>>(
+        this.COINGECKO_URL,
+        {
+          headers,
+          params: {
+            ids: 'stellar,usd-coin',
+            vs_currencies: 'usd',
+          },
+          timeout: 10000,
         },
-        timeout: 10000,
-      });
+      );
 
       const xlmUsd: number = data['stellar']['usd'];
       const usdcUsd: number = data['usd-coin']['usd'];
@@ -66,9 +69,7 @@ export class PriceService implements OnModuleInit {
 
       this.cache = rates;
       this.lastKnownRates = rates;
-      this.logger.log(
-        `Rates updated — XLM: $${xlmUsd}, USDC: $${usdcUsd}`,
-      );
+      this.logger.log(`Rates updated — XLM: $${xlmUsd}, USDC: $${usdcUsd}`);
     } catch (error) {
       this.logger.error(
         `Failed to fetch rates: ${error.message}. Using fallback.`,
@@ -87,7 +88,9 @@ export class PriceService implements OnModuleInit {
         cachedAt: new Date(),
         source: 'fallback',
       };
-      this.logger.warn('Using hardcoded fallback rates — no live data ever loaded');
+      this.logger.warn(
+        'Using hardcoded fallback rates — no live data ever loaded',
+      );
     }
   }
 

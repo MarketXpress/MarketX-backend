@@ -6,7 +6,7 @@ export class I18nService {
   constructor(private readonly i18n: NestI18nService) {}
 
   async translate(key: string, options?: any): Promise<string> {
-    return this.i18n.translate(key, options) as Promise<string>;
+    return this.i18n.translate(key, options);
   }
 
   formatDate(date: Date, locale: string) {

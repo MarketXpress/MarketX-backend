@@ -18,6 +18,7 @@ import { EmailLog, EmailStatus } from './entities/email-log.entity';
 import { EmailPreferenceService } from './email-preference.service';
 import { SendGridWebhookEventDto } from './dto/webhook-event.dto';
 import { AccountLockedEmailDto } from './dto/account-locked-email.dto';
+import { EMAIL_JOB_SEND, EMAIL_QUEUE } from '../job-processing/queue.constants';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -27,10 +28,10 @@ export class EmailService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly emailPreferenceService: EmailPreferenceService,
-    @InjectQueue('email') private readonly emailQueue: Queue,
+    @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
     @InjectRepository(EmailLog)
     private readonly emailLogRepository: Repository<EmailLog>,
-  ) { }
+  ) {}
 
   onModuleInit() {
     const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
@@ -48,9 +49,14 @@ export class EmailService implements OnModuleInit {
 
   async sendOrderConfirmation(dto: OrderConfirmationEmailDto): Promise<void> {
     if (dto.userId) {
-      const allowed = await this.emailPreferenceService.canReceive(dto.userId, 'order');
+      const allowed = await this.emailPreferenceService.canReceive(
+        dto.userId,
+        'order',
+      );
       if (!allowed) {
-        this.logger.debug(`User ${dto.userId} opted out of order emails — skipping.`);
+        this.logger.debug(
+          `User ${dto.userId} opted out of order emails — skipping.`,
+        );
         return;
       }
     }
@@ -89,9 +95,14 @@ export class EmailService implements OnModuleInit {
 
   async sendShippingUpdate(dto: ShippingUpdateEmailDto): Promise<void> {
     if (dto.userId) {
-      const allowed = await this.emailPreferenceService.canReceive(dto.userId, 'shipping');
+      const allowed = await this.emailPreferenceService.canReceive(
+        dto.userId,
+        'shipping',
+      );
       if (!allowed) {
-        this.logger.debug(`User ${dto.userId} opted out of shipping emails — skipping.`);
+        this.logger.debug(
+          `User ${dto.userId} opted out of shipping emails — skipping.`,
+        );
         return;
       }
     }
@@ -115,9 +126,14 @@ export class EmailService implements OnModuleInit {
 
   async sendWelcome(dto: WelcomeEmailDto): Promise<void> {
     if (dto.userId) {
-      const allowed = await this.emailPreferenceService.canReceive(dto.userId, 'account');
+      const allowed = await this.emailPreferenceService.canReceive(
+        dto.userId,
+        'account',
+      );
       if (!allowed) {
-        this.logger.debug(`User ${dto.userId} opted out of account emails — skipping.`);
+        this.logger.debug(
+          `User ${dto.userId} opted out of account emails — skipping.`,
+        );
         return;
       }
     }
@@ -164,14 +180,20 @@ export class EmailService implements OnModuleInit {
       }),
     );
 
-    await this.emailQueue.add('send-email', { ...dto, logId: log.id }, {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 2000 },
-      removeOnComplete: true,
-      removeOnFail: false,
-    });
+    await this.emailQueue.add(
+      EMAIL_JOB_SEND,
+      { ...dto, logId: log.id },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
 
-    this.logger.debug(`Queued email "${dto.subject}" to ${dto.to} (logId: ${log.id})`);
+    this.logger.debug(
+      `Queued email "${dto.subject}" to ${dto.to} (logId: ${log.id})`,
+    );
     return log;
   }
 
@@ -183,13 +205,16 @@ export class EmailService implements OnModuleInit {
    */
   async sendMail(dto: SendEmailDto & { logId?: string }): Promise<void> {
     const { to, subject, template, context, logId } = dto;
-    const from = this.configService.get<string>('EMAIL_FROM') || 'noreply@marketx.com';
+    const from =
+      this.configService.get<string>('EMAIL_FROM') || 'noreply@marketx.com';
 
     let html: string;
     try {
       html = await this.renderTemplate(template, context || {});
     } catch (err) {
-      this.logger.error(`Template render error for "${template}": ${err.message}`);
+      this.logger.error(
+        `Template render error for "${template}": ${err.message}`,
+      );
       await this.updateLog(logId, EmailStatus.FAILED, null, err.message);
       throw err;
     }
@@ -199,11 +224,15 @@ export class EmailService implements OnModuleInit {
     if (this.configService.get<string>('SENDGRID_API_KEY')) {
       try {
         const [response] = await sgMail.send(msg);
-        const messageId = (response.headers?.['x-message-id'] as string) ?? null;
-        this.logger.log(`Email sent to ${to} via template "${template}" (msgId: ${messageId})`);
+        const messageId =
+          (response.headers?.['x-message-id'] as string) ?? null;
+        this.logger.log(
+          `Email sent to ${to} via template "${template}" (msgId: ${messageId})`,
+        );
         await this.updateLog(logId, EmailStatus.SENT, messageId);
       } catch (error) {
-        const errMsg = error?.response?.body?.errors?.[0]?.message ?? error.message;
+        const errMsg =
+          error?.response?.body?.errors?.[0]?.message ?? error.message;
         this.logger.error(`SendGrid error sending to ${to}: ${errMsg}`);
         await this.updateLog(logId, EmailStatus.FAILED, null, errMsg);
         throw error;
@@ -222,7 +251,10 @@ export class EmailService implements OnModuleInit {
   /**
    * Render a Handlebars template with layout support
    */
-  private async renderTemplate(templateName: string, context: any): Promise<string> {
+  private async renderTemplate(
+    templateName: string,
+    context: any,
+  ): Promise<string> {
     const templateSource = await this.getTemplateSource(templateName);
     const template = handlebars.compile(templateSource);
     const content = template({
@@ -241,7 +273,9 @@ export class EmailService implements OnModuleInit {
           year: new Date().getFullYear(),
         });
       } catch (error) {
-        this.logger.warn(`Base layout not found, sending template ${templateName} without layout.`);
+        this.logger.warn(
+          `Base layout not found, sending template ${templateName} without layout.`,
+        );
         return content;
       }
     }
@@ -251,14 +285,22 @@ export class EmailService implements OnModuleInit {
 
   private async getTemplateSource(templateName: string): Promise<string> {
     const filePath = path.join(this.templatesPath, `${templateName}.hbs`);
-    const sourcePath = path.join(process.cwd(), 'src', 'email', 'templates', `${templateName}.hbs`);
-    
+    const sourcePath = path.join(
+      process.cwd(),
+      'src',
+      'email',
+      'templates',
+      `${templateName}.hbs`,
+    );
+
     if (fs.existsSync(filePath)) {
       return fs.readFileSync(filePath, 'utf8');
     } else if (fs.existsSync(sourcePath)) {
       return fs.readFileSync(sourcePath, 'utf8');
     } else {
-      throw new Error(`Email template "${templateName}" not found at ${distPath} or ${srcPath}`);
+      throw new Error(
+        `Email template "${templateName}" not found at ${distPath} or ${srcPath}`,
+      );
     }
   }
 }

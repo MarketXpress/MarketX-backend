@@ -33,7 +33,7 @@ export class MarketPlaceController {
     const skip = parseInt(skipStr ?? '', 10) || 0;
 
     const { listings, total } =
-      await this.listingsService.findActiveListingsPaginated({take, skip});
+      await this.listingsService.findActiveListingsPaginated({ take, skip });
 
     return {
       data: listings,

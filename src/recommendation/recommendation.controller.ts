@@ -42,7 +42,11 @@ export class RecommendationsController {
       throw new BadRequestException('Invalid latitude or longitude');
     }
 
-    return this.recommendationsService.findNearbyListings(userLat, userLng, maxDistance);
+    return this.recommendationsService.findNearbyListings(
+      userLat,
+      userLng,
+      maxDistance,
+    );
   }
 
   // 2. NEW: Similar Products (Required for Task #141)

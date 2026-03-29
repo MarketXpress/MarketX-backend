@@ -15,7 +15,13 @@ if (process.env.NODE_ENV === 'test') {
     async expire(_key: string, _sec: number) {
       return 1;
     },
-    async set(key: string, value: string, _ex?: string, _ttl?: number, _nx?: string) {
+    async set(
+      key: string,
+      value: string,
+      _ex?: string,
+      _ttl?: number,
+      _nx?: string,
+    ) {
       const exists = store.has(key);
       if (_nx === 'NX' && exists) return null;
       store.set(key, value);

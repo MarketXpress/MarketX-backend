@@ -25,4 +25,4 @@ export class ReportsController {
       return res.status(400).json({ message: 'Invalid report type' });
     }
   }
-} 
+}

@@ -1,4 +1,4 @@
-name: Rust Coverage Gate
+name: Worker Slice Coverage Gate
 
 on:
   push:
@@ -18,21 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install llvm-tools-preview
-        run: rustup component add llvm-tools-preview || true
-
-      - name: Install cargo-tarpaulin
-        run: |
-          cargo install cargo-tarpaulin --locked || true
-          cargo tarpaulin --version
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run coverage check
-        run: make ci
+        run: npm run test:issues -- --coverage --coverageReporters=text

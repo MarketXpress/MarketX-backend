@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { AuditLog, AuditActionType, AuditStatus } from './entities/audit-log.entity';
+import {
+  AuditLog,
+  AuditActionType,
+  AuditStatus,
+} from './entities/audit-log.entity';
 import { GetAuditLogsDto } from './dto/get-audit-logs.dto';
 import { IAuditEvent } from './interfaces/audit-event.interface';
 
@@ -64,7 +68,10 @@ export class AuditService {
       const auditLog = this.auditLogRepository.create(data);
       return await this.auditLogRepository.save(auditLog);
     } catch (error) {
-      this.logger.error(`Failed to create audit log: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create audit log: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -104,7 +111,10 @@ export class AuditService {
 
       return savedLog;
     } catch (error) {
-      this.logger.error(`Failed to log state change: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to log state change: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -113,9 +123,7 @@ export class AuditService {
    * Batch create audit logs (useful for bulk operations)
    * Maintains immutability by appending only
    */
-  async createBulkAuditLogs(
-    events: IAuditEvent[],
-  ): Promise<AuditLog[]> {
+  async createBulkAuditLogs(events: IAuditEvent[]): Promise<AuditLog[]> {
     try {
       const auditLogs = events.map((event) => {
         const { diff, changedFields } = this.calculateStateDiff(
@@ -142,7 +150,10 @@ export class AuditService {
 
       return await this.auditLogRepository.save(auditLogs);
     } catch (error) {
-      this.logger.error(`Failed to create bulk audit logs: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create bulk audit logs: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -165,7 +176,8 @@ export class AuditService {
       } = query;
 
       const skip = (page - 1) * limit;
-      const queryBuilder = this.auditLogRepository.createQueryBuilder('audit_log');
+      const queryBuilder =
+        this.auditLogRepository.createQueryBuilder('audit_log');
 
       // Apply filters
       if (action) {
@@ -181,26 +193,37 @@ export class AuditService {
       }
 
       if (resourceType) {
-        queryBuilder.andWhere('audit_log.resourceType = :resourceType', { resourceType });
+        queryBuilder.andWhere('audit_log.resourceType = :resourceType', {
+          resourceType,
+        });
       }
 
       if (resourceId) {
-        queryBuilder.andWhere('audit_log.resourceId = :resourceId', { resourceId });
+        queryBuilder.andWhere('audit_log.resourceId = :resourceId', {
+          resourceId,
+        });
       }
 
       if (startDate && endDate) {
-        queryBuilder.andWhere('audit_log.createdAt BETWEEN :startDate AND :endDate', {
-          startDate,
-          endDate,
-        });
+        queryBuilder.andWhere(
+          'audit_log.createdAt BETWEEN :startDate AND :endDate',
+          {
+            startDate,
+            endDate,
+          },
+        );
       } else if (startDate) {
-        queryBuilder.andWhere('audit_log.createdAt >= :startDate', { startDate });
+        queryBuilder.andWhere('audit_log.createdAt >= :startDate', {
+          startDate,
+        });
       } else if (endDate) {
         queryBuilder.andWhere('audit_log.createdAt <= :endDate', { endDate });
       }
 
       if (!includeExpired) {
-        queryBuilder.andWhere('(audit_log.expiresAt IS NULL OR audit_log.expiresAt > NOW())');
+        queryBuilder.andWhere(
+          '(audit_log.expiresAt IS NULL OR audit_log.expiresAt > NOW())',
+        );
       }
 
       // Apply sorting
@@ -221,7 +244,10 @@ export class AuditService {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to get audit logs: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get audit logs: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -235,7 +261,8 @@ export class AuditService {
     options?: { startDate?: Date; endDate?: Date; userId?: string },
   ): Promise<AuditLog[]> {
     try {
-      const queryBuilder = this.auditLogRepository.createQueryBuilder('audit_log');
+      const queryBuilder =
+        this.auditLogRepository.createQueryBuilder('audit_log');
 
       queryBuilder.where('audit_log.changedFields LIKE :changedField', {
         changedField: `%${changedField}%`,
@@ -254,10 +281,14 @@ export class AuditService {
       }
 
       if (options?.userId) {
-        queryBuilder.andWhere('audit_log.userId = :userId', { userId: options.userId });
+        queryBuilder.andWhere('audit_log.userId = :userId', {
+          userId: options.userId,
+        });
       }
 
-      return await queryBuilder.orderBy('audit_log.createdAt', 'DESC').getMany();
+      return await queryBuilder
+        .orderBy('audit_log.createdAt', 'DESC')
+        .getMany();
     } catch (error) {
       this.logger.error(
         `Failed to get audit logs by changed fields: ${error.message}`,
@@ -284,7 +315,10 @@ export class AuditService {
 
       return stats;
     } catch (error) {
-      this.logger.error(`Failed to get audit stats: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get audit stats: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -297,13 +331,18 @@ export class AuditService {
         .from(AuditLog)
         .where('expiresAt < :date', { date: new Date() })
         .orWhere('createdAt < :retentionDate', {
-          retentionDate: new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000),
+          retentionDate: new Date(
+            Date.now() - retentionDays * 24 * 60 * 60 * 1000,
+          ),
         })
         .execute();
 
       return result.affected || 0;
     } catch (error) {
-      this.logger.error(`Failed to cleanup expired logs: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to cleanup expired logs: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -316,8 +355,11 @@ export class AuditService {
       }
       return log;
     } catch (error) {
-      this.logger.error(`Failed to get audit log by ID: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get audit log by ID: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
-} 
+}

@@ -21,7 +21,8 @@ describe('Payments Module (e2e)', () => {
   // Mock data
   const testOrderId = 'order-123';
   const testBuyerId = 'buyer-123';
-  const testWalletAddress = 'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMhtqc6VPM7';
+  const testWalletAddress =
+    'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMhtqc6VPM7';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -40,7 +41,9 @@ describe('Payments Module (e2e)', () => {
     await app.init();
 
     paymentsService = moduleFixture.get<PaymentsService>(PaymentsService);
-    paymentMonitorService = moduleFixture.get<PaymentMonitorService>(PaymentMonitorService);
+    paymentMonitorService = moduleFixture.get<PaymentMonitorService>(
+      PaymentMonitorService,
+    );
   });
 
   afterAll(async () => {
@@ -102,7 +105,8 @@ describe('Payments Module (e2e)', () => {
     it('should accept Stellar webhook', async () => {
       const webhookData = {
         transactionHash: 'tx-123',
-        sourceAccount: 'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMHTQC6VTEST',
+        sourceAccount:
+          'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMHTQC6VTEST',
         destinationAccount: testWalletAddress,
         amount: '100',
         asset_code: 'XLM',

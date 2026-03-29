@@ -19,7 +19,10 @@ describe('AuthService - Refresh Token Security', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: JwtService, useValue: { signAsync: jest.fn().mockResolvedValue('new_at') } },
+        {
+          provide: JwtService,
+          useValue: { signAsync: jest.fn().mockResolvedValue('new_at') },
+        },
         { provide: TokenRegistryService, useValue: mockTokenRegistry },
         { provide: 'EventEmitter2', useValue: {} },
       ],
@@ -31,16 +34,22 @@ describe('AuthService - Refresh Token Security', () => {
 
   it('should rotate tokens and delete the old one on success', async () => {
     mockTokenRegistry.get.mockResolvedValue('active');
-    
-    const result = await service.refreshTokens('user123', 'test@example.com', 'old_rt');
+
+    const result = await service.refreshTokens(
+      'user123',
+      'test@example.com',
+      'old_rt',
+    );
 
     expect(result).toHaveProperty('accessToken');
-    expect(mockTokenRegistry.del).toHaveBeenCalledWith(expect.stringContaining('old_rt'));
+    expect(mockTokenRegistry.del).toHaveBeenCalledWith(
+      expect.stringContaining('old_rt'),
+    );
   });
 
   it('should throw ForbiddenException and revoke all tokens if reuse is detected', async () => {
     // Simulate token already rotated/missing
-    mockTokenRegistry.get.mockResolvedValue(null); 
+    mockTokenRegistry.get.mockResolvedValue(null);
     const revokeSpy = jest.spyOn(service, 'revokeAllUserTokens');
 
     await expect(

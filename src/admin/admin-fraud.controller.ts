@@ -21,7 +21,10 @@ export class AdminFraudController {
   }
 
   @Patch(':id/review')
-  async review(@Param('id') id: string, @Body() body: { mark: 'safe' | 'reviewed' | 'suspended' }) {
+  async review(
+    @Param('id') id: string,
+    @Body() body: { mark: 'safe' | 'reviewed' | 'suspended' },
+  ) {
     const alert = await this.repo.findOneBy({ id } as any);
     if (!alert) return { error: 'not_found' };
     alert.status = body.mark;

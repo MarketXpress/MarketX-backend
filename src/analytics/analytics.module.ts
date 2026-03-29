@@ -17,12 +17,7 @@ import { User } from '../entities/user.entity';
     }),
   ],
   controllers: [AnalyticsController],
-  providers: [
-    AnalyticsService,
-    AnalyticsGateway,
-  ],
-  exports: [
-    AnalyticsService,
-  ],
+  providers: [AnalyticsService, AnalyticsGateway],
+  exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

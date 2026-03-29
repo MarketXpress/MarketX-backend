@@ -8,42 +8,42 @@ export interface RateLimitOptions {
    * Window duration in milliseconds
    */
   windowMs?: number;
-  
+
   /**
    * Maximum number of requests allowed in the window
    */
   maxRequests?: number;
-  
+
   /**
    * Additional requests allowed for burst traffic
    */
   burstAllowance?: number;
-  
+
   /**
    * Whether to skip counting failed requests
    */
   skipFailedRequests?: boolean;
-  
+
   /**
    * Whether to skip counting successful requests
    */
   skipSuccessfulRequests?: boolean;
-  
+
   /**
    * Custom identifier function
    */
   keyGenerator?: (req: any) => string;
-  
+
   /**
    * Different limits for different user tiers
    */
   tierLimits?: Partial<Record<UserTier, Partial<RateLimitOptions>>>;
-  
+
   /**
    * Custom error message
    */
   message?: string;
-  
+
   /**
    * Whether to apply rate limiting to this endpoint
    */
@@ -52,9 +52,9 @@ export interface RateLimitOptions {
 
 /**
  * Rate limiting decorator for controllers and methods
- * 
+ *
  * @param options Rate limiting configuration options
- * 
+ *
  * @example
  * ```typescript
  * @RateLimit({
@@ -67,7 +67,7 @@ export interface RateLimitOptions {
  *   return this.userService.getProfile();
  * }
  * ```
- * 
+ *
  * @example
  * ```typescript
  * // Different limits for different tiers
@@ -91,7 +91,7 @@ export const RateLimit = (options: RateLimitOptions = {}) => {
 
 /**
  * Disable rate limiting for a specific endpoint
- * 
+ *
  * @example
  * ```typescript
  * @NoRateLimit()
@@ -107,7 +107,7 @@ export const NoRateLimit = () => {
 
 /**
  * Strict rate limiting for sensitive endpoints
- * 
+ *
  * @example
  * ```typescript
  * @StrictRateLimit({ maxRequests: 3, windowMs: 15 * 60 * 1000 })
@@ -117,13 +117,15 @@ export const NoRateLimit = () => {
  * }
  * ```
  */
-export const StrictRateLimit = (options: Omit<RateLimitOptions, 'burstAllowance'> = {}) => {
+export const StrictRateLimit = (
+  options: Omit<RateLimitOptions, 'burstAllowance'> = {},
+) => {
   return SetMetadata(RATE_LIMIT_KEY, { ...options, burstAllowance: 0 });
 };
 
 /**
  * Generous rate limiting for premium features
- * 
+ *
  * @example
  * ```typescript
  * @GenerousRateLimit({ maxRequests: 100, windowMs: 60 * 1000 })
@@ -134,15 +136,17 @@ export const StrictRateLimit = (options: Omit<RateLimitOptions, 'burstAllowance'
  * ```
  */
 export const GenerousRateLimit = (options: RateLimitOptions = {}) => {
-  return SetMetadata(RATE_LIMIT_KEY, { 
-    ...options, 
-    burstAllowance: (options.burstAllowance || 0) + Math.ceil((options.maxRequests || 10) * 0.5)
+  return SetMetadata(RATE_LIMIT_KEY, {
+    ...options,
+    burstAllowance:
+      (options.burstAllowance || 0) +
+      Math.ceil((options.maxRequests || 10) * 0.5),
   });
 };
 
 /**
  * IP-based rate limiting (ignores user authentication)
- * 
+ *
  * @example
  * ```typescript
  * @IpRateLimit({ maxRequests: 100, windowMs: 60 * 1000 })
@@ -153,15 +157,15 @@ export const GenerousRateLimit = (options: RateLimitOptions = {}) => {
  * ```
  */
 export const IpRateLimit = (options: RateLimitOptions = {}) => {
-  return SetMetadata(RATE_LIMIT_KEY, { 
-    ...options, 
-    keyGenerator: (req) => req.ip || req.connection.remoteAddress 
+  return SetMetadata(RATE_LIMIT_KEY, {
+    ...options,
+    keyGenerator: (req) => req.ip || req.connection.remoteAddress,
   });
 };
 
 /**
  * User-based rate limiting (requires authentication)
- * 
+ *
  * @example
  * ```typescript
  * @UserRateLimit({ maxRequests: 50, windowMs: 60 * 1000 })
@@ -172,15 +176,15 @@ export const IpRateLimit = (options: RateLimitOptions = {}) => {
  * ```
  */
 export const UserRateLimit = (options: RateLimitOptions = {}) => {
-  return SetMetadata(RATE_LIMIT_KEY, { 
-    ...options, 
-    keyGenerator: (req) => req.user?.id || req.user?.email || req.ip 
+  return SetMetadata(RATE_LIMIT_KEY, {
+    ...options,
+    keyGenerator: (req) => req.user?.id || req.user?.email || req.ip,
   });
 };
 
 /**
  * Endpoint-specific rate limiting
- * 
+ *
  * @example
  * ```typescript
  * @EndpointRateLimit({ maxRequests: 10, windowMs: 60 * 1000 })
@@ -191,8 +195,9 @@ export const UserRateLimit = (options: RateLimitOptions = {}) => {
  * ```
  */
 export const EndpointRateLimit = (options: RateLimitOptions = {}) => {
-  return SetMetadata(RATE_LIMIT_KEY, { 
-    ...options, 
-    keyGenerator: (req) => `${req.user?.id || req.ip}:${req.route?.path || req.url}` 
+  return SetMetadata(RATE_LIMIT_KEY, {
+    ...options,
+    keyGenerator: (req) =>
+      `${req.user?.id || req.ip}:${req.route?.path || req.url}`,
   });
 };

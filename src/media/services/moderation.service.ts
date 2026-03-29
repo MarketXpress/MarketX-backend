@@ -11,7 +11,9 @@ export class ModerationService {
   constructor(private readonly configService: ConfigService) {
     const region = this.configService.get<string>('AWS_REGION');
     const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+    const secretAccessKey = this.configService.get<string>(
+      'AWS_SECRET_ACCESS_KEY',
+    );
 
     this.isEnabled = !!(accessKeyId && secretAccessKey);
 
@@ -22,7 +24,9 @@ export class ModerationService {
         secretAccessKey,
       });
     } else {
-      this.logger.warn('AWS Rekognition not configured. Content moderation is DISABLED.');
+      this.logger.warn(
+        'AWS Rekognition not configured. Content moderation is DISABLED.',
+      );
     }
   }
 
@@ -37,14 +41,20 @@ export class ModerationService {
         MinConfidence: 80,
       };
 
-      const response = await this.rekognition.detectModerationLabels(params).promise();
+      const response = await this.rekognition
+        .detectModerationLabels(params)
+        .promise();
       const labels = response.ModerationLabels || [];
 
-      this.logger.debug(`Moderation labels detected: ${JSON.stringify(labels)}`);
+      this.logger.debug(
+        `Moderation labels detected: ${JSON.stringify(labels)}`,
+      );
 
       for (const label of labels) {
         if (
-          (label.Name === 'Explicit Nudity' || label.Name === 'Violence' || label.Name === 'Visually Disturbing') &&
+          (label.Name === 'Explicit Nudity' ||
+            label.Name === 'Violence' ||
+            label.Name === 'Visually Disturbing') &&
           label.Confidence > 90
         ) {
           throw new BadRequestException(
@@ -54,7 +64,10 @@ export class ModerationService {
       }
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
-      this.logger.error(`AI Content Moderation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `AI Content Moderation failed: ${error.message}`,
+        error.stack,
+      );
       // Fail-safe: allow if moderation service itself fails (or change to reject if strict)
     }
   }

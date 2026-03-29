@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  Inject,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Inject, HttpStatus } from '@nestjs/common';
 import {
   HealthCheckService,
   HealthCheck,
@@ -24,7 +19,12 @@ export class HealthController {
   @Get()
   @SkipRateLimit()
   @HealthCheck()
-  async check(): Promise<{ status: string; info?: any; error?: any; details: any }> {
+  async check(): Promise<{
+    status: string;
+    info?: any;
+    error?: any;
+    details: any;
+  }> {
     const startTime = Date.now();
     const result = await this.health.check([
       async () => this.dbIndicator.isHealthy(),
@@ -32,22 +32,29 @@ export class HealthController {
       async () => this.cacheHealthCheck(),
       async () => this.memoryHealthCheck(),
     ]);
-    
+
     // Calculate response time
     const responseTime = Date.now() - startTime;
-    
+
     // Ensure response is within 2 seconds as per requirements
     if (responseTime > 2000) {
-      console.warn(`Health check took ${responseTime}ms, exceeding 2 second threshold`);
+      console.warn(
+        `Health check took ${responseTime}ms, exceeding 2 second threshold`,
+      );
     }
-    
+
     return result;
   }
 
   @Get('live')
   @SkipRateLimit()
   @HealthCheck()
-  async liveness(): Promise<{ status: string; info?: any; error?: any; details: any }> {
+  async liveness(): Promise<{
+    status: string;
+    info?: any;
+    error?: any;
+    details: any;
+  }> {
     // Liveness probe - checks if the application is running
     return await this.health.check([
       async () => this.applicationLivenessCheck(),
@@ -57,7 +64,12 @@ export class HealthController {
   @Get('ready')
   @SkipRateLimit()
   @HealthCheck()
-  async readiness(): Promise<{ status: string; info?: any; error?: any; details: any }> {
+  async readiness(): Promise<{
+    status: string;
+    info?: any;
+    error?: any;
+    details: any;
+  }> {
     // Readiness probe - checks if the application is ready to accept traffic
     return await this.health.check([
       async () => this.dbIndicator.isHealthy(),
@@ -71,32 +83,32 @@ export class HealthController {
       // Simplified health check without actual cache manager
       return { cache: { status: 'up', message: 'Cache is available' } };
     } catch (error) {
-      return { cache: { status: 'down', message: (error as any).message } };
+      return { cache: { status: 'down', message: error.message } };
     }
   }
 
   private async memoryHealthCheck(): Promise<HealthIndicatorResult> {
     const used = process.memoryUsage();
     const heapUsedPercent = (used.heapUsed / used.heapTotal) * 100;
-    
+
     // Consider memory healthy if less than 90% of heap is used
     if (heapUsedPercent < 90) {
-      return { 
-        memory: { 
-          status: 'up', 
+      return {
+        memory: {
+          status: 'up',
           heapUsedPercent: heapUsedPercent.toFixed(2) + '%',
           rss: `${Math.round(used.rss / 1024 / 1024)}MB`,
           heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)}MB`,
-          heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`
-        } 
+          heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`,
+        },
       };
     } else {
-      return { 
-        memory: { 
-          status: 'down', 
+      return {
+        memory: {
+          status: 'down',
           message: `High memory usage: ${heapUsedPercent.toFixed(2)}%`,
-          heapUsedPercent: heapUsedPercent.toFixed(2) + '%'
-        } 
+          heapUsedPercent: heapUsedPercent.toFixed(2) + '%',
+        },
       };
     }
   }

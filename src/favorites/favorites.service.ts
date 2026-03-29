@@ -100,32 +100,32 @@ export class FavoritesService {
     return user.favoriteListings.some((fav) => fav.id === listingId);
   }
 
-
-  async findUserFavorites(userId: string, page: number = 1, limit: number = 10) {
+  async findUserFavorites(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     return this.cacheManager.getOrSet(
       `user:${userId}:favorites:page:${page}:limit:${limit}`,
       async () => {
         return [];
       },
-      { 
-        ttl: 1800, 
-        tags: ['favorites', `user:${userId}`] 
-      }
+      {
+        ttl: 1800,
+        tags: ['favorites', `user:${userId}`],
+      },
     );
   }
 
   async addToFavorites(userId: string, listingId: string) {
-    
     await this.cacheManager.invalidatePattern(`user:${userId}:favorites:*`);
-    
+
     return { message: 'Added to favorites' };
   }
 
   async removeFromFavorites(userId: string, listingId: string) {
-   
     await this.cacheManager.invalidatePattern(`user:${userId}:favorites:*`);
-    
+
     return { message: 'Removed from favorites' };
   }
 }
-

@@ -1,4 +1,5 @@
 import { Module, Provider } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductImage } from './entities/image.entity';
@@ -9,6 +10,8 @@ import { ImageProcessingService } from './services/image-processing.service';
 import { LocalStorageProvider } from './providers/local-storage.provider';
 import { S3StorageProvider } from './providers/s3-storage.provider';
 import { ModerationService } from './services/moderation.service';
+import { MediaProcessor } from './media.processor';
+import { IMAGE_PROCESSING_QUEUE } from '../job-processing/queue.constants';
 
 /**
  * Requirement: Cloud Storage Integration (AWS S3)
@@ -36,6 +39,9 @@ const storageProviderFactory: Provider = {
   imports: [
     TypeOrmModule.forFeature([ProductImage]), // Requirement: Store image metadata
     ConfigModule,
+    BullModule.registerQueue({
+      name: IMAGE_PROCESSING_QUEUE,
+    }),
   ],
   controllers: [
     MediaController, // Standard media endpoints
@@ -43,6 +49,7 @@ const storageProviderFactory: Provider = {
   ],
   providers: [
     MediaService, // Requirement: Upload handling
+    MediaProcessor,
     ImageProcessingService, // Requirement: Validation and Transformation
     ModerationService,
     storageProviderFactory,

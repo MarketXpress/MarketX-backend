@@ -15,10 +15,6 @@ import { CacheController } from './cache.controller';
     CacheInterceptor,
     CacheCleanupTask,
   ],
-  exports: [
-    CacheService,
-    CacheManagerService,
-    CacheInterceptor,
-  ]
+  exports: [CacheService, CacheManagerService, CacheInterceptor],
 })
 export class CacheModule {}

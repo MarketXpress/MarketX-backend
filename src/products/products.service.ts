@@ -43,7 +43,10 @@ export class ProductsService {
     this.pricingService.validatePrice(basePrice, baseCurrency);
 
     const basePriceDecimal = basePrice.toString();
-    const basePriceMinor = this.pricingService.toMinorUnitsString(basePrice, baseCurrency);
+    const basePriceMinor = this.pricingService.toMinorUnitsString(
+      basePrice,
+      baseCurrency,
+    );
     const rateSnapshot = this.pricingService.getRateSnapshot();
     const productId = crypto.randomUUID();
 
@@ -86,7 +89,9 @@ export class ProductsService {
         basePriceMinor,
         baseCurrency,
         rateSnapshot: rateSnapshot.rates,
-        rateTimestamp: rateSnapshot.timestamp ? new Date(rateSnapshot.timestamp) : undefined,
+        rateTimestamp: rateSnapshot.timestamp
+          ? new Date(rateSnapshot.timestamp)
+          : undefined,
         updatedBy: sellerId,
         reason: 'initial_price',
       }),
@@ -127,7 +132,11 @@ export class ProductsService {
     return this.toDisplayProduct(product, preferredCurrency);
   }
 
-  async update(id: string, sellerId: string, dto: UpdateProductDto): Promise<Product> {
+  async update(
+    id: string,
+    sellerId: string,
+    dto: UpdateProductDto,
+  ): Promise<Product> {
     const product = this.products.find((p) => p.id === id);
 
     if (!product || product.sellerId !== sellerId) {
@@ -159,7 +168,11 @@ export class ProductsService {
     return product;
   }
 
-  async updatePrice(id: string, sellerId: string, dto: UpdatePriceDto): Promise<Product> {
+  async updatePrice(
+    id: string,
+    sellerId: string,
+    dto: UpdatePriceDto,
+  ): Promise<Product> {
     const product = this.products.find((p) => p.id === id);
 
     if (!product || product.sellerId !== sellerId) {
@@ -169,9 +182,14 @@ export class ProductsService {
     this.pricingService.validatePrice(dto.basePrice, dto.baseCurrency);
 
     const basePriceDecimal = dto.basePrice.toString();
-    const basePriceMinor = this.pricingService.toMinorUnitsString(dto.basePrice, dto.baseCurrency);
+    const basePriceMinor = this.pricingService.toMinorUnitsString(
+      dto.basePrice,
+      dto.baseCurrency,
+    );
 
-    const hasChanged = product.basePrice !== basePriceDecimal || product.baseCurrency !== dto.baseCurrency;
+    const hasChanged =
+      product.basePrice !== basePriceDecimal ||
+      product.baseCurrency !== dto.baseCurrency;
 
     if (!hasChanged) {
       return product;
@@ -204,7 +222,9 @@ export class ProductsService {
         basePriceMinor,
         baseCurrency: dto.baseCurrency,
         rateSnapshot: rateSnapshot.rates,
-        rateTimestamp: rateSnapshot.timestamp ? new Date(rateSnapshot.timestamp) : undefined,
+        rateTimestamp: rateSnapshot.timestamp
+          ? new Date(rateSnapshot.timestamp)
+          : undefined,
         updatedBy: sellerId,
         reason: dto.reason,
       }),

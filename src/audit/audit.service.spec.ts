@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditService } from './audit.service';
-import { AuditLog, AuditActionType, AuditStatus } from './entities/audit-log.entity';
+import {
+  AuditLog,
+  AuditActionType,
+  AuditStatus,
+} from './entities/audit-log.entity';
 import { IAuditEvent } from './interfaces/audit-event.interface';
 
 describe('AuditService', () => {
@@ -43,7 +47,9 @@ describe('AuditService', () => {
       const mockSave = jest
         .spyOn(repository, 'save')
         .mockResolvedValue(mockAuditLog as AuditLog);
-      jest.spyOn(repository, 'create').mockReturnValue(mockAuditLog as AuditLog);
+      jest
+        .spyOn(repository, 'create')
+        .mockReturnValue(mockAuditLog as AuditLog);
 
       const result = await service.createAuditLog({
         userId: 'user-123',
@@ -168,7 +174,11 @@ describe('AuditService', () => {
 
       const mockLogs = [
         { ...mockAuditLog, userId: 'user-1' },
-        { ...mockAuditLog, userId: 'user-2', action: AuditActionType.EMAIL_CHANGE },
+        {
+          ...mockAuditLog,
+          userId: 'user-2',
+          action: AuditActionType.EMAIL_CHANGE,
+        },
       ];
 
       jest.spyOn(repository, 'create').mockReturnValue(mockLogs[0] as AuditLog);
@@ -307,8 +317,16 @@ describe('AuditService', () => {
   describe('getAuditStats', () => {
     it('should retrieve audit statistics', async () => {
       const mockStats = [
-        { action: AuditActionType.PASSWORD_CHANGE, status: AuditStatus.SUCCESS, count: 5 },
-        { action: AuditActionType.EMAIL_CHANGE, status: AuditStatus.SUCCESS, count: 3 },
+        {
+          action: AuditActionType.PASSWORD_CHANGE,
+          status: AuditStatus.SUCCESS,
+          count: 5,
+        },
+        {
+          action: AuditActionType.EMAIL_CHANGE,
+          status: AuditStatus.SUCCESS,
+          count: 3,
+        },
       ];
 
       const mockQueryBuilder = {
@@ -325,7 +343,10 @@ describe('AuditService', () => {
         .spyOn(repository, 'createQueryBuilder')
         .mockReturnValue(mockQueryBuilder as any);
 
-      const result = await service.getAuditStats(new Date('2024-01-01'), new Date('2024-12-31'));
+      const result = await service.getAuditStats(
+        new Date('2024-01-01'),
+        new Date('2024-12-31'),
+      );
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
@@ -362,7 +383,9 @@ describe('AuditService', () => {
       const result = await service.getAuditLogById('test-id-123');
 
       expect(result).toEqual(mockAuditLog);
-      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'test-id-123' } });
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: 'test-id-123' },
+      });
     });
 
     it('should throw error if audit log not found', async () => {

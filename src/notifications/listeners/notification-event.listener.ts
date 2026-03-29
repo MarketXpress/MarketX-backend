@@ -130,7 +130,11 @@ export class NotificationEventListener {
   }
 
   @OnEvent('auth.password_reset_requested')
-  async handlePasswordResetRequested(event: { email: string; name: string; resetUrl: string }) {
+  async handlePasswordResetRequested(event: {
+    email: string;
+    name: string;
+    resetUrl: string;
+  }) {
     await this.notificationsService.createNotification({
       userId: 'system',
       type: NotificationType.PASSWORD_RESET,

@@ -36,7 +36,9 @@ describe.skip('FavoritesController', () => {
       const result = await controller.favoriteListing('1', mockRequest);
 
       expect(favoritesService.favoriteListing).toHaveBeenCalledWith(1, 1);
-      expect(result).toEqual({ message: 'Listing added to favorites successfully' });
+      expect(result).toEqual({
+        message: 'Listing added to favorites successfully',
+      });
     });
   });
 
@@ -47,14 +49,18 @@ describe.skip('FavoritesController', () => {
       const result = await controller.unfavoriteListing('1', mockRequest);
 
       expect(favoritesService.unfavoriteListing).toHaveBeenCalledWith(1, 1);
-      expect(result).toEqual({ message: 'Listing removed from favorites successfully' });
+      expect(result).toEqual({
+        message: 'Listing removed from favorites successfully',
+      });
     });
   });
 
   describe('getUserFavorites', () => {
     it('should return user favorites', async () => {
       const mockFavorites = [{ id: 1, title: 'Test Listing' }];
-      jest.spyOn(favoritesService, 'getUserFavorites').mockResolvedValue(mockFavorites as any);
+      jest
+        .spyOn(favoritesService, 'getUserFavorites')
+        .mockResolvedValue(mockFavorites as any);
 
       const result = await controller.getUserFavorites(mockRequest);
 

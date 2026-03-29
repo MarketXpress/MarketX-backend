@@ -1,7 +1,11 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { PriceService } from './price.service';
-import { ConvertDto, ConversionResultDto, RatesResponseDto } from './dto/conversion.dto';
+import {
+  ConvertDto,
+  ConversionResultDto,
+  RatesResponseDto,
+} from './dto/conversion.dto';
 import { Public } from 'src/decorators/roles.decorator';
 
 @ApiTags('Price')

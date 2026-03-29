@@ -15,7 +15,10 @@ import {
   ApplyCouponResponseDto,
   OrderItemForCouponDto,
 } from './dto/apply-coupon.dto';
-import { CouponResponseDto, CouponAnalyticsDto } from './dto/coupon-response.dto';
+import {
+  CouponResponseDto,
+  CouponAnalyticsDto,
+} from './dto/coupon-response.dto';
 
 export interface CouponValidationResult {
   valid: boolean;
@@ -56,17 +59,13 @@ export class CouponsService {
       createCouponDto.discountType === DiscountType.PERCENTAGE &&
       createCouponDto.discountValue > 100
     ) {
-      throw new BadRequestException(
-        'Percentage discount cannot exceed 100%',
-      );
+      throw new BadRequestException('Percentage discount cannot exceed 100%');
     }
 
     // Validate dates
     if (createCouponDto.startDate && createCouponDto.endDate) {
       if (createCouponDto.startDate > createCouponDto.endDate) {
-        throw new BadRequestException(
-          'Start date cannot be after end date',
-        );
+        throw new BadRequestException('Start date cannot be after end date');
       }
     }
 
@@ -152,9 +151,7 @@ export class CouponsService {
     // Validate dates
     if (updateCouponDto.startDate && updateCouponDto.endDate) {
       if (updateCouponDto.startDate > updateCouponDto.endDate) {
-        throw new BadRequestException(
-          'Start date cannot be after end date',
-        );
+        throw new BadRequestException('Start date cannot be after end date');
       }
     }
 
@@ -428,7 +425,8 @@ export class CouponsService {
       totalUses,
       totalDiscountAmount,
       averageOrderAmount: totalUses > 0 ? totalOrderAmount / totalUses : 0,
-      averageDiscountAmount: totalUses > 0 ? totalDiscountAmount / totalUses : 0,
+      averageDiscountAmount:
+        totalUses > 0 ? totalDiscountAmount / totalUses : 0,
       uniqueUsers,
       conversionRate: 0, // Would need to calculate based on views vs usage
       usageByDay,
@@ -465,12 +463,8 @@ export class CouponsService {
       return items;
     }
 
-    const {
-      productIds,
-      categoryIds,
-      excludedProductIds,
-      excludedCategoryIds,
-    } = coupon.restrictions;
+    const { productIds, categoryIds, excludedProductIds, excludedCategoryIds } =
+      coupon.restrictions;
 
     return items.filter((item) => {
       // Check excluded products

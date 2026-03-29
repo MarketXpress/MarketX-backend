@@ -13,7 +13,7 @@ import { Users } from '../../users/users.entity';
 import {
   SubscriptionTier,
   SubscriptionStatus,
-  BillingCycle
+  BillingCycle,
 } from '../enums/subscription.enums';
 
 @Entity('subscriptions')
@@ -34,7 +34,11 @@ export class Subscription {
   tier: SubscriptionTier;
 
   @ApiProperty({ description: 'Subscription status', enum: SubscriptionStatus })
-  @Column({ type: 'enum', enum: SubscriptionStatus, default: SubscriptionStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: SubscriptionStatus,
+    default: SubscriptionStatus.PENDING,
+  })
   status: SubscriptionStatus;
 
   @ApiProperty({ description: 'Billing cycle', enum: BillingCycle })
@@ -81,7 +85,9 @@ export class Subscription {
   @Column({ name: 'payment_provider', nullable: true })
   paymentProvider: string;
 
-  @ApiProperty({ description: 'External subscription ID from payment provider' })
+  @ApiProperty({
+    description: 'External subscription ID from payment provider',
+  })
   @Column({ name: 'external_subscription_id', nullable: true })
   externalSubscriptionId: string;
 

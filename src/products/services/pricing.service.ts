@@ -69,8 +69,14 @@ export class PricingService {
     }
 
     const amountMinor = this.toMinorUnitsFromString(amountString, currency);
-    const minMinor = this.toMinorUnitsFromString(this.minPriceByCurrency[currency], currency);
-    const maxMinor = this.toMinorUnitsFromString(this.maxPriceByCurrency[currency], currency);
+    const minMinor = this.toMinorUnitsFromString(
+      this.minPriceByCurrency[currency],
+      currency,
+    );
+    const maxMinor = this.toMinorUnitsFromString(
+      this.maxPriceByCurrency[currency],
+      currency,
+    );
 
     if (amountMinor < minMinor || amountMinor > maxMinor) {
       throw new BadRequestException(
@@ -108,7 +114,9 @@ export class PricingService {
       return 1;
     }
 
-    const oneSourceUnitMinor = this.pow10(this.getCurrencyPrecision(sourceCurrency));
+    const oneSourceUnitMinor = this.pow10(
+      this.getCurrencyPrecision(sourceCurrency),
+    );
     const convertedMinor = this.convertMinorUnits(
       oneSourceUnitMinor,
       sourceCurrency,
@@ -124,7 +132,10 @@ export class PricingService {
   }
 
   toMinorUnits(amount: number, currency: SupportedCurrency): bigint {
-    return this.toMinorUnitsFromString(this.normalizeNumberString(amount), currency);
+    return this.toMinorUnitsFromString(
+      this.normalizeNumberString(amount),
+      currency,
+    );
   }
 
   fromMinorUnits(amountMinor: bigint, currency: SupportedCurrency): number {
@@ -137,12 +148,18 @@ export class PricingService {
     const fractionalString =
       precision > 0 ? fractional.toString().padStart(precision, '0') : '';
     const value =
-      precision > 0 ? `${integer.toString()}.${fractionalString}` : integer.toString();
+      precision > 0
+        ? `${integer.toString()}.${fractionalString}`
+        : integer.toString();
 
     return Number(negative ? `-${value}` : value);
   }
 
-  multiplyAmount(amount: number, quantity: number, currency: SupportedCurrency): number {
+  multiplyAmount(
+    amount: number,
+    quantity: number,
+    currency: SupportedCurrency,
+  ): number {
     const amountMinor = this.toMinorUnits(amount, currency);
     return this.fromMinorUnits(amountMinor * BigInt(quantity), currency);
   }
@@ -168,7 +185,10 @@ export class PricingService {
     return value.toFixed(12).replace(/0+$/, '').replace(/\.$/, '');
   }
 
-  private validateAmountForConversion(amount: number, currency: SupportedCurrency): void {
+  private validateAmountForConversion(
+    amount: number,
+    currency: SupportedCurrency,
+  ): void {
     const amountString = this.normalizeNumberString(amount);
     const scale = this.getScale(amountString);
     const maxScale = this.getCurrencyPrecision(currency);
@@ -191,7 +211,8 @@ export class PricingService {
     const [integerPartRaw, fractionPartRaw = ''] = clean.split('.');
     const integerPart = integerPartRaw || '0';
     const fractionPart = fractionPartRaw || '';
-    const combined = `${integerPart}${fractionPart}`.replace(/^0+(?=\d)/, '') || '0';
+    const combined =
+      `${integerPart}${fractionPart}`.replace(/^0+(?=\d)/, '') || '0';
     const int = BigInt(combined);
 
     return {
@@ -200,7 +221,10 @@ export class PricingService {
     };
   }
 
-  private toMinorUnitsFromString(value: string, currency: SupportedCurrency): bigint {
+  private toMinorUnitsFromString(
+    value: string,
+    currency: SupportedCurrency,
+  ): bigint {
     const decimal = this.parseDecimal(value);
     const targetScale = this.getCurrencyPrecision(currency);
     const exponent = targetScale - decimal.scale;
@@ -223,7 +247,8 @@ export class PricingService {
     const sourceScale = this.getCurrencyPrecision(sourceCurrency);
     const targetScale = this.getCurrencyPrecision(targetCurrency);
 
-    const exponent = targetRate.scale + targetScale - sourceScale - sourceRate.scale;
+    const exponent =
+      targetRate.scale + targetScale - sourceScale - sourceRate.scale;
     const numeratorMultiplier = exponent >= 0 ? this.pow10(exponent) : 1n;
     const denominatorMultiplier = exponent < 0 ? this.pow10(-exponent) : 1n;
 
@@ -265,7 +290,10 @@ export class PricingService {
   }
 
   // Public helpers for deterministic, precision-safe operations using strings
-  toMinorUnitsString(value: number | string, currency: SupportedCurrency): string {
+  toMinorUnitsString(
+    value: number | string,
+    currency: SupportedCurrency,
+  ): string {
     if (typeof value === 'number') {
       return this.toMinorUnits(value, currency).toString();
     }
@@ -274,25 +302,40 @@ export class PricingService {
     return this.toMinorUnitsFromString(value, currency).toString();
   }
 
-  fromMinorUnitsToDecimalString(amountMinor: bigint | string, currency: SupportedCurrency): string {
-    const n = typeof amountMinor === 'string' ? BigInt(amountMinor) : amountMinor;
+  fromMinorUnitsToDecimalString(
+    amountMinor: bigint | string,
+    currency: SupportedCurrency,
+  ): string {
+    const n =
+      typeof amountMinor === 'string' ? BigInt(amountMinor) : amountMinor;
     const precision = this.getCurrencyPrecision(currency);
     const negative = n < 0n;
     const absolute = negative ? -n : n;
     const base = this.pow10(precision);
     const integer = absolute / base;
     const fractional = absolute % base;
-    const fractionalString = precision > 0 ? fractional.toString().padStart(precision, '0') : '';
-    const value = precision > 0 ? `${integer.toString()}.${fractionalString}` : integer.toString();
+    const fractionalString =
+      precision > 0 ? fractional.toString().padStart(precision, '0') : '';
+    const value =
+      precision > 0
+        ? `${integer.toString()}.${fractionalString}`
+        : integer.toString();
     return negative ? `-${value}` : value;
   }
 
-  getRateSnapshot(): { rates: Record<SupportedCurrency, string>; timestamp: string } {
+  getRateSnapshot(): {
+    rates: Record<SupportedCurrency, string>;
+    timestamp: string;
+  } {
     return { rates: this.getLiveRates(), timestamp: new Date().toISOString() };
   }
 
   calculateOrderTotal(
-    items: { price: string | number; currency: SupportedCurrency; quantity: number }[],
+    items: {
+      price: string | number;
+      currency: SupportedCurrency;
+      quantity: number;
+    }[],
     targetCurrency: SupportedCurrency,
   ): string {
     let totalMinor = 0n;
@@ -301,7 +344,11 @@ export class PricingService {
         typeof item.price === 'number'
           ? this.toMinorUnits(item.price, item.currency)
           : this.toMinorUnitsFromString(item.price, item.currency);
-      const convertedMinor = this.convertMinorUnits(sourceMinor, item.currency, targetCurrency);
+      const convertedMinor = this.convertMinorUnits(
+        sourceMinor,
+        item.currency,
+        targetCurrency,
+      );
       totalMinor += convertedMinor * BigInt(item.quantity);
     }
     return this.fromMinorUnitsToDecimalString(totalMinor, targetCurrency);
@@ -312,11 +359,16 @@ export class PricingService {
     sourceCurrency: SupportedCurrency,
     targetCurrency: SupportedCurrency,
   ): string {
-    const sourceMinor = typeof amount === 'number'
-      ? this.toMinorUnits(amount, sourceCurrency)
-      : this.toMinorUnitsFromString(amount, sourceCurrency);
+    const sourceMinor =
+      typeof amount === 'number'
+        ? this.toMinorUnits(amount, sourceCurrency)
+        : this.toMinorUnitsFromString(amount, sourceCurrency);
 
-    const targetMinor = this.convertMinorUnits(sourceMinor, sourceCurrency, targetCurrency);
+    const targetMinor = this.convertMinorUnits(
+      sourceMinor,
+      sourceCurrency,
+      targetCurrency,
+    );
 
     return this.fromMinorUnitsToDecimalString(targetMinor, targetCurrency);
   }

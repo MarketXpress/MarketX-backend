@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsOptional, IsDateString, IsEnum, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsDateString,
+  IsEnum,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { VerificationType, DocumentType } from '../enums/verification.enums';
 
@@ -89,13 +96,20 @@ export class SubmitVerificationDto {
   @Type(() => PersonalInfoDto)
   personalInfo: PersonalInfoDto;
 
-  @ApiProperty({ description: 'Business information (for seller verification)', required: false, type: BusinessInfoDto })
+  @ApiProperty({
+    description: 'Business information (for seller verification)',
+    required: false,
+    type: BusinessInfoDto,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => BusinessInfoDto)
   businessInfo?: BusinessInfoDto;
 
-  @ApiProperty({ description: 'Documents to upload', type: [DocumentUploadDto] })
+  @ApiProperty({
+    description: 'Documents to upload',
+    type: [DocumentUploadDto],
+  })
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => DocumentUploadDto)

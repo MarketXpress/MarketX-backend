@@ -29,7 +29,10 @@ export class WalletService {
 
   generateKeyPair(): { publicKey: string; secretKey: string } {
     const secretKey = crypto.randomBytes(32).toString('hex');
-    const publicKey = crypto.createHash('sha256').update(secretKey).digest('hex');
+    const publicKey = crypto
+      .createHash('sha256')
+      .update(secretKey)
+      .digest('hex');
     return { publicKey, secretKey };
   }
 
@@ -53,16 +56,18 @@ export class WalletService {
       relations: ['user'],
     });
   }
-  
-  
 
   private encrypt(text: string): string {
     const key = this.configService.get<string>('SECRET_KEY');
     if (!key) {
       throw new Error('SECRET_KEY is not defined in environment variables');
     }
-  
-    const cipher = crypto.createCipheriv('aes-256-ctr', key.slice(0, 32), Buffer.alloc(16, 0));
+
+    const cipher = crypto.createCipheriv(
+      'aes-256-ctr',
+      key.slice(0, 32),
+      Buffer.alloc(16, 0),
+    );
     return Buffer.concat([cipher.update(text), cipher.final()]).toString('hex');
   }
 
@@ -107,12 +112,16 @@ export class WalletService {
       try {
         const account = await server.loadAccount(wallet.publicKey);
         // Find XLM balance (native asset)
-        const nativeBalance = account.balances.find(b => b.asset_type === 'native');
+        const nativeBalance = account.balances.find(
+          (b) => b.asset_type === 'native',
+        );
         if (nativeBalance) {
           // If you have a balance column, update it; otherwise, log it
           // wallet.balance = nativeBalance.balance;
           // await this.walletRepository.save(wallet);
-          console.log(`Wallet ${wallet.id} synced. Balance: ${nativeBalance.balance}`);
+          console.log(
+            `Wallet ${wallet.id} synced. Balance: ${nativeBalance.balance}`,
+          );
         }
       } catch (error) {
         console.error(`Failed to sync wallet ${wallet.id}:`, error.message);
@@ -125,7 +134,9 @@ export class WalletService {
    * @param userId - The ID of the user whose wallet balance is to be fetched
    * @returns Object containing balance, currency, and publicKey
    */
-  async getWalletBalance(userId: string): Promise<{ balance: string; currency: string; publicKey: string }> {
+  async getWalletBalance(
+    userId: string,
+  ): Promise<{ balance: string; currency: string; publicKey: string }> {
     const wallet = await this.findByUserId(userId);
     if (!wallet) {
       throw new Error('Wallet not found for user');
@@ -135,8 +146,10 @@ export class WalletService {
     try {
       const account = await server.loadAccount(wallet.publicKey);
       // Find XLM balance (native asset)
-      const nativeBalance = account.balances.find(b => b.asset_type === 'native');
-      
+      const nativeBalance = account.balances.find(
+        (b) => b.asset_type === 'native',
+      );
+
       if (!nativeBalance) {
         throw new Error('No balance found for wallet');
       }
@@ -144,7 +157,7 @@ export class WalletService {
       return {
         balance: nativeBalance.balance,
         currency: 'XLM',
-        publicKey: wallet.publicKey
+        publicKey: wallet.publicKey,
       };
     } catch (error) {
       if (error.response?.status === 404) {
@@ -242,7 +255,10 @@ export class WalletService {
 
       return { success: true, transactionId };
     } catch (error) {
-      this.logger.error(`Withdrawal request failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Withdrawal request failed: ${error.message}`,
+        error.stack,
+      );
 
       // Emit audit event for error
       this.eventEmitter.emit(
@@ -320,7 +336,10 @@ export class WalletService {
 
       return { success: true };
     } catch (error) {
-      this.logger.error(`Withdrawal completion failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Withdrawal completion failed: ${error.message}`,
+        error.stack,
+      );
 
       // Emit audit event for error
       this.eventEmitter.emit(
@@ -396,7 +415,10 @@ export class WalletService {
 
       return { success: true, transactionId };
     } catch (error) {
-      this.logger.error(`Deposit request failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Deposit request failed: ${error.message}`,
+        error.stack,
+      );
 
       this.eventEmitter.emit(
         EventNames.WALLET_DEPOSIT_REQUESTED,
@@ -430,4 +452,3 @@ export class WalletService {
     return /^G[A-Z2-7]{55}$/.test(address);
   }
 }
-

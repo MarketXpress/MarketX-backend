@@ -34,7 +34,10 @@ export class AuthController {
   })
   async login(@Body() body: { email: string; password: string }) {
     try {
-      const token = await this.authService.validateUser(body.email, body.password);
+      const token = await this.authService.validateUser(
+        body.email,
+        body.password,
+      );
       return { accessToken: token };
     } catch {
       throw new UnauthorizedException('Invalid credentials');

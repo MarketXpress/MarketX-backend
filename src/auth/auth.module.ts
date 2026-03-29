@@ -16,7 +16,7 @@ import { TokenRegistryService } from './token-registry.service';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    
+
     // Register JWT without static config; strategies will handle specific secrets/expiry
     JwtModule.register({}),
 
@@ -26,7 +26,8 @@ import { TokenRegistryService } from './token-registry.service';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         store: await redisStore.redisStore({
-          url: configService.get<string>('REDIS_URL') || 'redis://localhost:6379',
+          url:
+            configService.get<string>('REDIS_URL') || 'redis://localhost:6379',
           ttl: 604800000, // Default 7 days
         }),
       }),

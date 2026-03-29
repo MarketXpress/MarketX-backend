@@ -98,24 +98,27 @@ export class ThrottleGuard implements CanActivate {
     const response = context.switchToHttp().getResponse();
     response.setHeader('X-RateLimit-Limit', config.limit);
     response.setHeader('X-RateLimit-Remaining', config.limit - record.count);
-    response.setHeader(
-      'X-RateLimit-Reset',
-      Math.ceil(record.resetTime / 1000),
-    );
+    response.setHeader('X-RateLimit-Reset', Math.ceil(record.resetTime / 1000));
 
     return true;
   }
 
   private getClientId(request: Request): string {
     // Prefer user ID if authenticated, otherwise use IP
-    if (request.user && typeof request.user === 'object' && 'id' in request.user) {
+    if (
+      request.user &&
+      typeof request.user === 'object' &&
+      'id' in request.user
+    ) {
       return `user:${(request.user as any).id}`;
     }
 
     // Get client IP
     const forwarded = request.headers['x-forwarded-for'];
     const clientIp =
-      (typeof forwarded === 'string' ? forwarded.split(',')[0] : forwarded?.[0]) ||
+      (typeof forwarded === 'string'
+        ? forwarded.split(',')[0]
+        : forwarded?.[0]) ||
       request.ip ||
       request.socket.remoteAddress ||
       'unknown';
@@ -145,7 +148,9 @@ export class ThrottleGuard implements CanActivate {
     }
 
     if (cleanedCount > 0) {
-      this.logger.debug(`Cleaned up ${cleanedCount} expired rate limit records`);
+      this.logger.debug(
+        `Cleaned up ${cleanedCount} expired rate limit records`,
+      );
     }
   }
 

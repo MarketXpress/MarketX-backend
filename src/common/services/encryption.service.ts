@@ -9,7 +9,9 @@ export class EncryptionService {
   private readonly key: Buffer;
 
   constructor(private configService: ConfigService) {
-    const secret = this.configService.get<string>('ENCRYPTION_SECRET') || 'default-secret-key-32-chars-long-!!';
+    const secret =
+      this.configService.get<string>('ENCRYPTION_SECRET') ||
+      'default-secret-key-32-chars-long-!!';
     // Ensure the key is 32 bytes for aes-256
     this.key = crypto.createHash('sha256').update(String(secret)).digest();
   }
@@ -17,10 +19,12 @@ export class EncryptionService {
   /**
    * Encrypt a buffer
    */
-  async encrypt(data: Buffer): Promise<{ encryptedData: Buffer; iv: Buffer; authTag: Buffer }> {
+  async encrypt(
+    data: Buffer,
+  ): Promise<{ encryptedData: Buffer; iv: Buffer; authTag: Buffer }> {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(this.algorithm, this.key, iv);
-    
+
     const encryptedData = Buffer.concat([cipher.update(data), cipher.final()]);
     const authTag = cipher.getAuthTag();
 
@@ -34,10 +38,14 @@ export class EncryptionService {
   /**
    * Decrypt a buffer
    */
-  async decrypt(encryptedData: Buffer, iv: Buffer, authTag: Buffer): Promise<Buffer> {
+  async decrypt(
+    encryptedData: Buffer,
+    iv: Buffer,
+    authTag: Buffer,
+  ): Promise<Buffer> {
     const decipher = crypto.createDecipheriv(this.algorithm, this.key, iv);
     decipher.setAuthTag(authTag);
-    
+
     return Buffer.concat([decipher.update(encryptedData), decipher.final()]);
   }
 
@@ -45,7 +53,9 @@ export class EncryptionService {
    * Encrypt a string (helper)
    */
   async encryptString(text: string): Promise<string> {
-    const { encryptedData, iv, authTag } = await this.encrypt(Buffer.from(text));
+    const { encryptedData, iv, authTag } = await this.encrypt(
+      Buffer.from(text),
+    );
     return JSON.stringify({
       data: encryptedData.toString('hex'),
       iv: iv.toString('hex'),

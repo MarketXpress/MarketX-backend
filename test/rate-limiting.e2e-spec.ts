@@ -67,7 +67,9 @@ describe('Rate Limiting (e2e)', () => {
         .send({ email: 'test@example.com', password: 'password' })
         .expect((res) => {
           expect(res.headers['x-ratelimit-limit']).toBe('5');
-          expect(parseInt(res.headers['x-ratelimit-remaining'])).toBeLessThan(5);
+          expect(parseInt(res.headers['x-ratelimit-remaining'])).toBeLessThan(
+            5,
+          );
           expect(res.headers['x-ratelimit-window']).toBe('900000'); // 15 minutes
           expect(res.headers['x-ratelimit-burst']).toBe('0');
         });
@@ -252,9 +254,10 @@ describe('Rate Limiting (e2e)', () => {
     it('should rate limit by IP when user is not authenticated', async () => {
       // Make requests without authentication
       for (let i = 0; i < 15; i++) {
-        const response = await request(app.getHttpServer())
-          .get('/listings/activeListings');
-        
+        const response = await request(app.getHttpServer()).get(
+          '/listings/activeListings',
+        );
+
         if (response.status === 429) {
           expect(i).toBeGreaterThan(5); // Should allow some requests before limiting
           break;
@@ -278,7 +281,7 @@ describe('Rate Limiting (e2e)', () => {
     it('should allow requests as time window slides', async () => {
       // This test would need to use fake timers or wait for actual time
       // For now, we'll test that the window resets after the specified time
-      
+
       // Hit rate limit
       for (let i = 0; i < 6; i++) {
         await request(app.getHttpServer())

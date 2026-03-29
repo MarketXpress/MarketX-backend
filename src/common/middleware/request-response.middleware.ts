@@ -41,20 +41,11 @@ export class RequestResponseMiddleware implements NestMiddleware {
 
       // Log based on status code
       if (statusCode >= 500) {
-        this.customLogger.error(
-          `Server Error: ${method} ${url}`,
-          logData,
-        );
+        this.customLogger.error(`Server Error: ${method} ${url}`, logData);
       } else if (statusCode >= 400) {
-        this.customLogger.warn(
-          `Client Error: ${method} ${url}`,
-          logData,
-        );
+        this.customLogger.warn(`Client Error: ${method} ${url}`, logData);
       } else {
-        this.customLogger.info(
-          `Request completed: ${method} ${url}`,
-          logData,
-        );
+        this.customLogger.info(`Request completed: ${method} ${url}`, logData);
       }
     });
 

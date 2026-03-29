@@ -20,7 +20,9 @@ export class BackupController {
 
   @Get(':s3Key/restore-url')
   async getRestoreUrl(@Param('s3Key') s3Key: string) {
-    const url = await this.backupService.generateRestoreUrl(decodeURIComponent(s3Key));
+    const url = await this.backupService.generateRestoreUrl(
+      decodeURIComponent(s3Key),
+    );
     return { url, expiresIn: '1 hour' };
   }
 }

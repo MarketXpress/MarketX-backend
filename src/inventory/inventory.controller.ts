@@ -17,22 +17,58 @@ export class InventoryController {
   }
 
   @Post('adjust')
-  async adjustInventory(@Body() body: { listingId: string; userId: string; change: number; note?: string }) {
-    return this.inventoryService.adjustInventory(body.listingId, body.userId, body.change, InventoryChangeType.ADJUSTMENT, body.note);
+  async adjustInventory(
+    @Body()
+    body: {
+      listingId: string;
+      userId: string;
+      change: number;
+      note?: string;
+    },
+  ) {
+    return this.inventoryService.adjustInventory(
+      body.listingId,
+      body.userId,
+      body.change,
+      InventoryChangeType.ADJUSTMENT,
+      body.note,
+    );
   }
 
   @Post('reserve')
-  async reserveInventory(@Body() body: { listingId: string; userId: string; amount: number }) {
-    return this.inventoryService.reserveInventory(body.listingId, body.userId, body.amount);
+  async reserveInventory(
+    @Body() body: { listingId: string; userId: string; amount: number },
+  ) {
+    return this.inventoryService.reserveInventory(
+      body.listingId,
+      body.userId,
+      body.amount,
+    );
   }
 
   @Post('release')
-  async releaseInventory(@Body() body: { listingId: string; userId: string; amount: number }) {
-    return this.inventoryService.releaseInventory(body.listingId, body.userId, body.amount);
+  async releaseInventory(
+    @Body() body: { listingId: string; userId: string; amount: number },
+  ) {
+    return this.inventoryService.releaseInventory(
+      body.listingId,
+      body.userId,
+      body.amount,
+    );
   }
 
   @Post('bulk-update')
-  async bulkUpdateInventory(@Body() body: { updates: { listingId: string; userId: string; change: number; note?: string }[] }) {
+  async bulkUpdateInventory(
+    @Body()
+    body: {
+      updates: {
+        listingId: string;
+        userId: string;
+        change: number;
+        note?: string;
+      }[];
+    },
+  ) {
     return this.inventoryService.bulkUpdateInventory(body.updates);
   }
-} 
+}

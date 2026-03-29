@@ -7,11 +7,21 @@ export class CacheUtils {
     return suffix ? `listing:${listingId}:${suffix}` : `listing:${listingId}`;
   }
 
-  static generateMarketplaceCacheKey(marketplaceId: string, suffix?: string): string {
-    return suffix ? `marketplace:${marketplaceId}:${suffix}` : `marketplace:${marketplaceId}`;
+  static generateMarketplaceCacheKey(
+    marketplaceId: string,
+    suffix?: string,
+  ): string {
+    return suffix
+      ? `marketplace:${marketplaceId}:${suffix}`
+      : `marketplace:${marketplaceId}`;
   }
 
-  static generatePaginationKey(entity: string, page: number, limit: number, filters?: Record<string, any>): string {
+  static generatePaginationKey(
+    entity: string,
+    page: number,
+    limit: number,
+    filters?: Record<string, any>,
+  ): string {
     const filterString = filters ? `:${JSON.stringify(filters)}` : '';
     return `${entity}:page:${page}:limit:${limit}${filterString}`;
   }

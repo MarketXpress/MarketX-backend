@@ -12,9 +12,9 @@ describe('Chat E2E', () => {
   let httpServer;
   let client1: ClientSocket;
   let client2: ClientSocket;
-  let listingId = 'test-listing';
-  let senderId = 1;
-  let receiverId = 2;
+  const listingId = 'test-listing';
+  const senderId = 1;
+  const receiverId = 2;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -40,7 +40,12 @@ describe('Chat E2E', () => {
     client1.emit('joinRoom', { listingId, userId: senderId });
     client2.emit('joinRoom', { listingId, userId: receiverId });
     client2.on('joinedRoom', () => {
-      client1.emit('sendMessage', { listingId, senderId, receiverId, message: 'Hello' });
+      client1.emit('sendMessage', {
+        listingId,
+        senderId,
+        receiverId,
+        message: 'Hello',
+      });
     });
     client2.on('newMessage', (msg) => {
       expect(msg.message).toBe('Hello');
@@ -64,6 +69,11 @@ describe('Chat E2E', () => {
         done();
       });
     });
-    client1.emit('sendMessage', { listingId, senderId, receiverId, message: 'Second message' });
+    client1.emit('sendMessage', {
+      listingId,
+      senderId,
+      receiverId,
+      message: 'Second message',
+    });
   });
-}); 
+});

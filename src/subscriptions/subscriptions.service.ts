@@ -65,7 +65,7 @@ export class SubscriptionsService {
     @InjectRepository(Listing)
     private readonly listingRepo: Repository<Listing>,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Create new subscription
@@ -480,7 +480,6 @@ export class SubscriptionsService {
     feature: SubscriptionFeature,
     subscription?: Subscription,
   ): Promise<number> {
-
     switch (feature) {
       case SubscriptionFeature.MAX_LISTINGS:
         return this.listingRepo.count({ where: { userId: String(userId) } });
@@ -509,7 +508,6 @@ export class SubscriptionsService {
 
     return features;
   }
-
 
   private getAvailableFeatures(tierLimits: any): string[] {
     const features: string[] = [];

@@ -26,14 +26,12 @@ export class RedisClusterStrategy implements ICacheStrategy {
 
   async clear(): Promise<void> {
     const nodes = this.cluster.nodes('master');
-    await Promise.all(nodes.map(node => node.flushdb()));
+    await Promise.all(nodes.map((node) => node.flushdb()));
   }
 
   async keys(pattern: string = '*'): Promise<string[]> {
     const nodes = this.cluster.nodes('master');
-    const allKeys = await Promise.all(
-      nodes.map(node => node.keys(pattern))
-    );
+    const allKeys = await Promise.all(nodes.map((node) => node.keys(pattern)));
     return allKeys.flat();
   }
 }

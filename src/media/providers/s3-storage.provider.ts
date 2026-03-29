@@ -23,8 +23,7 @@ export class S3StorageProvider implements StorageProvider {
   private readonly cdnUrl?: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.region =
-      this.configService.get<string>('AWS_REGION') || 'us-east-1';
+    this.region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
     this.bucket = this.configService.get<string>('AWS_S3_BUCKET') || '';
     this.cdnUrl = this.configService.get<string>('AWS_CLOUDFRONT_URL');
 

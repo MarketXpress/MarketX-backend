@@ -1,10 +1,17 @@
-import { NotificationEntity, NotificationType, NotificationPriority } from '../notification.entity';
+import {
+  NotificationEntity,
+  NotificationType,
+  NotificationPriority,
+} from '../notification.entity';
 
 export class NotificationUtils {
   /**
    * Generate notification title based on type and metadata
    */
-  static generateTitle(type: NotificationType, metadata?: Record<string, any>): string {
+  static generateTitle(
+    type: NotificationType,
+    metadata?: Record<string, any>,
+  ): string {
     const titleMap: Record<NotificationType, string> = {
       [NotificationType.TRANSACTION_RECEIVED]: 'Transaction Received',
       [NotificationType.TRANSACTION_SENT]: 'Transaction Sent',
@@ -30,7 +37,10 @@ export class NotificationUtils {
   /**
    * Generate notification message with template substitution
    */
-  static generateMessage(template: string, variables: Record<string, any>): string {
+  static generateMessage(
+    template: string,
+    variables: Record<string, any>,
+  ): string {
     return template.replace(/\{(\w+)\}/g, (match, key) => {
       return variables[key] !== undefined ? String(variables[key]) : match;
     });
@@ -41,7 +51,7 @@ export class NotificationUtils {
    */
   static determinePriority(
     type: NotificationType,
-    amount?: number
+    amount?: number,
   ): NotificationPriority {
     // High priority for security alerts and large transactions
     if (type === NotificationType.SECURITY_ALERT) {
@@ -56,8 +66,10 @@ export class NotificationUtils {
       return NotificationPriority.HIGH;
     }
 
-    if (type === NotificationType.TRANSACTION_RECEIVED ||
-      type === NotificationType.PAYMENT_SUCCESS) {
+    if (
+      type === NotificationType.TRANSACTION_RECEIVED ||
+      type === NotificationType.PAYMENT_SUCCESS
+    ) {
       return NotificationPriority.MEDIUM;
     }
 
@@ -79,13 +91,15 @@ export class NotificationUtils {
    */
   static shouldSendNotification(
     notification: Partial<NotificationEntity>,
-    userPreferences?: any
+    userPreferences?: any,
   ): boolean {
     if (!userPreferences) return true;
 
     // Check if notification type is allowed
-    if (userPreferences.allowedTypes &&
-      !userPreferences.allowedTypes.includes(notification.type)) {
+    if (
+      userPreferences.allowedTypes &&
+      !userPreferences.allowedTypes.includes(notification.type)
+    ) {
       return false;
     }
 

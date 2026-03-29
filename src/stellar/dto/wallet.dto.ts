@@ -2,7 +2,10 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateWalletDto {
-  @ApiProperty({ required: false, description: 'Optional label for the wallet' })
+  @ApiProperty({
+    required: false,
+    description: 'Optional label for the wallet',
+  })
   @IsOptional()
   @IsString()
   label?: string;

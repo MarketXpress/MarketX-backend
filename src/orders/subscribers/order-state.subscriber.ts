@@ -1,12 +1,22 @@
-import { EntitySubscriberInterface, EventSubscriber, InsertEvent, UpdateEvent } from 'typeorm';
+import {
+  EntitySubscriberInterface,
+  EventSubscriber,
+  InsertEvent,
+  UpdateEvent,
+} from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { OrderStatus } from '../dto/create-order.dto';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 
 @EventSubscriber()
 export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
   // Define strict state transition dictionary
-  private static readonly VALID_STATE_TRANSITIONS: { [key in OrderStatus]: OrderStatus[] } = {
+  private static readonly VALID_STATE_TRANSITIONS: {
+    [key in OrderStatus]: OrderStatus[];
+  } = {
     [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
     [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
     [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
@@ -23,7 +33,7 @@ export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
     // For new orders, ensure status starts as PENDING
     if (event.entity.status && event.entity.status !== OrderStatus.PENDING) {
       throw new BadRequestException(
-        `New orders must start with status ${OrderStatus.PENDING}. Invalid status: ${event.entity.status}`
+        `New orders must start with status ${OrderStatus.PENDING}. Invalid status: ${event.entity.status}`,
       );
     }
   }
@@ -44,13 +54,17 @@ export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
     // Validate state transition
     if (!this.isValidStateTransition(oldStatus, newStatus)) {
       throw new InternalServerErrorException(
-        `Illegal state transition attempt: ${oldStatus} -> ${newStatus}. This violates the order state machine.`
+        `Illegal state transition attempt: ${oldStatus} -> ${newStatus}. This violates the order state machine.`,
       );
     }
   }
 
-  private isValidStateTransition(currentStatus: OrderStatus, newStatus: OrderStatus): boolean {
-    const allowedTransitions = OrderStateSubscriber.VALID_STATE_TRANSITIONS[currentStatus] || [];
+  private isValidStateTransition(
+    currentStatus: OrderStatus,
+    newStatus: OrderStatus,
+  ): boolean {
+    const allowedTransitions =
+      OrderStateSubscriber.VALID_STATE_TRANSITIONS[currentStatus] || [];
     return allowedTransitions.includes(newStatus);
   }
 }

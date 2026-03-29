@@ -1,12 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
-import { ApplyCouponDto, ApplyCouponResponseDto } from '../coupons/dto/apply-coupon.dto';
+import {
+  ApplyCouponDto,
+  ApplyCouponResponseDto,
+} from '../coupons/dto/apply-coupon.dto';
 import { CouponsService } from '../coupons/coupons.service';
-import { OrderCreatedEvent, OrderCancelledEvent, EventNames } from '../common/events';
+import {
+  OrderCreatedEvent,
+  OrderCancelledEvent,
+  EventNames,
+} from '../common/events';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -21,7 +44,7 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createOrderDto: CreateOrderDto) {
     const order = await this.ordersService.create(createOrderDto);
-    
+
     // Emit order.created event for side-effects (email, notifications, analytics)
     this.eventEmitter.emit(
       EventNames.ORDER_CREATED,
@@ -34,7 +57,7 @@ export class OrdersController {
         order.currency,
       ),
     );
-    
+
     return order;
   }
 
@@ -50,25 +73,30 @@ export class OrdersController {
 
   @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: string, 
-    @Body() updateOrderStatusDto: UpdateOrderStatusDto
+    @Param('id') id: string,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
-    const order = await this.ordersService.updateStatus(id, updateOrderStatusDto);
+    const order = await this.ordersService.updateStatus(
+      id,
+      updateOrderStatusDto,
+    );
     // Emit event: OrderStatusChanged
-    console.log(`Event emitted: OrderStatusChanged - Order ID: ${order.id}, Status: ${order.status}`);
+    console.log(
+      `Event emitted: OrderStatusChanged - Order ID: ${order.id}, Status: ${order.status}`,
+    );
     return order;
   }
 
   @Patch(':id/cancel')
   async cancelOrder(
     @Param('id') id: string,
-    @Body('userId') userId: string  // In a real app, this would come from authentication
+    @Body('userId') userId: string, // In a real app, this would come from authentication
   ) {
     if (!userId) {
       throw new Error('User ID is required to cancel an order');
     }
     const order = await this.ordersService.cancelOrder(id, userId);
-    
+
     // Emit order.cancelled event for side-effects (email, notifications, analytics)
     this.eventEmitter.emit(
       EventNames.ORDER_CANCELLED,
@@ -79,7 +107,7 @@ export class OrdersController {
         'User requested cancellation',
       ),
     );
-    
+
     return order;
   }
 

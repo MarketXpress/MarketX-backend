@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Evidence } from './evidence.entity';
 import { EscrowEntity } from '../escrowes/entities/escrow.entity';
 
@@ -36,7 +45,7 @@ export class Dispute {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Evidence, evidence => evidence.dispute)
+  @OneToMany(() => Evidence, (evidence) => evidence.dispute)
   evidences: Evidence[];
 
   @Column({ nullable: true })
@@ -51,4 +60,4 @@ export class Dispute {
 
   @Column({ nullable: true })
   imageUrls?: string;
-} 
+}

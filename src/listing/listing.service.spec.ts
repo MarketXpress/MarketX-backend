@@ -21,8 +21,6 @@ describe.skip('ListingsService', () => {
   });
 });
 
-
-
 @Injectable()
 export class ListingService {
   private readonly logger = new Logger(ListingService.name);
@@ -30,12 +28,12 @@ export class ListingService {
   constructor(private readonly cacheManager: CacheManagerService) {}
 
   async create(createListingDto: CreateListingDto) {
-    const listing = {}; 
-    
+    const listing = {};
+
     await Promise.all([
       this.cacheManager.invalidatePattern('listings:*'),
       this.cacheManager.invalidatePattern('featured:*'),
-      this.cacheManager.invalidatePattern('popular:*')
+      this.cacheManager.invalidatePattern('popular:*'),
     ]);
 
     return listing;
@@ -43,16 +41,20 @@ export class ListingService {
 
   async findAll(page: number = 1, limit: number = 10, category?: string) {
     const cacheKey = `listings:page:${page}:limit:${limit}:category:${category || 'all'}`;
-    
+
     return this.cacheManager.getOrSet(
       cacheKey,
       async () => {
-        return []; 
+        return [];
       },
-      { 
-        ttl: 1800, 
-        tags: ['listings', 'paginated', category ? `category:${category}` : ''].filter(Boolean)
-      }
+      {
+        ttl: 1800,
+        tags: [
+          'listings',
+          'paginated',
+          category ? `category:${category}` : '',
+        ].filter(Boolean),
+      },
     );
   }
 
@@ -62,10 +64,10 @@ export class ListingService {
       async () => {
         return {};
       },
-      { 
-        ttl: 3600, 
-        tags: ['listings', `listing:${id}`] 
-      }
+      {
+        ttl: 3600,
+        tags: ['listings', `listing:${id}`],
+      },
     );
   }
 
@@ -73,22 +75,22 @@ export class ListingService {
     return this.cacheManager.getOrSet(
       'listings:featured',
       async () => {
-        return []; 
+        return [];
       },
-      { 
-        ttl: 3600, 
-        tags: ['listings', 'featured'] 
-      }
+      {
+        ttl: 3600,
+        tags: ['listings', 'featured'],
+      },
     );
   }
 
   async update(id: string, updateListingDto: UpdateListingDto) {
-    const listing = {}; 
-    
+    const listing = {};
+
     await Promise.all([
       this.cacheManager.invalidateListing(id),
       this.cacheManager.invalidatePattern('listings:*'),
-      this.cacheManager.invalidatePattern('featured:*')
+      this.cacheManager.invalidatePattern('featured:*'),
     ]);
 
     return listing;
@@ -96,10 +98,10 @@ export class ListingService {
 
   async remove(id: string) {
     // Database deletion logic
-    
+
     await Promise.all([
       this.cacheManager.invalidateListing(id),
-      this.cacheManager.invalidatePattern('listings:*')
+      this.cacheManager.invalidatePattern('listings:*'),
     ]);
 
     return { message: 'Listing deleted successfully' };

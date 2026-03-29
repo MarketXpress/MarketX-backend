@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TransactionStatus, TransactionType } from '../entities/transaction.entity';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '../entities/transaction.entity';
 
 export class UserDto {
   @ApiProperty({ description: 'User ID' })
@@ -42,4 +45,4 @@ export class TransactionResponseDto {
 
   @ApiProperty({ description: 'Transaction last update date' })
   updatedAt: Date;
-} 
+}

@@ -22,7 +22,10 @@ import {
 import { CouponsService } from './coupons.service';
 import { CreateCouponDto, UpdateCouponDto } from './dto/create-coupon.dto';
 import { ApplyCouponDto, ApplyCouponResponseDto } from './dto/apply-coupon.dto';
-import { CouponResponseDto, CouponAnalyticsDto } from './dto/coupon-response.dto';
+import {
+  CouponResponseDto,
+  CouponAnalyticsDto,
+} from './dto/coupon-response.dto';
 import { CouponStatus } from './entities/coupon.entity';
 
 @ApiTags('Coupons')
@@ -38,7 +41,8 @@ export class CouponsController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a new coupon',
-    description: 'Create a promotional coupon with percentage or fixed amount discount',
+    description:
+      'Create a promotional coupon with percentage or fixed amount discount',
   })
   @ApiResponse({
     status: 201,
@@ -47,7 +51,9 @@ export class CouponsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid coupon data' })
   @ApiResponse({ status: 409, description: 'Coupon code already exists' })
-  async create(@Body() createCouponDto: CreateCouponDto): Promise<CouponResponseDto> {
+  async create(
+    @Body() createCouponDto: CreateCouponDto,
+  ): Promise<CouponResponseDto> {
     return this.couponsService.create(createCouponDto);
   }
 
@@ -100,7 +106,9 @@ export class CouponsController {
     type: CouponResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Coupon not found' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<CouponResponseDto> {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<CouponResponseDto> {
     return this.couponsService.findOne(id);
   }
 

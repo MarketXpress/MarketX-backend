@@ -9,9 +9,12 @@ import { EscrowModule } from '../escrowes/escrow.module';
 import { EscrowEntity } from '../escrowes/entities/escrow.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Dispute, Evidence, EscrowEntity]), EscrowModule],
+  imports: [
+    TypeOrmModule.forFeature([Dispute, Evidence, EscrowEntity]),
+    EscrowModule,
+  ],
   providers: [DisputesService],
   controllers: [DisputesController, AdminDisputesController],
   exports: [DisputesService],
 })
-export class DisputesModule {} 
+export class DisputesModule {}

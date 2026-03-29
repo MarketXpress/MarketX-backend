@@ -18,7 +18,8 @@ describe('PaymentMonitorService', () => {
   let mockSchedulerRegistry: any;
 
   const testPaymentId = 'payment-123';
-  const testWalletAddress = 'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMhtqc6VPM7';
+  const testWalletAddress =
+    'GBUQWP3BOUZX34ULNQG23RQ6F5DOBAB4NSTZDVSXTVWDNXMhtqc6VPM7';
 
   beforeEach(async () => {
     mockPaymentsRepo = {
@@ -143,7 +144,9 @@ describe('PaymentMonitorService', () => {
 
       await service.onModuleInit();
 
-      expect(mockPaymentsService.handlePaymentTimeout).toHaveBeenCalledWith('payment-1');
+      expect(mockPaymentsService.handlePaymentTimeout).toHaveBeenCalledWith(
+        'payment-1',
+      );
     });
   });
 
@@ -176,7 +179,10 @@ describe('PaymentMonitorService', () => {
       });
 
       const mockServer = (service as any).stellarServer;
-      const streamSpy = jest.spyOn(mockServer.transactions().forAccount(''), 'stream');
+      const streamSpy = jest.spyOn(
+        mockServer.transactions().forAccount(''),
+        'stream',
+      );
 
       await service.monitorPayment(testPaymentId, testWalletAddress);
 
@@ -308,8 +314,12 @@ describe('PaymentMonitorService', () => {
 
   describe('getActiveStreamCount', () => {
     it('should return count of active streams', () => {
-      (service as any).activeStreams.set('payment-1', { paymentId: 'payment-1' });
-      (service as any).activeStreams.set('payment-2', { paymentId: 'payment-2' });
+      (service as any).activeStreams.set('payment-1', {
+        paymentId: 'payment-1',
+      });
+      (service as any).activeStreams.set('payment-2', {
+        paymentId: 'payment-2',
+      });
 
       expect(service.getActiveStreamCount()).toBe(2);
     });
@@ -334,8 +344,14 @@ describe('PaymentMonitorService', () => {
         closeFunction: mockClose2,
       });
 
-      (service as any).timeoutIntervals.set('payment-1', setTimeout(() => {}, 1000));
-      (service as any).timeoutIntervals.set('payment-2', setTimeout(() => {}, 1000));
+      (service as any).timeoutIntervals.set(
+        'payment-1',
+        setTimeout(() => {}, 1000),
+      );
+      (service as any).timeoutIntervals.set(
+        'payment-2',
+        setTimeout(() => {}, 1000),
+      );
 
       await service.onModuleDestroy();
 

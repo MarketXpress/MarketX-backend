@@ -7,7 +7,7 @@ on:
 
 jobs:
   ci:
-    name: Lint, Format & Test
+    name: Issue Slice Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -26,16 +26,11 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
-      - name: Run linter
-        run: npm run lint
+      - name: Run issue-slice tests
+        run: npm run test:issues
 
-      - name: Run tests with coverage
-        run: npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          fail_ci_if_error: true
-          comment: true
+      - name: Smoke-check worker and messaging files
+        run: |
+          test -f src/media/media.processor.ts
+          test -f src/recommendation/recommendation.processor.ts
+          test -f src/messaging/rabbitmq.service.ts

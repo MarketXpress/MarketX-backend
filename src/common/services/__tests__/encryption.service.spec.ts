@@ -42,7 +42,7 @@ describe('EncryptionService', () => {
   it('should encrypt and decrypt a string', async () => {
     const text = 'Hello, World!';
     const encryptedJson = await service.encryptString(text);
-    
+
     expect(typeof encryptedJson).toBe('string');
     const parsed = JSON.parse(encryptedJson);
     expect(parsed.data).toBeDefined();

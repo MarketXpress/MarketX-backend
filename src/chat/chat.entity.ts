@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Listing } from '../listing/entities/listing.entity';
 import { Users } from '../users/users.entity';
 
@@ -39,4 +46,4 @@ export class Chat {
 
   @Column({ type: 'varchar', default: 'sent' })
   status: 'sent' | 'delivered' | 'read';
-} 
+}

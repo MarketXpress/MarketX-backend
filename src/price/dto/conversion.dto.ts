@@ -32,18 +32,18 @@ export class ConversionResultDto {
 }
 
 export class RatesResponseDto {
-  @ApiProperty() 
+  @ApiProperty()
   XLM_USD: number;
 
-  @ApiProperty() 
+  @ApiProperty()
   USDC_USD: number;
 
-  @ApiProperty() 
+  @ApiProperty()
   XLM_USDC: number;
 
-  @ApiProperty() 
+  @ApiProperty()
   cachedAt: string;
 
-  @ApiProperty() 
+  @ApiProperty()
   source: 'live' | 'fallback';
 }

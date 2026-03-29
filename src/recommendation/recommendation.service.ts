@@ -1,7 +1,9 @@
 /* eslint-disable prettier/prettier */
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import { Queue } from 'bull';
 import { Listing } from '../listing/entities/listing.entity';
 import {
   BrowsingHistory,
@@ -17,12 +19,17 @@ import {
   GetSimilarProductsDto,
   GetFrequentlyBoughtTogetherDto,
 } from './dto/recommendation.dto';
+import {
+  RECOMMENDATIONS_JOB_REFRESH,
+  RECOMMENDATIONS_QUEUE,
+} from '../job-processing/queue.constants';
 
 @Injectable()
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
   private readonly CACHE_TTL = 3600; // 1 hour
   private readonly CACHE_TTL_SHORT = 300; // 5 minutes
+  private readonly PRECOMPUTED_TTL = 60 * 60 * 24;
 
   constructor(
     @InjectRepository(Listing)
@@ -36,6 +43,8 @@ export class RecommendationsService {
     @InjectRepository(UserSimilarity)
     private readonly userSimilarityRepository: Repository<UserSimilarity>,
     private readonly cacheService: CacheService,
+    @InjectQueue(RECOMMENDATIONS_QUEUE)
+    private readonly recommendationsQueue: Queue,
   ) {}
 
   // ==================== EXISTING NEARBY LOGIC ====================
@@ -112,6 +121,8 @@ export class RecommendationsService {
 
     // Invalidate user's recommendation cache
     await this.cacheService.delete(`recommendations:user:${userId}`);
+    await this.cacheService.delete(this.getPrecomputedKey(userId));
+    await this.queueRecommendationRefresh(userId);
 
     return saved;
   }
@@ -149,7 +160,12 @@ export class RecommendationsService {
   async recordPurchase(
     userId: string,
     orderId: string,
-    items: Array<{ listingId: string; quantity: number; price: number; currency: string }>,
+    items: Array<{
+      listingId: string;
+      quantity: number;
+      price: number;
+      currency: string;
+    }>,
   ): Promise<void> {
     // Record each item in purchase history
     for (const item of items) {
@@ -178,10 +194,14 @@ export class RecommendationsService {
 
     // Invalidate recommendation caches
     await this.cacheService.delete(`recommendations:user:${userId}`);
+    await this.cacheService.delete(this.getPrecomputedKey(userId));
     for (const item of items) {
-      await this.cacheService.delete(`recommendations:similar:${item.listingId}`);
+      await this.cacheService.delete(
+        `recommendations:similar:${item.listingId}`,
+      );
       await this.cacheService.delete(`recommendations:fbt:${item.listingId}`);
     }
+    await this.queueRecommendationRefresh(userId);
 
     this.logger.log(`Recorded purchase for user ${userId}, order ${orderId}`);
   }
@@ -196,6 +216,10 @@ export class RecommendationsService {
    */
   async getRecommendedForUser(dto: GetRecommendationsDto): Promise<Listing[]> {
     const { userId, limit = 10 } = dto;
+    const precomputed = await this.getPrecomputedRecommendations(userId, limit);
+    if (precomputed.length > 0) {
+      return precomputed;
+    }
 
     // Try to get from cache
     const cacheKey = `recommendations:user:${userId}:${limit}`;
@@ -206,12 +230,63 @@ export class RecommendationsService {
     }
 
     // Get recommendations using multiple strategies
-    const recommendations = await this.generatePersonalizedRecommendations(userId, limit);
+    const recommendations = await this.generatePersonalizedRecommendations(
+      userId,
+      limit,
+    );
 
     // Cache the results
-    await this.cacheService.set(cacheKey, recommendations, { ttl: this.CACHE_TTL });
+    await this.cacheService.set(cacheKey, recommendations, {
+      ttl: this.CACHE_TTL,
+    });
 
     return recommendations;
+  }
+
+  async queueRecommendationRefresh(
+    userId: string,
+    limit: number = 100,
+  ): Promise<void> {
+    await this.recommendationsQueue.add(RECOMMENDATIONS_JOB_REFRESH, {
+      userId,
+      limit,
+    });
+  }
+
+  async precomputeRecommendations(
+    userId: string,
+    limit: number = 100,
+  ): Promise<void> {
+    const recommendations = await this.generatePersonalizedRecommendations(
+      userId,
+      limit,
+    );
+    await this.cacheService.set(
+      this.getPrecomputedKey(userId),
+      recommendations.map((listing) => listing.id),
+      { ttl: this.PRECOMPUTED_TTL },
+    );
+  }
+
+  async getUsersNeedingRefresh(): Promise<string[]> {
+    const [browsers, purchasers] = await Promise.all([
+      this.browsingHistoryRepository
+        .createQueryBuilder('history')
+        .select('DISTINCT history.userId', 'userId')
+        .getRawMany<{ userId: string }>(),
+      this.purchaseHistoryRepository
+        .createQueryBuilder('history')
+        .select('DISTINCT history.userId', 'userId')
+        .getRawMany<{ userId: string }>(),
+    ]);
+
+    return Array.from(
+      new Set(
+        [...browsers, ...purchasers]
+          .map((entry) => entry.userId)
+          .filter((userId): userId is string => Boolean(userId)),
+      ),
+    );
   }
 
   /**
@@ -247,25 +322,30 @@ export class RecommendationsService {
         where: { id: view.listingId },
       });
       if (listing?.category) {
-        const score = (categoryScores.get(listing.category) || 0) + (view.purchased ? 3 : 1);
+        const score =
+          (categoryScores.get(listing.category) || 0) +
+          (view.purchased ? 3 : 1);
         categoryScores.set(listing.category, score);
       }
     }
 
     // Strategy 2: Collaborative filtering - find similar users
-    const collaborativeRecommendations = await this.getCollaborativeRecommendations(userId, limit);
+    const collaborativeRecommendations =
+      await this.getCollaborativeRecommendations(userId, limit);
 
     // Strategy 3: Content-based recommendations
     let contentBasedRecommendations: Listing[] = [];
     if (allRelevantIds.length > 0) {
       // Get categories and tags from viewed/purchased items
       const categories = Array.from(categoryScores.keys());
-      
+
       if (categories.length > 0) {
         contentBasedRecommendations = await this.listingRepository
           .createQueryBuilder('listing')
           .where('listing.category IN (:...categories)', { categories })
-          .andWhere('listing.id NOT IN (:...excludedIds)', { excludedIds: allRelevantIds })
+          .andWhere('listing.id NOT IN (:...excludedIds)', {
+            excludedIds: allRelevantIds,
+          })
           .andWhere('listing.isActive = :isActive', { isActive: true })
           .orderBy('listing.createdAt', 'DESC')
           .take(limit * 2)
@@ -274,14 +354,17 @@ export class RecommendationsService {
     }
 
     // Combine and rank recommendations
-    const recommendationMap = new Map<string, { listing: Listing; score: number }>();
+    const recommendationMap = new Map<
+      string,
+      { listing: Listing; score: number }
+    >();
 
     // Add content-based with scores based on category relevance
     for (const listing of contentBasedRecommendations) {
       const categoryScore = categoryScores.get(listing.category) || 0;
       const isPurchased = purchasedIds.includes(listing.id);
       const isBrowsed = browsedIds.includes(listing.id);
-      
+
       let score = categoryScore;
       if (!isPurchased && !isBrowsed) score += 1; // Bonus for new items
       if (!isPurchased) score += 2; // Extra bonus for unpurchased
@@ -295,9 +378,9 @@ export class RecommendationsService {
       if (existing) {
         existing.score += rec['collaborativeScore'] || 0;
       } else {
-        recommendationMap.set(rec.id, { 
-          listing: rec, 
-          score: rec['collaborativeScore'] || 0 
+        recommendationMap.set(rec.id, {
+          listing: rec,
+          score: rec['collaborativeScore'] || 0,
         });
       }
     }
@@ -310,15 +393,20 @@ export class RecommendationsService {
 
     // If not enough recommendations, add popular items
     if (ranked.length < limit) {
-      const purchasedSet = new Set([...purchasedIds, ...ranked.map((l) => l.id)]);
+      const purchasedSet = new Set([
+        ...purchasedIds,
+        ...ranked.map((l) => l.id),
+      ]);
       const popular = await this.listingRepository
         .createQueryBuilder('listing')
-        .where('listing.id NOT IN (:...exclude)', { exclude: Array.from(purchasedSet) })
+        .where('listing.id NOT IN (:...exclude)', {
+          exclude: Array.from(purchasedSet),
+        })
         .andWhere('listing.isActive = :isActive', { isActive: true })
         .orderBy('listing.views', 'DESC')
         .take(limit - ranked.length)
         .getMany();
-      
+
       ranked.push(...popular);
     }
 
@@ -336,10 +424,7 @@ export class RecommendationsService {
   ): Promise<Listing[]> {
     // Find similar users
     const similarUsers = await this.userSimilarityRepository.find({
-      where: [
-        { userIdA: userId },
-        { userIdB: userId },
-      ],
+      where: [{ userIdA: userId }, { userIdB: userId }],
       order: { similarityScore: 'DESC' },
       take: 10,
     });
@@ -366,14 +451,21 @@ export class RecommendationsService {
     // Get items purchased by similar users
     const similarPurchases = await this.purchaseHistoryRepository
       .createQueryBuilder('ph')
-      .innerJoin(UserSimilarity, 'us', 
+      .innerJoin(
+        UserSimilarity,
+        'us',
         '(us.userIdA = ph.userId AND us.userIdB = :userId) OR (us.userIdB = ph.userId AND us.userIdA = :userId)',
-        { userId }
+        { userId },
       )
       .where('ph.userId IN (:...similarUserIds)', { similarUserIds })
-      .andWhere(userPurchasedIds.length > 0 ? 'ph.listingId NOT IN (:...userPurchasedIds)' : '1=1', {
-        userPurchasedIds,
-      })
+      .andWhere(
+        userPurchasedIds.length > 0
+          ? 'ph.listingId NOT IN (:...userPurchasedIds)'
+          : '1=1',
+        {
+          userPurchasedIds,
+        },
+      )
       .orderBy('us.similarityScore', 'DESC')
       .addOrderBy('ph.purchasedAt', 'DESC')
       .take(limit * 2)
@@ -401,8 +493,8 @@ export class RecommendationsService {
       };
     });
 
-    return listingsWithScore.sort((a, b) => 
-      (b['collaborativeScore'] || 0) - (a['collaborativeScore'] || 0)
+    return listingsWithScore.sort(
+      (a, b) => (b['collaborativeScore'] || 0) - (a['collaborativeScore'] || 0),
     );
   }
 
@@ -529,10 +621,7 @@ export class RecommendationsService {
 
     // Get items frequently bought together
     const fbtItems = await this.frequentlyBoughtTogetherRepository.find({
-      where: [
-        { listingIdA: listingId },
-        { listingIdB: listingId },
-      ],
+      where: [{ listingIdA: listingId }, { listingIdB: listingId }],
       order: { confidence: 'DESC', purchaseCount: 'DESC' },
       take: limit,
     });
@@ -554,7 +643,9 @@ export class RecommendationsService {
         .take(limit)
         .getMany();
 
-      await this.cacheService.set(cacheKey, fallback, { ttl: this.CACHE_TTL_SHORT });
+      await this.cacheService.set(cacheKey, fallback, {
+        ttl: this.CACHE_TTL_SHORT,
+      });
       return fallback;
     }
 
@@ -573,7 +664,9 @@ export class RecommendationsService {
       .filter(Boolean) as Listing[];
 
     // Cache the results
-    await this.cacheService.set(cacheKey, sortedListings, { ttl: this.CACHE_TTL });
+    await this.cacheService.set(cacheKey, sortedListings, {
+      ttl: this.CACHE_TTL,
+    });
 
     return sortedListings;
   }
@@ -593,7 +686,7 @@ export class RecommendationsService {
         const itemB = items[j].listingId;
 
         // Check if relationship exists
-        let existing = await this.frequentlyBoughtTogetherRepository.findOne({
+        const existing = await this.frequentlyBoughtTogetherRepository.findOne({
           where: [
             { listingIdA: itemA, listingIdB: itemB },
             { listingIdA: itemB, listingIdB: itemA },
@@ -604,7 +697,10 @@ export class RecommendationsService {
           existing.purchaseCount += 1;
           // Recalculate confidence (simple moving average)
           existing.confidence = parseFloat(
-            ((existing.confidence * (existing.purchaseCount - 1) + 1) / existing.purchaseCount).toFixed(2),
+            (
+              (existing.confidence * (existing.purchaseCount - 1) + 1) /
+              existing.purchaseCount
+            ).toFixed(2),
           );
           await this.frequentlyBoughtTogetherRepository.save(existing);
         } else {
@@ -617,6 +713,35 @@ export class RecommendationsService {
         }
       }
     }
+  }
+
+  private async getPrecomputedRecommendations(
+    userId: string,
+    limit: number,
+  ): Promise<Listing[]> {
+    const ids = await this.cacheService.get<string[]>(
+      this.getPrecomputedKey(userId),
+    );
+    if (!ids || ids.length === 0) {
+      await this.queueRecommendationRefresh(userId, Math.max(limit, 100));
+      return [];
+    }
+
+    const limitedIds = ids.slice(0, limit);
+    const listings = await this.listingRepository.find({
+      where: { id: In(limitedIds), isActive: true },
+    });
+    const listingMap = new Map(
+      listings.map((listing) => [listing.id, listing]),
+    );
+
+    return limitedIds
+      .map((id) => listingMap.get(id))
+      .filter((listing): listing is Listing => Boolean(listing));
+  }
+
+  private getPrecomputedKey(userId: string): string {
+    return `recommendations:precomputed:user:${userId}`;
   }
 
   // ==================== LEGACY METHODS ====================
@@ -632,7 +757,9 @@ export class RecommendationsService {
   }
 
   async getSimilarProductsLegacy(listingId: string): Promise<Listing[]> {
-    const original = await this.listingRepository.findOne({ where: { id: listingId } });
+    const original = await this.listingRepository.findOne({
+      where: { id: listingId },
+    });
     if (!original) return [];
 
     // Requirements: Suggest similar products on product pages

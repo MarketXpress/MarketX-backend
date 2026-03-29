@@ -101,21 +101,25 @@ export class InventoryService {
    * Reserve inventory for an order during checkout
    */
   async reserveForOrder(order: Order) {
-    return this.dataSource.transaction(async manager => {
+    return this.dataSource.transaction(async (manager) => {
       for (const item of order.items) {
-        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        const listing = await manager.findOne(Listing, {
+          where: { id: item.productId },
+        });
         if (!listing) {
           throw new NotFoundException(`Listing ${item.productId} not found`);
         }
         if (listing.available < item.quantity) {
-          throw new BadRequestException(`Not enough inventory for ${item.productName}. Available: ${listing.available}, Requested: ${item.quantity}`);
+          throw new BadRequestException(
+            `Not enough inventory for ${item.productName}. Available: ${listing.available}, Requested: ${item.quantity}`,
+          );
         }
-        
+
         // Reserve the quantity
         listing.reserved += item.quantity;
         listing.available = listing.quantity - listing.reserved;
         await manager.save(listing);
-        
+
         // Log the reservation
         const history = this.historyRepo.create({
           listingId: item.productId,
@@ -133,20 +137,22 @@ export class InventoryService {
    * Confirm inventory reservation when order is paid (convert reservation to purchase)
    */
   async confirmOrder(order: Order) {
-    return this.dataSource.transaction(async manager => {
+    return this.dataSource.transaction(async (manager) => {
       for (const item of order.items) {
-        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        const listing = await manager.findOne(Listing, {
+          where: { id: item.productId },
+        });
         if (!listing) {
           throw new NotFoundException(`Listing ${item.productId} not found`);
         }
-        
+
         // Reduce the available quantity (since it was already reserved)
         listing.quantity -= item.quantity;
         listing.reserved -= item.quantity;
         if (listing.reserved < 0) listing.reserved = 0;
         listing.available = listing.quantity - listing.reserved;
         await manager.save(listing);
-        
+
         // Log the purchase
         const history = this.historyRepo.create({
           listingId: item.productId,
@@ -156,7 +162,7 @@ export class InventoryService {
           note: `Order ${order.id} confirmed`,
         });
         await manager.save(history);
-        
+
         // Check if low stock notification is needed
         if (listing.available <= 5) {
           await this.notifyLowStock(listing);
@@ -169,19 +175,21 @@ export class InventoryService {
    * Release reserved inventory when order is cancelled
    */
   async cancelOrder(order: Order) {
-    return this.dataSource.transaction(async manager => {
+    return this.dataSource.transaction(async (manager) => {
       for (const item of order.items) {
-        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        const listing = await manager.findOne(Listing, {
+          where: { id: item.productId },
+        });
         if (!listing) {
           throw new NotFoundException(`Listing ${item.productId} not found`);
         }
-        
+
         // Release the reserved quantity
         listing.reserved -= item.quantity;
         if (listing.reserved < 0) listing.reserved = 0;
         listing.available = listing.quantity - listing.reserved;
         await manager.save(listing);
-        
+
         // Log the release
         const history = this.historyRepo.create({
           listingId: item.productId,
@@ -199,18 +207,20 @@ export class InventoryService {
    * Restore inventory when order is refunded
    */
   async restoreInventoryFromRefund(order: Order) {
-    return this.dataSource.transaction(async manager => {
+    return this.dataSource.transaction(async (manager) => {
       for (const item of order.items) {
-        const listing = await manager.findOne(Listing, { where: { id: item.productId } });
+        const listing = await manager.findOne(Listing, {
+          where: { id: item.productId },
+        });
         if (!listing) {
           throw new NotFoundException(`Listing ${item.productId} not found`);
         }
-        
+
         // Increase quantity (restore stock)
         listing.quantity += item.quantity;
         listing.available = listing.quantity - listing.reserved;
         await manager.save(listing);
-        
+
         // Log the restoration
         const history = this.historyRepo.create({
           listingId: item.productId,
@@ -220,7 +230,7 @@ export class InventoryService {
           note: `Order ${order.id} refunded`,
         });
         await manager.save(history);
-        
+
         // Check if low stock notification is needed
         if (listing.available <= 5) {
           await this.notifyLowStock(listing);

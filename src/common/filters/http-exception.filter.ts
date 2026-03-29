@@ -42,7 +42,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message =
           (exceptionResponse as any).message || exception.message || message;
       } else {
-        message = exceptionResponse as string;
+        message = exceptionResponse;
       }
     } else if (exception instanceof Error) {
       // Handle generic Error

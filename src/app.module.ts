@@ -5,7 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { ThrottlerStorageRedisService } from '@nestjs/throttler-storage-redis';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +17,7 @@ import { RedisCacheModule } from './redis-caching/redis-cache.module';
 import { BackupModule } from './backup/backup.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { RabbitMqModule } from './messaging/rabbitmq.module';
 
 // ── Features ───────────────────────────────────────────────────────────────
 import { ProductsModule } from './products/products.module';
@@ -43,6 +43,8 @@ import { SearchModule } from './search/search.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { OrdersModule } from './orders/orders.module';
+import { MilestonesModule } from './milestones/milestones.module';
+import { ArchivingModule } from './archiving/archiving.module';
 
 // ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
@@ -67,13 +69,12 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
      */
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
-        ttl: 60, // seconds window
-        limit: 100, // default rate limit
-        storage: new ThrottlerStorageRedisService({
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379', 10),
-          password: process.env.REDIS_PASSWORD || undefined,
-        }),
+        throttlers: [
+          {
+            ttl: 60_000,
+            limit: 100,
+          },
+        ],
       }),
     }),
 
@@ -108,6 +109,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     BackupModule,
     SchedulerModule,
     EventEmitterModule.forRoot(),
+    RabbitMqModule,
 
     // ── Features ──────────────────────────────────────────────────────────
     PriceModule,
@@ -131,6 +133,9 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RefundsModule,
     ListingsModule,
     SearchModule,
+    NotificationsModule,
+    AdminModule,
+    OrdersModule,
     ArchivingModule,
   ],
   controllers: [AppController],
