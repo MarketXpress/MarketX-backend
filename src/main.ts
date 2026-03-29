@@ -12,6 +12,7 @@ import { RequestResponseMiddleware } from './common/middleware/request-response.
 import * as express from 'express';
 import { join } from 'path';
 import { DynamicThrottlerGuard } from './common/guards/dynamic-throttler.guard';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -64,7 +65,10 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter(loggerService));
 
   // Apply global logging interceptor
-  app.useGlobalInterceptors(new LoggingInterceptor(loggerService));
+  app.useGlobalInterceptors(
+  new LoggingInterceptor(loggerService),
+  new ResponseInterceptor(),
+);
 
   // Apply locale middleware
   app.use(LocaleMiddleware.prototype.use);
