@@ -1,11 +1,29 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createReadStream } from 'node:fs';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { Listing } from './entities/listing.entity';
 import { ConfigService } from '@nestjs/config';
 import { SearchSyncService } from '../search/search-sync.service';
+import { parse } from 'csv-parse';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+
+export interface BulkListingImportRowResult {
+  row: number;
+  success: boolean;
+  listingId?: string;
+  errors: string[];
+}
+
+export interface BulkListingImportResult {
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  rows: BulkListingImportRowResult[];
+}
 
 // NOTE: Ensure ConfigService is provided in the ListingsModule for dependency injection.
 @Injectable()
@@ -41,6 +59,104 @@ export class ListingsService {
     }
 
     return saved;
+  }
+
+  async importFromCsv(
+    filePath: string,
+    userId: string,
+  ): Promise<BulkListingImportResult> {
+    const parser = parse({
+      columns: true,
+      bom: true,
+      trim: true,
+      skip_empty_lines: true,
+    });
+    const stream = createReadStream(filePath);
+    const records = stream.pipe(parser);
+
+    const rows: BulkListingImportRowResult[] = [];
+    let dataRow = 1;
+    let successCount = 0;
+    let failureCount = 0;
+
+    for await (const record of records) {
+      const csvLine = dataRow + 1;
+      const dto = plainToInstance(CreateListingDto, {
+        title: this.getCsvValue(record, ['title']),
+        description: this.getCsvValue(record, ['description']),
+        price: this.getCsvValue(record, ['price']),
+        category: this.getCsvValue(record, ['category']),
+        location: this.getCsvValue(record, ['location']),
+      });
+
+      const validationErrors = await validate(dto);
+      if (validationErrors.length > 0) {
+        const errors = validationErrors.flatMap((validationError) =>
+          Object.values(validationError.constraints || {}),
+        );
+        rows.push({
+          row: csvLine,
+          success: false,
+          errors,
+        });
+        failureCount += 1;
+        dataRow += 1;
+        continue;
+      }
+
+      try {
+        const listing = await this.create(dto, userId);
+        rows.push({
+          row: csvLine,
+          success: true,
+          listingId: listing.id,
+          errors: [],
+        });
+        successCount += 1;
+      } catch (error) {
+        rows.push({
+          row: csvLine,
+          success: false,
+          errors: [
+            error instanceof Error
+              ? error.message
+              : 'Unable to create listing for this row',
+          ],
+        });
+        failureCount += 1;
+      }
+
+      dataRow += 1;
+    }
+
+    return {
+      totalRows: rows.length,
+      successCount,
+      failureCount,
+      rows,
+    };
+  }
+
+  private getCsvValue(
+    record: Record<string, unknown>,
+    aliases: string[],
+  ): unknown {
+    const normalized = Object.entries(record).reduce<Record<string, unknown>>(
+      (acc, [key, value]) => {
+        acc[key.trim().toLowerCase()] = value;
+        return acc;
+      },
+      {},
+    );
+
+    for (const alias of aliases) {
+      const value = normalized[alias.toLowerCase()];
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 
   async findOne(id: string) {

@@ -63,6 +63,7 @@
     "class-validator": "^0.14.3",
     "compression": "^1.8.1",
     "crypto": "^1.0.1",
+    "csv-parse": "^5.6.0",
     "handlebars": "^4.7.8",
     "ioredis": "^5.6.1",
     "json2csv": "^6.0.0-alpha.2",
