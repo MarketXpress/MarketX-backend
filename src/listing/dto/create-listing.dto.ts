@@ -1,3 +1,4 @@
+import { ListingVariantDto } from './listing-variant.dto';
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
 
@@ -24,4 +25,5 @@ export class CreateListingDto {
   location: string;
 
   expiresAt?: Date;
+  variants?: ListingVariantDto[];
 }
