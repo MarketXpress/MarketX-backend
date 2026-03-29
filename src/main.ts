@@ -15,6 +15,7 @@ import { RequestResponseMiddleware } from './common/middleware/request-response.
 import * as express from 'express';
 import { join } from 'path';
 import { DynamicThrottlerGuard } from './common/guards/dynamic-throttler.guard';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
