@@ -1,6 +1,18 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { OrderStatus } from '../dto/create-order.dto';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { SupportedCurrency } from '../../products/services/pricing.service';
+import { OrderStatus } from '../dto/create-order.dto';
+
+export enum EscrowType {
+  STANDARD = 'standard',
+  MILESTONE = 'milestone',
+}
 
 @Entity()
 export class Order {
@@ -57,4 +69,39 @@ export class Order {
 
   @Column({ nullable: true })
   deliveredAt?: Date;
+
+  @Column({ nullable: true })
+  escrowType?: EscrowType;
+
+  @Column({ type: 'json', nullable: true })
+  milestones?: Array<{
+    title: string;
+    description: string;
+    amount: number;
+    percentage: number;
+    type: string;
+    trigger: string;
+    autoRelease: boolean;
+    sortOrder: number;
+  }>;
+
+  @Column({
+    name: 'released_amount',
+    type: 'decimal',
+    precision: 20,
+    scale: 2,
+    default: 0,
+  })
+  releasedAmount: number;
+
+  @Column({
+    name: 'remaining_amount',
+    type: 'decimal',
+    precision: 20,
+    scale: 2,
+  })
+  remainingAmount: number;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
 }

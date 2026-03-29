@@ -10,11 +10,11 @@ export class StellarIndicator {
     try {
       // Set timeout to ensure fast response as per requirements (must respond within 2 seconds)
       const timeout = parseInt(process.env.HEALTH_CHECK_TIMEOUT || '2000', 10); // 2 seconds timeout
-      
+
       // Check Stellar Horizon API availability
       const response = await axios.get(`${this.stellarHorizonUrl}/ledgers?limit=1`, {
         timeout,
-      });
+      }) as any;
 
       if (response.status >= 200 && response.status < 300) {
         // Check if the response has the expected structure
@@ -24,8 +24,8 @@ export class StellarIndicator {
               status: 'up',
               horizon_url: this.stellarHorizonUrl,
               network: this.stellarHorizonUrl.includes('testnet') ? 'testnet' : 'mainnet',
-              last_ledger: response.data._embedded.records.length > 0 
-                ? response.data._embedded.records[0].sequence 
+              last_ledger: response.data._embedded.records.length > 0
+                ? response.data._embedded.records[0].sequence
                 : 'unknown',
             },
           };

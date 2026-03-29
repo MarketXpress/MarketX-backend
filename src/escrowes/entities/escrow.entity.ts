@@ -13,6 +13,8 @@ export enum EscrowStatus {
   RELEASED = 'released',
   REFUNDED = 'refunded',
   CANCELLED = 'cancelled',
+  FROZEN = 'frozen',
+  PARTIALLY_RELEASED = 'partially_released',
 }
 
 @Entity('escrow_transactions')
@@ -59,6 +61,13 @@ export class EscrowEntity {
 
   @Column({ nullable: true })
   errorMessage: string;
+
+  /**
+   * Dispute flag - set to true when a dispute is opened against this escrow.
+   * When true, auto-release is blocked even if delivery was confirmed.
+   */
+  @Column({ default: false })
+  disputeFlag: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

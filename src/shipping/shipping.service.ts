@@ -18,6 +18,7 @@ import {
   CarrierInfoDto,
 } from './dto/create-shipment.dto';
 import { OrderStatus } from '../orders/dto/create-order.dto';
+import { ShipmentCreatedEvent, ShipmentStatusUpdatedEvent, EventNames } from '../common/events';
 
 @Injectable()
 export class ShippingService {
@@ -163,13 +164,15 @@ export class ShippingService {
     );
 
     // Emit event
-    this.eventEmitter.emit('shipment.created', {
-      shipmentId: savedShipment.id,
-      orderId: order.id,
-      carrier: savedShipment.carrier,
-      trackingNumber: savedShipment.trackingNumber,
-      timestamp: new Date(),
-    });
+    this.eventEmitter.emit(
+      EventNames.SHIPMENT_CREATED,
+      new ShipmentCreatedEvent(
+        savedShipment.id,
+        order.id,
+        savedShipment.trackingNumber,
+        savedShipment.carrier,
+      ),
+    );
 
     return this.mapToResponseDto(savedShipment);
   }
@@ -223,13 +226,15 @@ export class ShippingService {
     );
 
     // Emit event
-    this.eventEmitter.emit('shipment.status_updated', {
-      shipmentId: id,
-      orderId: shipment.orderId,
-      previousStatus,
-      newStatus: updateShipmentStatusDto.status,
-      timestamp: new Date(),
-    });
+    this.eventEmitter.emit(
+      EventNames.SHIPMENT_STATUS_UPDATED,
+      new ShipmentStatusUpdatedEvent(
+        id,
+        shipment.orderId,
+        updateShipmentStatusDto.status,
+        previousStatus,
+      ),
+    );
 
     return this.mapToResponseDto(updatedShipment);
   }

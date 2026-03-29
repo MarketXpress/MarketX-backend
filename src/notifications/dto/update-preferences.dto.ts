@@ -1,5 +1,5 @@
 import { IsBoolean, IsObject, IsOptional } from 'class-validator';
-import { NotificationType, NotificationChannel } from '../entities/notification.entity';
+import { NotificationType, NotificationChannel } from '../notification.entity';
 
 export class UpdatePreferencesDto {
   @IsObject()

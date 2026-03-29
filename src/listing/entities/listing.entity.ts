@@ -86,6 +86,9 @@ export class Listing {
   @Column({ type: 'int', default: 0 })
   views: number;
 
+  @Column({ default: false })
+  isFeatured: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date;
 }

@@ -10,10 +10,10 @@ import {
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Users } from '../../users/users.entity';
-import { 
-  SubscriptionTier, 
-  SubscriptionStatus, 
-  BillingCycle 
+import {
+  SubscriptionTier,
+  SubscriptionStatus,
+  BillingCycle
 } from '../enums/subscription.enums';
 
 @Entity('subscriptions')
@@ -91,7 +91,7 @@ export class Subscription {
 
   @ApiProperty({ description: 'Cancellation reason' })
   @Column({ name: 'cancellation_reason', nullable: true })
-  cancellationReason: string;
+  cancellationReason: string | null;
 
   @ApiProperty({ description: 'Cancellation date' })
   @Column({ name: 'cancelled_at', type: 'timestamp', nullable: true })

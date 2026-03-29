@@ -22,6 +22,13 @@ import {
   InitiatePaymentDto,
 } from './dto/payment.dto';
 import { OrderStatus } from '../orders/dto/create-order.dto';
+import {
+  PaymentInitiatedEvent,
+  PaymentFailedEvent,
+  PaymentConfirmedEvent,
+  PaymentTimeoutEvent,
+  EventNames,
+} from '../common/events';
 
 @Injectable()
 export class PaymentsService {
@@ -61,6 +68,12 @@ export class PaymentsService {
 
     if (!order) {
       throw new NotFoundException(`Order with ID "${initiatePaymentDto.orderId}" not found`);
+    }
+
+    if (order.status === OrderStatus.MANUAL_REVIEW) {
+      throw new BadRequestException(
+        `Order ${order.id} is under MANUAL_REVIEW due to fraud risk; payment is halted`,
+      );
     }
 
     if (order.status !== OrderStatus.PENDING) {
@@ -120,13 +133,16 @@ export class PaymentsService {
     );
 
     // Emit event for payment monitoring
-    this.eventEmitter.emit('payment.initiated', {
-      paymentId: savedPayment.id,
-      orderId: initiatePaymentDto.orderId,
-      destinationAddress: wallet.publicKey,
-      expectedAmount: savedPayment.amount,
-      currency: initiatePaymentDto.currency,
-    });
+    this.eventEmitter.emit(
+      EventNames.PAYMENT_INITIATED,
+      new PaymentInitiatedEvent(
+        savedPayment.id,
+        initiatePaymentDto.orderId,
+        wallet.publicKey,
+        savedPayment.amount,
+        initiatePaymentDto.currency,
+      ),
+    );
 
     return this.mapToResponseDto(savedPayment);
   }
@@ -151,6 +167,12 @@ export class PaymentsService {
       throw new BadRequestException(`Payment is no longer in PENDING status`);
     }
 
+    if (payment.order && payment.order.status === OrderStatus.MANUAL_REVIEW) {
+      throw new BadRequestException(
+        `Payment for order ${payment.orderId} is blocked: order is under MANUAL_REVIEW`,
+      );
+    }
+
     // Verify transaction data
     const { isValid, errorMessage } = await this.validateTransaction(payment, transactionData);
 
@@ -162,11 +184,16 @@ export class PaymentsService {
 
       this.logger.warn(`Payment ${paymentId} validation failed: ${errorMessage}`);
 
-      this.eventEmitter.emit('payment.failed', {
-        paymentId,
-        orderId: payment.orderId,
-        reason: errorMessage,
-      });
+      this.eventEmitter.emit(
+        EventNames.PAYMENT_FAILED,
+        new PaymentFailedEvent(
+          paymentId,
+          payment.buyerId,
+          payment.orderId,
+          payment.amount,
+          errorMessage || 'Payment validation failed',
+        ),
+      );
 
       return this.mapToResponseDto(payment);
     }
@@ -192,13 +219,16 @@ export class PaymentsService {
     );
 
     // Emit event for downstream services
-    this.eventEmitter.emit('payment.confirmed', {
-      paymentId,
-      orderId: payment.orderId,
-      amount: payment.amount,
-      currency: payment.currency,
-      stellarTransactionId: payment.stellarTransactionId,
-    });
+    this.eventEmitter.emit(
+      EventNames.PAYMENT_CONFIRMED,
+      new PaymentConfirmedEvent(
+        paymentId,
+        payment.orderId,
+        payment.amount,
+        payment.currency,
+        payment.stellarTransactionId,
+      ),
+    );
 
     return this.mapToResponseDto(payment);
   }
@@ -223,10 +253,13 @@ export class PaymentsService {
 
       this.logger.warn(`Payment ${paymentId} timed out`);
 
-      this.eventEmitter.emit('payment.timeout', {
-        paymentId,
-        orderId: payment.orderId,
-      });
+      this.eventEmitter.emit(
+        EventNames.PAYMENT_TIMEOUT,
+        new PaymentTimeoutEvent(
+          paymentId,
+          payment.orderId,
+        ),
+      );
     }
 
     return this.mapToResponseDto(payment);

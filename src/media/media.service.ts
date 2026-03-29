@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import {
   ProductImage,
   ImageFormat,
@@ -16,6 +16,7 @@ import {
 import { UploadImageDto } from './dto/upload-image.dto';
 import { ImageProcessingService } from './services/image-processing.service';
 import { StorageProvider } from './interfaces/storage-provider.interface';
+import { ModerationService } from './services/moderation.service';
 import * as crypto from 'crypto';
 
 export interface UploadedImageResult {
@@ -36,6 +37,7 @@ export class MediaService {
     @InjectRepository(ProductImage)
     private readonly imageRepository: Repository<ProductImage>,
     private readonly imageProcessingService: ImageProcessingService,
+    private readonly moderationService: ModerationService,
     private readonly configService: ConfigService,
     @Inject('STORAGE_PROVIDER')
     private readonly storage: StorageProvider,
@@ -122,6 +124,9 @@ export class MediaService {
         altText: existingImage.altText,
       };
     }
+
+    // AI Content Moderation (#230)
+    await this.moderationService.validateImageContent(file.buffer);
 
     // 2. Requirement: Image Validation and Transformation (3 sizes)
     // processImage internally validates size (5MB) and dimensions

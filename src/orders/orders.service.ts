@@ -1,119 +1,93 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Order } from './entities/order.entity';
+import { DataSource, Repository } from 'typeorm';
+import { InventoryService } from '../inventory/inventory.service';
+import { OrderUpdatedEvent, EventNames } from '../common/events';
+import { PricingService } from '../products/services/pricing.service';
 import {
   CreateOrderDto,
   OrderStatus,
   UpdateOrderStatusDto,
 } from './dto/create-order.dto';
-import {
-  PricingService,
-  SupportedCurrency,
-} from '../products/services/pricing.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  OrderCreatedEvent,
-  OrderUpdatedEvent,
-} from '../notifications/events/order.events';
-import { InventoryService } from '../inventory/inventory.service';
+import { Order } from './entities/order.entity';
+import { AdminWebhookService } from '../admin/admin-webhook.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
+    private dataSource: DataSource,
     private readonly pricingService: PricingService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryService: InventoryService,
+    private readonly adminWebhookService: AdminWebhookService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    // In a real application, you would fetch product details from a database
-    // For now, we'll simulate calculating the total
+    return await this.dataSource.transaction(async (manager) => {
+      const order = manager.create(Order, {
+        ...createOrderDto,
+        status: OrderStatus.PENDING,
+        items: createOrderDto.items,
+      });
 
-    // Simulate fetching product prices (in a real app, you'd query the products service)
-    const simulatedProductPrices: Record<
-      string,
-      { price: number; currency: SupportedCurrency }
-    > = {
-      '1': { price: 10.99, currency: SupportedCurrency.USD },
-      '2': { price: 24.99, currency: SupportedCurrency.USD },
-      '3': { price: 5.49, currency: SupportedCurrency.USD },
-    };
+      const savedOrder = await manager.save(order);
 
-    const paymentCurrency =
-      createOrderDto.paymentCurrency ?? SupportedCurrency.USD;
-    const subtotals: number[] = [];
+      for (const item of savedOrder.items) {
+        await this.inventoryService.reserveInventory(
+          item.productId,
+          savedOrder.buyerId,
+          item.quantity,
+          manager,
+        );
+      }
 
-    const itemsWithDetails = createOrderDto.items.map((item) => {
-      const productPricing = simulatedProductPrices[item.productId] || {
-        price: 0,
-        currency: SupportedCurrency.USD,
-      };
-      const convertedPrice = this.pricingService.convertAmount(
-        productPricing.price,
-        productPricing.currency,
-        paymentCurrency,
-      );
-      const subtotal = this.pricingService.multiplyAmount(
-        convertedPrice,
-        item.quantity,
-        paymentCurrency,
-      );
-      subtotals.push(subtotal);
+      // Real-time Admin Webhook for Massive Orders (#231)
+      if (savedOrder.totalAmount > 5000) {
+        await this.adminWebhookService.notifyAdmin('Massive Order Detected', {
+          orderId: savedOrder.id,
+          buyerId: savedOrder.buyerId,
+          amount: savedOrder.totalAmount,
+          itemCount: savedOrder.items.length,
+        });
+      }
 
-      return {
-        productId: item.productId,
-        productName: `Product ${item.productId}`, // In real app, fetch from product service
-        quantity: item.quantity,
-        price: convertedPrice,
-        subtotal,
-        priceCurrency: paymentCurrency,
-      };
+      return savedOrder;
     });
+  }
 
-    const totalAmount = this.pricingService.addAmounts(
-      subtotals,
-      paymentCurrency,
-    );
+  async cancelOrder(id: string, userId: string): Promise<Order> {
+    return await this.dataSource.transaction(async (manager) => {
+      const order = await manager.findOne(Order, { where: { id } });
 
-    const order = this.ordersRepository.create({
-      totalAmount,
-      currency: paymentCurrency,
-      status: OrderStatus.PENDING,
-      items: itemsWithDetails,
-      buyerId: createOrderDto.buyerId,
+      if (!order || order.buyerId !== userId) {
+        throw new BadRequestException('Order not found or unauthorized');
+      }
+
+      if (order.status === OrderStatus.CANCELLED) {
+        throw new BadRequestException('Order is already cancelled');
+      }
+
+      // Requirement: Restore inventory on order cancellation
+      for (const item of order.items) {
+        await this.inventoryService.releaseInventory(
+          item.productId,
+          userId,
+          item.quantity,
+          manager,
+        );
+      }
+
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = new Date();
+      return await manager.save(order);
     });
-
-    const savedOrder = await this.ordersRepository.save(order);
-
-    try {
-      // Reserve inventory for the order
-      await this.inventoryService.reserveForOrder(savedOrder);
-    } catch (error) {
-      // If inventory reservation fails, cancel the order
-      savedOrder.status = OrderStatus.CANCELLED;
-      await this.ordersRepository.save(savedOrder);
-      throw error;
-    }
-
-    this.eventEmitter.emit(
-      'order.created',
-      new OrderCreatedEvent(
-        savedOrder.id,
-        savedOrder.buyerId,
-        `ORD-${savedOrder.id.substring(0, 8)}`, // Simple order number
-        savedOrder.totalAmount,
-        savedOrder.items,
-      ),
-    );
-
-    return savedOrder;
   }
 
   async findAll(buyerId?: string): Promise<Order[]> {
@@ -148,30 +122,13 @@ export class OrdersService {
 
     // Handle inventory based on status change
     if (updateOrderStatusDto.status === OrderStatus.PAID) {
-      // Confirm the order and reduce inventory
       await this.inventoryService.confirmOrder(order);
-      order.status = OrderStatus.PAID;
     } else if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
-      // Cancel the order and release inventory
       await this.inventoryService.cancelOrder(order);
-      order.status = OrderStatus.CANCELLED;
       order.cancelledAt = new Date();
     } else {
-      // Validate state transition for other statuses
-      if (
-        !this.isValidStateTransition(order.status, updateOrderStatusDto.status)
-      ) {
-        throw new BadRequestException(
-          `Invalid state transition from ${order.status} to ${updateOrderStatusDto.status}`,
-        );
-      }
-
-      // Update timestamps based on status
       const now = new Date();
       switch (updateOrderStatusDto.status) {
-        case OrderStatus.CANCELLED:
-          order.cancelledAt = now;
-          break;
         case OrderStatus.SHIPPED:
           order.shippedAt = now;
           break;
@@ -179,15 +136,13 @@ export class OrdersService {
           order.deliveredAt = now;
           break;
       }
-
-      order.status = updateOrderStatusDto.status;
-      order.updatedAt = now;
     }
+    order.status = updateOrderStatusDto.status;
 
     const updatedOrder = await this.ordersRepository.save(order);
 
     this.eventEmitter.emit(
-      'order.updated',
+      EventNames.ORDER_UPDATED,
       new OrderUpdatedEvent(
         updatedOrder.id,
         updatedOrder.buyerId,
@@ -198,47 +153,5 @@ export class OrdersService {
     );
 
     return updatedOrder;
-  }
-
-  async cancelOrder(id: string, userId: string): Promise<Order> {
-    const order = await this.findOne(id);
-
-    // Business rule: Only allow cancellation for pending/paid orders
-    if (
-      order.status !== OrderStatus.PENDING &&
-      order.status !== OrderStatus.PAID
-    ) {
-      throw new BadRequestException(
-        `Cannot cancel order with status ${order.status}. Only pending or paid orders can be cancelled.`,
-      );
-    }
-
-    // Business rule: Only the buyer can cancel their own order
-    if (order.buyerId !== userId) {
-      throw new BadRequestException('Only the buyer can cancel their order');
-    }
-
-    const updateOrderStatusDto: UpdateOrderStatusDto = {
-      status: OrderStatus.CANCELLED,
-    };
-
-    return this.updateStatus(id, updateOrderStatusDto);
-  }
-
-  private isValidStateTransition(
-    currentStatus: OrderStatus,
-    newStatus: OrderStatus,
-  ): boolean {
-    // Define valid state transitions
-    const validTransitions: { [key in OrderStatus]: OrderStatus[] } = {
-      [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
-      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-      [OrderStatus.DELIVERED]: [],
-      [OrderStatus.CANCELLED]: [],
-    };
-
-    const allowedTransitions = validTransitions[currentStatus] || [];
-    return allowedTransitions.includes(newStatus);
   }
 }

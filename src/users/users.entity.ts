@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   OneToMany,
   ManyToMany,
   JoinTable,
@@ -29,15 +30,21 @@ export class Users {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Exclude()
-  password: string;
+  password: string | null;
 
   @Column()
   name: string;
 
   @Column({ nullable: true })
   bio: string;
+
+  @Column({ nullable: true })
+  oauthProvider: string | null;
+
+  @Column({ nullable: true, unique: true })
+  oauthProviderId: string | null;
 
   @Column({ nullable: true })
   avatarUrl: string;
@@ -104,11 +111,17 @@ export class Users {
   @Column({ name: 'has_premium_subscription', default: false })
   hasPremiumSubscription: boolean;
 
+  @Column({ nullable: true, default: 'active' })
+  status: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
 
   @OneToMany(() => Listing, (listing) => listing.user)
   listings: Listing[];
@@ -128,6 +141,7 @@ export class Users {
   favoriteListings: Listing[];
 
   async validatePassword(password: string): Promise<boolean> {
+    if (!this.password) return false;
     return bcrypt.compare(password, this.password);
   }
 }
