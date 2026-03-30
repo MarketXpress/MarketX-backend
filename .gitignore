@@ -20,6 +20,12 @@ pact/logs/
 pact/.tmp/
 .app.pid
 
+# Load testing reports and results
+load-testing/reports/*.json
+load-testing/reports/*.html
+load-testing/reports/*.csv
+load-testing/.env.load-test
+
 # Temp
 compile-errors.txt
 build-output.txt
