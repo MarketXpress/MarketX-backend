@@ -15,6 +15,11 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Pact logs and temporary files
+pact/logs/
+pact/.tmp/
+.app.pid
+
 # Temp
 compile-errors.txt
 build-output.txt
@@ -50,6 +55,7 @@ OPEN_SOURCE_ISSUES.md
 .env.test.local
 .env.production.local
 .env.local
+.env.pact
 
 # temp directory
 .temp
