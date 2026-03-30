@@ -91,6 +91,58 @@ services:
     networks:
       - marketx_net
 
+  # ── OWASP ZAP Security Scanner ──────────────────────────────────
+  zap:
+    image: owasp/zap2docker-stable:latest
+    container_name: marketx_zap_scanner
+    restart: "no"
+    command: >
+      zap-baseline.sh 
+      -t http://api:3000/ 
+      -J zap_report.json 
+      -config api.key=zap_api_key_change_in_production 
+      -config scanner.attackOnStart=true
+      -config ascan.attackStrength=INSANE
+      -config ascan.alertThreshold=LOW
+      -config spider.maxDuration=10
+      -config ascan.maxDuration=60
+    volumes:
+      - ./security/zap/payloads:/zap/payloads:ro
+      - ./security/zap/reports:/zap/wrk:rw
+    environment:
+      ZAP_API_KEY: zap_api_key_change_in_production
+      JAVA_OPTS: -Xmx2048m
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - marketx_net
+    profiles:
+      - security-test
+
+  # ── OWASP ZAP Full Scan ─────────────────────────────────────────
+  zap-full:
+    image: owasp/zap2docker-stable:latest
+    container_name: marketx_zap_full_scanner
+    restart: "no"
+    command: >
+      zap-full-scan.py 
+      -t http://api:3000/ 
+      -J zap_full_report.json 
+      -html zap_full_report.html 
+      -l INFORMATION 
+      -T 60
+    volumes:
+      - ./security/zap/payloads:/zap/payloads:ro
+      - ./security/zap/reports:/zap/wrk:rw
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - marketx_net
+    profiles:
+      - security-test
+
 # ── Persistent Volumes ────────────────────────────────────────
 volumes:
   postgres_data:
