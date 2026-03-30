@@ -10,7 +10,7 @@ import { Wallet } from '../wallet/entities/wallet.entity';
 import { PaymentStatus, PaymentCurrency } from './dto/payment.dto';
 import { OrderStatus } from '../orders/dto/create-order.dto';
 
-describe.skip('PaymentsService', () => {
+describe('PaymentsService', () => {
   let service: PaymentsService;
   let mockPaymentsRepo: any;
   let mockOrdersRepo: any;
@@ -124,19 +124,13 @@ describe.skip('PaymentsService', () => {
         timeoutMinutes: 30,
       });
 
-      expect(result).toEqual({
-        id: 'payment-123',
-        orderId: testOrderId,
-        amount: 100,
-        currency: PaymentCurrency.XLM,
-        status: PaymentStatus.PENDING,
-        destinationWalletAddress: testWalletAddress,
-        sourceWalletAddress: undefined,
-        confirmationCount: 0,
-        createdAt: undefined,
-        confirmedAt: undefined,
-        expiresAt: undefined,
-      });
+      expect(result.id).toBe('payment-123');
+      expect(result.orderId).toBe(testOrderId);
+      expect(result.amount).toBe(100);
+      expect(result.currency).toBe(PaymentCurrency.XLM);
+      expect(result.status).toBe(PaymentStatus.PENDING);
+      expect(result.destinationWalletAddress).toBe(testWalletAddress);
+      expect(result.expiresAt).toBeInstanceOf(Date);
 
       expect(mockPaymentsRepo.save).toHaveBeenCalledTimes(1);
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(

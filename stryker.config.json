@@ -1,0 +1,86 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Stryker Mutation Testing Configuration for MarketX-Backend",
+  "packageManager": "npm",
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress",
+    "json",
+    "dashboard"
+  ],
+  "testRunner": "jest",
+  "jest": {
+    "projectType": "custom",
+    "configFile": "package.json",
+    "enableFindRelatedTests": true
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/payments/payments.service.ts",
+    "src/orders/orders.service.ts",
+    "src/shipping/shipping.service.ts",
+    "src/escrow/escrow.service.ts",
+    "src/transactions/transactions.service.ts",
+    "src/refunds/refunds.service.ts",
+    "src/wallet/wallet.service.ts"
+  ],
+  "mutator": {
+    "plugins": [
+      "@stryker-mutator/typescript-checker"
+    ],
+    "excludedMutations": []
+  },
+  "checkers": [
+    "typescript"
+  ],
+  "tsconfigFile": "tsconfig.json",
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 50
+  },
+  "timeoutMS": 60000,
+  "timeoutFactor": 2,
+  "maxConcurrentTestRunners": 4,
+  "tempDirName": "stryker-tmp",
+  "cleanTempDir": true,
+  "concurrency": 4,
+  "ignorePatterns": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/test/**",
+    "**/*.d.ts",
+    "**/*.entity.ts",
+    "**/*.dto.ts",
+    "**/*.interface.ts",
+    "**/*.module.ts",
+    "**/*.controller.ts"
+  ],
+  "dashboard": {
+    "reportType": "full"
+  },
+  "htmlReporter": {
+    "fileName": "mutation-report.html",
+    "baseDir": "reports/mutation"
+  },
+  "jsonReporter": {
+    "fileName": "mutation-report.json"
+  },
+  "clearTextReporter": {
+    "allowColor": true,
+    "logTests": true,
+    "maxTestsToLog": 3
+  },
+  "warnings": {
+    "slow": true,
+    "unknownOptions": true
+  },
+  "plugins": [
+    "@stryker-mutator/jest-runner",
+    "@stryker-mutator/typescript-checker"
+  ]
+}

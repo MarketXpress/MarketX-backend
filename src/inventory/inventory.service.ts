@@ -24,15 +24,18 @@ export class InventoryService {
   constructor(
     @InjectRepository(Listing)
     private readonly listingRepo: Repository<Listing>,
-    @InjectRepository(InventoryHistory)
-    private readonly hListingVariant)
+    @InjectRepository(ListingVariant)
     private readonly variantRepo: Repository<ListingVariant>,
-    @InjectRepository(istoryRepo: Repository<InventoryHistory>,
+    @InjectRepository(InventoryHistory)
+    private readonly historyRepo: Repository<InventoryHistory>,
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
   private async syncListingAggregate(listing: Listing, manager: EntityManager) {
     const variants = await manager.find(ListingVariant, {
       where: { listingId: listing.id },
@@ -98,51 +101,28 @@ export class InventoryService {
     });
   }
 
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
-
   async adjustInventory(
     listingId: string,
-    userlet listing: Listing | null = null;
-        let variant: ListingVariant | null = null;
+    userId: string,
+    change: number,
+    type: InventoryChangeType,
+    note?: string,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      const listing = await manager.findOne(Listing, {
+        where: { id: listingId },
+      });
 
-        if ('variantId' in item && item.variantId) {
-          variant = await manager.findOne(ListingVariant, {
-            where: { id: item.variantId },
-          });
-          if (!variant) {
-            throw new NotFoundException(`Variant ${item.variantId} not found`);
-          }
-          listing = await manager.findOne(Listing, {
-            where: { id: variant.listingId },
-          });
-        } else {
-          listing = await manager.findOne(Listing, {
-            where: { id: item.productId },
-          });
-        }
+      if (!listing) {
+        throw new NotFoundException(`Listing ${listingId} not found`);
+      }
 
-        if (!listing) {
-          throw new NotFoundException(`Listing ${item.productId} not found`);
-        }
+      listing.quantity += change;
+      listing.available = listing.quantity - listing.reserved;
 
-        const available = variant ? variant.available : listing.available;
-        if (available < item.quantity) {
-          throw new BadRequestException(
-            `Not enough inventory for ${item.productName}. Available: ${available}, Requested: ${item.quantity}`,
-          );
-        }
+      await manager.save(listing);
 
-        if (variant) {
-          variant.reserved += item.quantity;
-          variant.available = variant.quantity - variant.reserved;
-          await manager.save(variant);
-          await this.syncListingAggregate(listing, manager);
-        } else {
-          listing.reserved += item.quantity;
-          listing.available = listing.quantity - listing.reserved;
-          await manager.save(listing);
-        }(InventoryHistory, {
+      const history = manager.create(InventoryHistory, {
         listingId,
         userId,
         change,
@@ -150,9 +130,11 @@ export class InventoryService {
         note,
       });
       await manager.save(history);
+
       if (listing.available <= 5) {
         await this.notifyLowStock(listing);
       }
+
       return listing;
     });
   }

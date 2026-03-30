@@ -99,7 +99,7 @@ export class Milestone {
   releaseConditions: string[];
 
   @ApiProperty({ description: 'Admin notes' })
-  @Column('text', nullable: true })
+  @Column('text', { nullable: true })
   adminNotes: string;
 
   @ApiProperty({ description: 'Rejection reason' })
