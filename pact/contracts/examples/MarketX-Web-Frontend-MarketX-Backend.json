@@ -1,0 +1,195 @@
+{
+  "consumer": {
+    "name": "MarketX-Web-Frontend"
+  },
+  "provider": {
+    "name": "MarketX-Backend"
+  },
+  "interactions": [
+    {
+      "description": "a request to get all products",
+      "providerState": "products exist in the system",
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "query": "page=1&limit=10"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "name": "Sample Product",
+              "description": "A sample product description",
+              "price": 99.99,
+              "currency": "USD",
+              "stock": 10,
+              "sellerId": "550e8400-e29b-41d4-a716-446655440001",
+              "createdAt": "2026-03-30T00:00:00.000Z",
+              "updatedAt": "2026-03-30T00:00:00.000Z"
+            }
+          ],
+          "meta": {
+            "total": 1,
+            "page": 1,
+            "limit": 10,
+            "totalPages": 1
+          }
+        },
+        "matchingRules": {
+          "$.body.data[*].id": {
+            "match": "type"
+          },
+          "$.body.data[*].name": {
+            "match": "type"
+          },
+          "$.body.data[*].price": {
+            "match": "type"
+          },
+          "$.body.meta.total": {
+            "match": "integer"
+          }
+        }
+      }
+    },
+    {
+      "description": "a request to get a specific product",
+      "providerState": "a product with ID 550e8400-e29b-41d4-a716-446655440000 exists",
+      "request": {
+        "method": "GET",
+        "path": "/products/550e8400-e29b-41d4-a716-446655440000"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "name": "Sample Product",
+          "description": "A sample product description",
+          "price": 99.99,
+          "currency": "USD",
+          "stock": 10,
+          "sellerId": "550e8400-e29b-41d4-a716-446655440001",
+          "images": [],
+          "createdAt": "2026-03-30T00:00:00.000Z",
+          "updatedAt": "2026-03-30T00:00:00.000Z"
+        },
+        "matchingRules": {
+          "$.body.id": {
+            "match": "type"
+          },
+          "$.body.name": {
+            "match": "type"
+          },
+          "$.body.price": {
+            "match": "decimal"
+          },
+          "$.body.stock": {
+            "match": "integer"
+          }
+        }
+      }
+    },
+    {
+      "description": "a request to create an order",
+      "providerState": "user is authenticated",
+      "request": {
+        "method": "POST",
+        "path": "/orders",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer mock-auth-token"
+        },
+        "body": {
+          "productId": "550e8400-e29b-41d4-a716-446655440000",
+          "quantity": 2,
+          "shippingAddress": {
+            "street": "123 Main St",
+            "city": "New York",
+            "state": "NY",
+            "zipCode": "10001",
+            "country": "USA"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "660e8400-e29b-41d4-a716-446655440000",
+          "productId": "550e8400-e29b-41d4-a716-446655440000",
+          "quantity": 2,
+          "totalAmount": 199.98,
+          "status": "pending",
+          "shippingAddress": {
+            "street": "123 Main St",
+            "city": "New York",
+            "state": "NY",
+            "zipCode": "10001",
+            "country": "USA"
+          },
+          "createdAt": "2026-03-30T00:00:00.000Z"
+        },
+        "matchingRules": {
+          "$.body.id": {
+            "match": "type"
+          },
+          "$.body.totalAmount": {
+            "match": "decimal"
+          },
+          "$.body.status": {
+            "match": "type"
+          }
+        }
+      }
+    },
+    {
+      "description": "a request to get order details",
+      "providerState": "an order with ID 660e8400-e29b-41d4-a716-446655440000 exists",
+      "request": {
+        "method": "GET",
+        "path": "/orders/660e8400-e29b-41d4-a716-446655440000",
+        "headers": {
+          "Authorization": "Bearer mock-auth-token"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "660e8400-e29b-41d4-a716-446655440000",
+          "productId": "550e8400-e29b-41d4-a716-446655440000",
+          "quantity": 2,
+          "totalAmount": 199.98,
+          "status": "pending",
+          "createdAt": "2026-03-30T00:00:00.000Z",
+          "updatedAt": "2026-03-30T00:00:00.000Z"
+        },
+        "matchingRules": {
+          "$.body.id": {
+            "match": "type"
+          },
+          "$.body.status": {
+            "match": "regex",
+            "regex": "pending|processing|completed|cancelled"
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "2.0.0"
+    }
+  }
+}

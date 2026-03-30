@@ -1,0 +1,191 @@
+config:
+  target: "{{ $processEnvironment.TARGET_URL }}"
+  phases:
+    # Warm-up phase: Gradually ramp up to 50 users over 1 minute
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 50
+      name: "Warm-up phase"
+    
+    # Peak load phase: 200 concurrent users for 5 minutes
+    - duration: 300
+      arrivalRate: 200
+      name: "Peak load - 200 VUs for 5 minutes"
+    
+    # Cool-down phase: Gradually decrease load
+    - duration: 60
+      arrivalRate: 50
+      rampTo: 10
+      name: "Cool-down phase"
+  
+  # Performance thresholds
+  ensure:
+    maxErrorRate: 5  # Max 5% error rate
+    p95: 2000        # 95th percentile response time < 2000ms
+    p99: 5000        # 99th percentile response time < 5000ms
+  
+  # HTTP configuration
+  http:
+    timeout: 30
+    pool: 200  # Connection pool size
+  
+  # Plugins for enhanced metrics
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  
+  # Processor for custom logic
+  processor: "./processor.js"
+  
+  # Variables for test data
+  variables:
+    categoryIds:
+      - "cat-electronics-001"
+      - "cat-fashion-002"
+      - "cat-home-003"
+      - "cat-sports-004"
+    
+    sortOptions:
+      - "price"
+      - "createdAt"
+      - "popularity"
+    
+    priceRanges:
+      - { min: 0, max: 50 }
+      - { min: 50, max: 200 }
+      - { min: 200, max: 1000 }
+
+scenarios:
+  # Scenario 1: Heavy product filtering and search (40% weight)
+  - name: "Product Search & Filter - Heavy Query"
+    weight: 40
+    flow:
+      # List products with multiple filters
+      - get:
+          url: "/products?page=1&limit=20&minPrice=10&maxPrice=500&category={{ categoryIds[$randomNumber(0, 3)] }}&sortBy={{ sortOptions[$randomNumber(0, 2)] }}&order=desc&inStock=true"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: data
+          capture:
+            - json: "$.data[0].id"
+              as: "productId"
+      
+      # Get specific product details
+      - get:
+          url: "/products/{{ productId }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+      
+      # Get product price history (heavy query)
+      - get:
+          url: "/products/{{ productId }}/price-history"
+          expect:
+            - statusCode: [200, 401]  # May require auth
+      
+      # Search products with text query
+      - get:
+          url: "/products?search=laptop&page=1&limit=20&sortBy=price"
+          expect:
+            - statusCode: 200
+      
+      # Think time between requests
+      - think: 2
+
+  # Scenario 2: Order listing with filters (30% weight)
+  - name: "Order Queries - Heavy Filtering"
+    weight: 30
+    flow:
+      # List all orders (potentially heavy query)
+      - get:
+          url: "/orders"
+          expect:
+            - statusCode: [200, 401]
+          capture:
+            - json: "$.data[0].id"
+              as: "orderId"
+              default: "test-order-id"
+      
+      # Get specific order details
+      - get:
+          url: "/orders/{{ orderId }}"
+          expect:
+            - statusCode: [200, 404, 401]
+      
+      # List orders by buyer (filtered query)
+      - get:
+          url: "/orders?buyerId=buyer-{{ $randomNumber(1, 100) }}"
+          expect:
+            - statusCode: [200, 401]
+      
+      - think: 2
+
+  # Scenario 3: Category browsing with nested queries (15% weight)
+  - name: "Category Navigation - Nested Queries"
+    weight: 15
+    flow:
+      # List all categories
+      - get:
+          url: "/categories"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.data[0].id"
+              as: "categoryId"
+      
+      # Get category details
+      - get:
+          url: "/categories/{{ categoryId }}"
+          expect:
+            - statusCode: [200, 404]
+      
+      # Get products in category with filters
+      - get:
+          url: "/products?category={{ categoryId }}&page=1&limit=50&sortBy=popularity"
+          expect:
+            - statusCode: 200
+      
+      - think: 1
+
+  # Scenario 4: Analytics and reporting queries (10% weight)
+  - name: "Analytics Queries - Heavy Aggregations"
+    weight: 10
+    flow:
+      # Get analytics data (potentially heavy aggregation)
+      - get:
+          url: "/analytics/dashboard"
+          expect:
+            - statusCode: [200, 401]
+      
+      # Get user analytics
+      - get:
+          url: "/analytics/users/user-{{ $randomNumber(1, 100) }}"
+          expect:
+            - statusCode: [200, 401, 404]
+      
+      - think: 3
+
+  # Scenario 5: Admin operations and reports (5% weight)
+  - name: "Admin Heavy Queries"
+    weight: 5
+    flow:
+      # Get admin statistics (heavy aggregation)
+      - get:
+          url: "/admin/stats"
+          expect:
+            - statusCode: [200, 401, 403]
+      
+      # Get pending escrows (complex join query)
+      - get:
+          url: "/admin/escrows/pending?page=1&limit=50"
+          expect:
+            - statusCode: [200, 401, 403]
+      
+      # Get audit logs (large dataset query)
+      - get:
+          url: "/audit/logs?page=1&limit=100&startDate=2026-01-01&endDate=2026-12-31"
+          expect:
+            - statusCode: [200, 401, 403]
+      
+      - think: 2
