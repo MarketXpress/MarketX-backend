@@ -6,11 +6,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install dependencies (including devDependencies needed to build)
 COPY package*.json ./
 RUN npm ci
 
+# Copy source and compile
 COPY . .
-RUN npm run build
+RUN npm run build          # outputs to /app/dist
 
 
 # ─────────────────────────────────────────────────────────────
@@ -24,11 +26,14 @@ ENV PORT=3000
 
 WORKDIR /app
 
+# Only install production dependencies
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Pull compiled artefacts from the builder stage
 COPY --from=builder /app/dist ./dist
 
+# Drop to non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
