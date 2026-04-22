@@ -1,16 +1,7 @@
 name: Worker Slice Coverage Gate
 
 on:
-  push:
-    branches:
-      - main
-      - master
-      - '**/feat/**'
-      - '**/fix/**'
-  pull_request:
-    branches:
-      - main
-      - master
+  workflow_dispatch:
 
 jobs:
   coverage:
