@@ -6,21 +6,19 @@ import { Wishlist } from './entities/wishlist.entity';
 import { WishlistItem } from './entities/wishlist-item.entity';
 import { WishlistPriceScheduler } from './wishlists.scheduler';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { NotificationsService } from '../notifications/notifications.service';
 import { Product } from '../entities/product.entity';
-import { ProductsService } from '../products/products.service';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Wishlist, WishlistItem, Product]),
     NotificationsModule,
+    ProductsModule,
   ],
   controllers: [WishlistsController],
   providers: [
     WishlistsService,
     WishlistPriceScheduler,
-    NotificationsService,
-    ProductsService,
   ],
   exports: [WishlistsService],
 })

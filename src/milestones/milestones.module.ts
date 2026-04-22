@@ -6,11 +6,13 @@ import { MilestonesService } from './milestones.service';
 import { Milestone } from './entities/milestone.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
+import { TransactionsModule } from '../transactions/transactions.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Milestone, Order, Transaction]),
     ScheduleModule,
+    TransactionsModule,
   ],
   controllers: [MilestonesController],
   providers: [MilestonesService],

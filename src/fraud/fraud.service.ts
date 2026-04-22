@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FraudAlert } from './entities/fraud-alert.entity';
 import { evaluateAllRules } from './score';
-import type { AdminService } from '../admin/admin.service';
+import { AdminService } from '../admin/admin.service';
 import { GeolocationService } from '../geolocation/geolocation.service';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/dto/create-order.dto';
@@ -25,6 +25,7 @@ export class FraudService {
     private readonly cacheService: CacheService,
     private readonly emailService: EmailService,
     private readonly adminWebhookService: AdminWebhookService,
+    @Optional()
     private readonly adminService?: AdminService,
   ) {}
 

@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Injectable, Logger } from '@nestjs/common';
 import geoip from 'geoip-lite';
-import NodeGeocoder from 'node-geocoder';
+import NodeGeocoder = require('node-geocoder');
 
 export type GeoPoint = { latitude: number; longitude: number };
 

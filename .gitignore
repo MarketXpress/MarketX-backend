@@ -31,6 +31,7 @@ compile-errors.txt
 build-output.txt
 test-results.txt
 OPEN_SOURCE_ISSUES.md
+BACKLOG_ISSUES_100.md
 
 # OS
 .DS_Store

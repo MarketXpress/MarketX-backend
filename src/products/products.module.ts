@@ -18,6 +18,6 @@ import { PriceModule } from '../price/price.module';
   ],
   controllers: [ProductsController, ProductImagesController],
   providers: [ProductsService, PricingService],
-  exports: [PricingService],
+  exports: [ProductsService, PricingService],
 })
 export class ProductsModule {}
