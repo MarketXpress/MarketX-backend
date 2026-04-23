@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 
 import { AdminController } from './admin.controller';
@@ -14,17 +14,30 @@ import { AdminWebhookService } from './admin-webhook.service';
 import { AdminTaxExportService } from './admin-tax-export.service';
 
 import { Order } from '../orders/entities/order.entity';
-import { User } from 'src/profile/user.entity';
+import { Users } from '../users/users.entity';
 import { FraudAlert } from '../fraud/entities/fraud-alert.entity';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([User, Order, FraudAlert]),
+    TypeOrmModule.forFeature([Users, Order, FraudAlert]),
     HttpModule,
-    // MailerModule is expected to be configured globally in AppModule
-    // (MailerModule.forRootAsync({ ... })). No re-import needed here
-    // unless you want a module-scoped override.
+    MailerModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        transport: {
+          service: 'Sendgrid',
+          auth: {
+            user: 'apikey',
+            pass: configService.get<string>('SENDGRID_API_KEY') || '',
+          },
+        },
+        defaults: {
+          from:
+            configService.get<string>('EMAIL_FROM') || 'noreply@marketx.com',
+        },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [
     AdminController,
