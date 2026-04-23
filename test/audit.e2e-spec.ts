@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../app.module';
-import { AuditService } from './audit.service';
+import { AppModule } from '../src/app.module';
+import { AuditService } from '../src/audit/audit.service';
 import {
   AuditLog,
   AuditActionType,
   AuditStatus,
-} from './entities/audit-log.entity';
+} from '../src/audit/entities/audit-log.entity';
 
 describe('Audit Module E2E Tests', () => {
   let app: INestApplication;
@@ -253,8 +253,8 @@ describe('Audit Module E2E Tests', () => {
       // Verify withdrawal tracking
       expect(auditLog.action).toBe(AuditActionType.WITHDRAWAL);
       expect(auditLog.resourceType).toBe('wallet');
-      expect(auditLog.metadata).toHaveProperty('amount', 5000);
-      expect(auditLog.metadata).toHaveProperty('transactionHash');
+      expect(auditLog.details).toHaveProperty('amount', 5000);
+      expect(auditLog.details).toHaveProperty('transactionHash');
 
       // Retrieve and verify immutability
       const retrieved = await auditService.getAuditLogById(auditLog.id);

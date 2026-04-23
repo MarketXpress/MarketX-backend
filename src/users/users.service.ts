@@ -175,4 +175,12 @@ export class UsersService {
   ): Promise<void> {
     await this.userRepository.update(userId, { refreshToken: token } as any);
   }
+
+  async update2FA(userId: number, secret: string, enabled: boolean): Promise<void> {
+    await this.userRepository.update(userId, { twoFASecret: secret, twoFAEnabled: enabled } as any);
+  }
+
+  async updatePassword(userId: number, passwordHash: string): Promise<void> {
+    await this.userRepository.update(userId, { password: passwordHash } as any);
+  }
 }

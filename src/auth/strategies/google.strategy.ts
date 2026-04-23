@@ -32,7 +32,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       // Normalize email and name
       const email: string = emails?.[0]?.value ?? '';
       const name: string = displayName ?? 'Google User';
-      const avatarUrl: string = photos?.[0]?.value;
+      const avatarUrl: string | undefined = photos?.[0]?.value;
 
       // Create a strictly typed OAuth profile contract
       const oauthProfile = createOAuthProfile(

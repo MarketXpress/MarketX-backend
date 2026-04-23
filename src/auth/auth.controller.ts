@@ -7,9 +7,10 @@ import {
   Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ApiTags } from '@nestjs/swagger';
 import { StrictRateLimit } from '../decorators/rate-limit.decorator';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
-import { RefreshTokenGuard } from './common/guards/refresh-token.guard';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { Enable2FADto } from './dto/enable-2fa.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
 
@@ -18,7 +19,7 @@ import { Verify2FADto } from './dto/verify-2fa.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @UseGuards(RefreshTokenGuard)
+  @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   async refresh(@Req() req: any, @Body('email') email: string) {
     // The Guard attaches { userId, refreshToken } to req.user

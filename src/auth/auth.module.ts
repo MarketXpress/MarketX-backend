@@ -12,6 +12,7 @@ import { TokenRegistryService } from './token-registry.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [

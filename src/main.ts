@@ -80,8 +80,7 @@ async function bootstrap() {
   app.use(LocaleMiddleware.prototype.use);
 
   // Apply global rate limiting guard (dynamic limits via Redis)
-  const reflector = app.get(Reflector);
-  app.useGlobalGuards(new DynamicThrottlerGuard(reflector));
+  app.useGlobalGuards(app.get(DynamicThrottlerGuard));
 
   // Start the application
   const port = process.env.PORT ?? 3000;

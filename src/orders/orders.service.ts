@@ -34,7 +34,8 @@ export class OrdersService {
       const order = manager.create(Order, {
         ...createOrderDto,
         status: OrderStatus.PENDING,
-        items: createOrderDto.items,
+        items: createOrderDto.items as any,
+        escrowType: createOrderDto.escrowType as any,
       });
 
       const savedOrder = await manager.save(order);

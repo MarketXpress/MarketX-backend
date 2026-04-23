@@ -6,12 +6,12 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import { PaymentsModule } from './payments.module';
-import { OrdersModule } from 'src/orders/orders.module';
-import { WalletModule } from 'src/wallet/wallet.module';
-import { PaymentsService } from './payments.service';
-import { PaymentMonitorService } from './payment-monitor.service';
-import { PaymentStatus, PaymentCurrency } from './dto/payment.dto';
+import { PaymentsModule } from '../src/payments/payments.module';
+import { OrdersModule } from '../src/orders/orders.module';
+import { WalletModule } from '../src/wallet/wallet.module';
+import { PaymentsService } from '../src/payments/payments.service';
+import { PaymentMonitorService } from '../src/payments/payment-monitor.service';
+import { PaymentStatus, PaymentCurrency } from '../src/payments/dto/payment.dto';
 
 describe('Payments Module (e2e)', () => {
   let app: INestApplication;

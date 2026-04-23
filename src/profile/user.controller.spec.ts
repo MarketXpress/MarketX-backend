@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from '../users.controller';
-import { UsersService } from '../users.service';
-import { ProfileVisibility } from '../entities/user.entity';
-import { UpdateProfileDto } from '../dto/update-profile.dto';
-import { ProfileResponseDto } from '../dto/profile-response.dto';
-import { PublicProfileDto } from '../dto/public-profile.dto';
+import { UsersController } from './user.controller';
+import { UsersService } from './user.service';
+import { ProfileVisibility } from './user.entity';
+import { UpdateProfileDto } from './update-profile.dto';
+import { ProfileResponseDto } from './profile-response.dto';
+import { PublicProfileDto } from './public-profile.dto';
 
 describe.skip('UsersController', () => {
   let controller: UsersController;
@@ -31,15 +31,17 @@ describe.skip('UsersController', () => {
 
   const mockPublicProfile: PublicProfileDto = {
     id: '123e4567-e89b-12d3-a456-426614174000',
-    firstName: 'John',
-    lastName: 'Doe',
+    firstName: 'Test',
+    lastName: 'User',
     profileImageUrl: 'https://example.com/profile.jpg',
     bio: 'Test bio',
     sellerRating: 4.5,
     totalReviews: 10,
-    totalSales: 25,
+    totalSales: 50,
     isVerifiedSeller: true,
-    createdAt: new Date('2024-01-01'),
+    verificationLevel: 'gold',
+    trustScore: 95,
+    createdAt: new Date(),
   };
 
   const mockUsersService = {

@@ -213,6 +213,7 @@ describe('Auth Lifecycle (e2e)', () => {
     // or extracting token from email queue
     it.skip('should reset password with valid token', async () => {
       const newPassword = 'NewSecurePass123!';
+      const resetToken = 'mock-reset-token';
 
       const response = await request(app.getHttpServer())
         .post('/auth/reset-password')

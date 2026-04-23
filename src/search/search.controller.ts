@@ -29,6 +29,6 @@ export class SearchController {
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   search(@Query() query: SearchQueryDto) {
-    return this.searchService.search(query);
+    return this.searchService.search(query.q || '', query);
   }
 }

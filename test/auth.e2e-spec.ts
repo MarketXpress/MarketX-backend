@@ -3,7 +3,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { AppModule } from '../src/app.module';
-import { AuthModule } from '../src/Authentication/user.module';
 
 /**
  * Full end-to-end flow exercising the real application stack against a live

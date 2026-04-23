@@ -5,8 +5,9 @@ import { FavoritesService } from './favorites.service';
 import { Users } from '../users/users.entity';
 import { Listing } from '../listing/entities/listing.entity';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { CacheManagerService } from '../cache/cache-manager.service';
 
-describe.skip('FavoritesService', () => {
+describe('FavoritesService', () => {
   let service: FavoritesService;
   let userRepository: Repository<Users>;
   let listingRepository: Repository<Listing>;
@@ -15,14 +16,14 @@ describe.skip('FavoritesService', () => {
     id: 1,
     email: 'test@example.com',
     favoriteListings: [],
-  };
+  } as unknown as Users;
 
   const mockListing = {
-    id: 1,
+    id: 'listing-1',
     title: 'Test Listing',
     description: 'Test Description',
     price: 100,
-  };
+  } as unknown as Listing;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,6 +34,13 @@ describe.skip('FavoritesService', () => {
           useValue: {
             findOne: jest.fn(),
             save: jest.fn(),
+          },
+        },
+        {
+          provide: CacheManagerService,
+          useValue: {
+            getOrSet: jest.fn(),
+            invalidatePattern: jest.fn(),
           },
         },
         {
@@ -53,26 +61,25 @@ describe.skip('FavoritesService', () => {
 
   describe('favoriteListing', () => {
     it('should successfully favorite a listing', async () => {
-      const userWithFavorites = { ...mockUser, favoriteListings: [] };
+      const userWithFavorites = {
+        ...mockUser,
+        favoriteListings: [],
+      } as unknown as Users;
 
       jest
         .spyOn(userRepository, 'findOne')
         .mockResolvedValue(userWithFavorites);
-      jest
-        .spyOn(listingRepository, 'findOne')
-        .mockResolvedValue(mockListing as Listing);
-      jest
-        .spyOn(userRepository, 'save')
-        .mockResolvedValue(userWithFavorites as unknown as Users);
+      jest.spyOn(listingRepository, 'findOne').mockResolvedValue(mockListing);
+      jest.spyOn(userRepository, 'save').mockResolvedValue(userWithFavorites);
 
-      await service.favoriteListing(1, 1);
+      await service.favoriteListing(1, 'listing-1');
 
       expect(userRepository.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
         relations: ['favoriteListings'],
       });
       expect(listingRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: 'listing-1' },
       });
       expect(userRepository.save).toHaveBeenCalled();
     });
@@ -80,38 +87,34 @@ describe.skip('FavoritesService', () => {
     it('should throw NotFoundException when user not found', async () => {
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(service.favoriteListing(1, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.favoriteListing(1, 'listing-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when listing not found', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockUser as unknown as Users);
+      jest.spyOn(userRepository, 'findOne').mockResolvedValue(mockUser);
       jest.spyOn(listingRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(service.favoriteListing(1, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.favoriteListing(1, 'listing-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when listing already favorited', async () => {
       const userWithFavorites = {
         ...mockUser,
-        favoriteListings: [mockListing as Listing],
-      };
+        favoriteListings: [mockListing],
+      } as unknown as Users;
 
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithFavorites as Users);
-      jest
-        .spyOn(listingRepository, 'findOne')
-        .mockResolvedValue(mockListing as Listing);
+        .mockResolvedValue(userWithFavorites);
+      jest.spyOn(listingRepository, 'findOne').mockResolvedValue(mockListing);
 
-      await expect(service.favoriteListing(1, 1)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.favoriteListing(1, 'listing-1'),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -119,17 +122,15 @@ describe.skip('FavoritesService', () => {
     it('should successfully unfavorite a listing', async () => {
       const userWithFavorites = {
         ...mockUser,
-        favoriteListings: [mockListing as Listing],
-      };
+        favoriteListings: [mockListing],
+      } as unknown as Users;
 
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithFavorites as Users);
-      jest
-        .spyOn(userRepository, 'save')
-        .mockResolvedValue(userWithFavorites as Users);
+        .mockResolvedValue(userWithFavorites);
+      jest.spyOn(userRepository, 'save').mockResolvedValue(userWithFavorites);
 
-      await service.unfavoriteListing(1, 1);
+      await service.unfavoriteListing(1, 'listing-1');
 
       expect(userRepository.save).toHaveBeenCalled();
     });
@@ -137,21 +138,24 @@ describe.skip('FavoritesService', () => {
     it('should throw NotFoundException when user not found', async () => {
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
 
-      await expect(service.unfavoriteListing(1, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.unfavoriteListing(1, 'listing-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when listing not in favorites', async () => {
-      const userWithFavorites = { ...mockUser, favoriteListings: [] };
+      const userWithFavorites = {
+        ...mockUser,
+        favoriteListings: [],
+      } as unknown as Users;
 
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithFavorites as unknown as Users);
+        .mockResolvedValue(userWithFavorites);
 
-      await expect(service.unfavoriteListing(1, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.unfavoriteListing(1, 'listing-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -299,8 +299,73 @@ export class EmailService implements OnModuleInit {
       return fs.readFileSync(sourcePath, 'utf8');
     } else {
       throw new Error(
-        `Email template "${templateName}" not found at ${distPath} or ${srcPath}`,
+        `Email template "${templateName}" not found at ${filePath} or ${sourcePath}`,
       );
+    }
+  }
+
+  // ── Tracking & Logging ─────────────────────────────────────────────────────
+
+  /**
+   * Update the status and details of an email log entry.
+   */
+  async updateLog(
+    logId: string | undefined,
+    status: EmailStatus,
+    messageId: string | null = null,
+    error: string | null = null,
+  ): Promise<void> {
+    if (!logId) return;
+    try {
+      const updateData: Partial<EmailLog> = { status };
+      if (messageId !== null) updateData.messageId = messageId;
+      if (error !== null) updateData.errorMessage = error;
+      if (status === EmailStatus.SENT) updateData.sentAt = new Date();
+      if (status === EmailStatus.DELIVERED) updateData.deliveredAt = new Date();
+
+      await this.emailLogRepository.update(logId, updateData);
+    } catch (err) {
+      this.logger.error(`Failed to update email log ${logId}: ${err.message}`);
+    }
+  }
+
+  /**
+   * Process a SendGrid webhook event to update email delivery status.
+   */
+  async trackDeliveryEvent(event: SendGridWebhookEventDto): Promise<void> {
+    const messageId = event.sg_message_id?.split('.')[0];
+    if (!messageId) return;
+
+    const log = await this.emailLogRepository.findOne({ where: { messageId } });
+    if (!log) {
+      this.logger.warn(`No email log found for message ID: ${messageId}`);
+      return;
+    }
+
+    let status = log.status;
+    let error = log.errorMessage;
+
+    switch (event.event) {
+      case 'delivered':
+        status = EmailStatus.DELIVERED;
+        break;
+      case 'bounce':
+        status = EmailStatus.BOUNCED;
+        error = event.reason || 'Bounced';
+        break;
+      case 'spamreport':
+      case 'spam_report':
+        status = EmailStatus.SPAM;
+        break;
+      case 'deferred':
+      case 'dropped':
+        status = EmailStatus.FAILED;
+        error = event.reason || `Dropped (${event.event})`;
+        break;
+    }
+
+    if (status !== log.status) {
+      await this.updateLog(log.id, status, null, error);
     }
   }
 }
