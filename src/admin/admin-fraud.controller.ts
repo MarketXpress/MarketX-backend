@@ -2,8 +2,8 @@ import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FraudAlert } from '../fraud/entities/fraud-alert.entity';
-import { JwtAuthGuard } from 'src/Authentication/jwt-auth-guard';
-import { AdminGuard } from 'src/guards/admin.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../guards/admin.guard';
 import { Roles } from '../decorators/roles.decorator';
 
 @Controller('admin/fraud')

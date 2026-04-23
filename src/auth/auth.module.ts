@@ -14,7 +14,6 @@ import { TokenRegistryService } from './token-registry.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
 
     // Register JWT without static config; strategies will handle specific secrets/expiry

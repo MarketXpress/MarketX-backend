@@ -12,8 +12,8 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
-import { CurrentUser } from '../Authentication/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AnalyticsService } from './analytics.service';
 import {
   AnalyticsQueryDto,

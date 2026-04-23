@@ -16,9 +16,9 @@ import { EmailPreferenceService } from './email-preference.service';
 import { UpdateEmailPreferenceDto } from './dto/email-preference.dto';
 import { SendGridWebhookEventDto } from './dto/webhook-event.dto';
 import { SendEmailDto } from './dto/send-email.dto';
-import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../guards/admin.guard';
-import { Public } from '../Authentication/public.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Email')
 @Controller('email')

@@ -18,7 +18,7 @@ import {
   ProcessRefundDto,
   QueryReturnRequestsDto,
 } from './dto/refund.dto';
-import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 
@@ -50,12 +50,6 @@ export class RefundsController {
     @Body() dto: ReviewReturnRequestDto,
     @Request() req: any,
   ) {
-    return this.refundsService.reviewReturnRequest(
-      id,
-      dto,
-      req.user.id,
-    );
+    return this.refundsService.reviewReturnRequest(id, dto, req.user.id);
   }
-
-
 }

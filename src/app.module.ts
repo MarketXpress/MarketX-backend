@@ -20,6 +20,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RabbitMqModule } from './messaging/rabbitmq.module';
 
 // ── Features ───────────────────────────────────────────────────────────────
+import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { FraudModule } from './fraud/fraud.module';
 import { MessagesModule } from './messages/messages.module';
@@ -112,6 +113,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RabbitMqModule,
 
     // ── Features ──────────────────────────────────────────────────────────
+    AuthModule,
     PriceModule,
     ProductsModule,
     FraudModule,
