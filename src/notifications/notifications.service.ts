@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
@@ -20,6 +20,7 @@ import {
 import { NotificationPreferencesEntity } from './notification-preferences.entity';
 import { Users } from '../users/users.entity';
 import { I18nService } from '../i18n/i18n.service';
+import { EMAIL_QUEUE } from '../job-processing/queue.constants';
 
 import {
   CreateNotificationDto as CreateNotificationDtoV1,
@@ -67,10 +68,10 @@ export class NotificationsService {
     private readonly userRepository: Repository<Users>,
 
     private readonly eventEmitter: EventEmitter2,
-    @Inject(InjectQueue('email')) private readonly emailQueue: Queue,
+    @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
     private readonly i18nService: I18nService,
     private readonly notificationGateway: NotificationGateway,
-    private readonly cacheManager?: CacheManagerService, // optional - if not provided adapt accordingly
+    @Optional() private readonly cacheManager?: CacheManagerService,
   ) {}
 
   /**
