@@ -34,7 +34,7 @@ import {
 // Placeholder for auth guard - implement according to your auth system
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-import { JwtAuthGuard } from '../Authentication/jwt-auth-guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
