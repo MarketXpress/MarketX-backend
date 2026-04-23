@@ -2,10 +2,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PricingService, SupportedCurrency } from './services/pricing.service';
 import { ProductsService } from './products.service';
 
-describe.skip('ProductsService price history & events', () => {
+describe('ProductsService price history & events', () => {
   let pricing: PricingService;
   let events: EventEmitter2;
   let products: ProductsService;
+  let priceHistoryRepo: any;
 
   beforeEach(() => {
     pricing = new PricingService();
@@ -13,10 +14,19 @@ describe.skip('ProductsService price history & events', () => {
     const mediaService = {
       deleteProductImages: jest.fn().mockResolvedValue(true),
     } as any;
-    products = new ProductsService(pricing, events, mediaService);
+    priceHistoryRepo = {
+      create: jest.fn().mockImplementation((dto) => dto),
+      save: jest.fn().mockImplementation((dto) => Promise.resolve(dto)),
+    };
+    products = new ProductsService(
+      pricing,
+      events,
+      mediaService,
+      priceHistoryRepo,
+    );
   });
 
-  it('create stores decimal and minor strings and includes rate snapshot in history', () => {
+  it('create stores decimal and minor strings and includes rate snapshot in history', async () => {
     const dto: any = {
       name: 'T',
       category: 'c',
@@ -25,7 +35,7 @@ describe.skip('ProductsService price history & events', () => {
       images: ['http://x/1.jpg'],
     };
 
-    const p = products.create('seller-1', dto);
+    const p = await products.create('seller-1', dto);
     expect(p.basePrice).toBe('12.34');
     expect(p.basePriceMinor).toBe('1234');
     expect(p.priceHistory.length).toBeGreaterThan(0);
@@ -45,11 +55,11 @@ describe.skip('ProductsService price history & events', () => {
       images: ['http://x/1.jpg'],
     };
 
-    const p = products.create('seller-1', dto);
+    const p = await products.create('seller-1', dto);
     let payload: any = null;
     events.on('product.price.updated', (pl) => (payload = pl));
 
-    const updated = products.updatePrice(p.id, 'seller-1', {
+    const updated = await products.updatePrice(p.id, 'seller-1', {
       basePrice: 15.5,
       baseCurrency: SupportedCurrency.USD,
       reason: 'test',

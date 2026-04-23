@@ -6,9 +6,9 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { UsersService } from '../users.service';
-import { User, ProfileVisibility } from '../entities/user.entity';
-import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { UsersService } from './user.service';
+import { User, ProfileVisibility } from './user.entity';
+import { UpdateProfileDto } from './update-profile.dto';
 
 describe.skip('UsersService', () => {
   let service: UsersService;

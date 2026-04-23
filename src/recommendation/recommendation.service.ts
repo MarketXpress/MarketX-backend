@@ -374,12 +374,13 @@ export class RecommendationsService {
 
     // Add collaborative recommendations with scores
     for (const rec of collaborativeRecommendations) {
-      const existing = recommendationMap.get(rec.id);
+      const recId = rec.id as string;
+      const existing = recommendationMap.get(recId);
       if (existing) {
         existing.score += rec['collaborativeScore'] || 0;
       } else {
-        recommendationMap.set(rec.id, {
-          listing: rec,
+        recommendationMap.set(recId, {
+          listing: rec as any,
           score: rec['collaborativeScore'] || 0,
         });
       }

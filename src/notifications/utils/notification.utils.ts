@@ -29,6 +29,7 @@ export class NotificationUtils {
       [NotificationType.ORDER_COMPLETED]: 'Order Completed',
       [NotificationType.SHIPMENT_UPDATE]: 'Shipment Update',
       [NotificationType.PASSWORD_RESET]: 'Password Reset',
+      [NotificationType.WELCOME]: 'Welcome to MarketX!',
     };
 
     return titleMap[type] || 'Notification';

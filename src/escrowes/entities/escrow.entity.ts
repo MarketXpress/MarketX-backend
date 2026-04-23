@@ -42,13 +42,13 @@ export class EscrowEntity {
   escrowAccountPublicKey: string;
 
   @Column({ nullable: true })
-  lockTransactionHash: string;
+  lockTransactionHash: string | null;
 
   @Column({ nullable: true })
-  releaseTransactionHash: string;
+  releaseTransactionHash: string | null;
 
   @Column({ nullable: true })
-  refundTransactionHash: string;
+  refundTransactionHash: string | null;
 
   @Column({ type: 'enum', enum: EscrowStatus, default: EscrowStatus.PENDING })
   status: EscrowStatus;

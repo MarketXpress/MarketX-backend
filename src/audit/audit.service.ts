@@ -90,7 +90,7 @@ export class AuditService {
       const auditLog = this.auditLogRepository.create({
         userId: event.userId,
         action: event.actionType as AuditActionType,
-        status: event.status || AuditStatus.SUCCESS,
+        status: (event.status as AuditStatus) || AuditStatus.SUCCESS,
         ipAddress: event.ipAddress,
         userAgent: event.userAgent,
         resourceType: event.resourceType,
@@ -134,7 +134,7 @@ export class AuditService {
         return this.auditLogRepository.create({
           userId: event.userId,
           action: event.actionType as AuditActionType,
-          status: event.status || AuditStatus.SUCCESS,
+          status: (event.status as AuditStatus) || AuditStatus.SUCCESS,
           ipAddress: event.ipAddress,
           userAgent: event.userAgent,
           resourceType: event.resourceType,

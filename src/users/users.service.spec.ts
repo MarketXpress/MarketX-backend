@@ -12,8 +12,7 @@ const mockUser = (): Partial<Users> => ({
   name: 'Test User',
   isActive: true,
   status: 'active',
-  deletedAt: null,
-});
+  deletedAt: undefined,});
 
 describe('UsersService - softDeleteUser', () => {
   let service: UsersService;

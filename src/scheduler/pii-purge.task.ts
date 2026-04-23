@@ -69,14 +69,14 @@ export class PiiPurgeTask {
   async anonymizeUser(user: Users): Promise<void> {
     user.email = `deleted_${user.id}@anonymized.local`;
     user.name = 'Deleted User';
-    user.bio = null;
-    user.avatarUrl = null;
+    user.bio = '';
+    user.avatarUrl = '';
     user.status = 'deleted';
     user.isActive = false;
 
     // Clear refreshToken if present on the entity
     if ('refreshToken' in user) {
-      (user as Users & { refreshToken: null }).refreshToken = null;
+      (user as any).refreshToken = '';
     }
 
     await this.userRepository.save(user);

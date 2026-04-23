@@ -237,7 +237,7 @@ export class PaymentsService {
         payment.orderId,
         payment.amount,
         payment.currency,
-        payment.stellarTransactionId,
+        payment.stellarTransactionId || '',
       ),
     );
 

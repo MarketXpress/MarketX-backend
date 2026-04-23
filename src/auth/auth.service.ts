@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { generateSecret, generateURI, verify } from 'otplib';
 import * as qrcode from 'qrcode';
-import { PrismaService } from '../prisma.service';
+import { UsersService } from '../users/users.service';
 import { OAuthProfile, validateOAuthProfile } from './types/oauth-profile.types';
 import { TokenRegistryService } from './token-registry.service';
 import {
@@ -25,7 +25,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly eventEmitter: EventEmitter2,
     private readonly tokenRegistry: TokenRegistryService,
-    private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -94,10 +94,7 @@ export class AuthService {
   async enable2FA(userId: string) {
     const secret = generateSecret();
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { twoFASecret: secret, twoFAEnabled: true },
-    });
+    await this.usersService.update2FA(parseInt(userId, 10), secret, true);
 
     const otpauth = generateURI({
       issuer: 'MarketX',
@@ -119,7 +116,7 @@ export class AuthService {
   }
 
   async verify2FA(userId: string, code: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.usersService.findOne(parseInt(userId, 10));
     if (!user || !user.twoFAEnabled || !user.twoFASecret) {
       throw new BadRequestException('2FA not enabled for this user');
     }
@@ -146,8 +143,10 @@ export class AuthService {
   ): Promise<{ success: boolean }> {
     try {
       // Fetch user
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (!user) {
+      let user;
+      try {
+        user = await this.usersService.findOne(parseInt(userId, 10));
+      } catch {
         throw new UnauthorizedException('User not found');
       }
 
@@ -179,10 +178,7 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { password: hashedPassword },
-      });
+      await this.usersService.updatePassword(parseInt(userId, 10), hashedPassword);
 
       // Emit successful audit event
       // Note: We intentionally don't store actual password values, only that a change occurred
@@ -244,10 +240,7 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { password: hashedPassword },
-      });
+      await this.usersService.updatePassword(parseInt(userId, 10), hashedPassword);
 
       // Emit successful audit event
       this.eventEmitter.emit(

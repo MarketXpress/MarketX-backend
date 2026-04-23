@@ -17,12 +17,17 @@ export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
   private static readonly VALID_STATE_TRANSITIONS: {
     [key in OrderStatus]: OrderStatus[];
   } = {
-    [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+    [OrderStatus.PENDING]: [
+      OrderStatus.PAID,
+      OrderStatus.CANCELLED,
+      OrderStatus.MANUAL_REVIEW,
+    ],
     [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
     [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
     [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED],
     [OrderStatus.CANCELLED]: [],
     [OrderStatus.COMPLETED]: [],
+    [OrderStatus.MANUAL_REVIEW]: [OrderStatus.PAID, OrderStatus.CANCELLED],
   };
 
   listenTo() {

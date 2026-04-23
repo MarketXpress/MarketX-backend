@@ -68,6 +68,6 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
       contentType: 'application/json',
       persistent: true,
       type: eventName,
-    });
+    } as any);
   }
 }

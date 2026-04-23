@@ -55,7 +55,7 @@ export class ModerationService {
           (label.Name === 'Explicit Nudity' ||
             label.Name === 'Violence' ||
             label.Name === 'Visually Disturbing') &&
-          label.Confidence > 90
+          (label.Confidence ?? 0) > 90
         ) {
           throw new BadRequestException(
             `Image rejected due to content policy violation: ${label.Name} detected with high confidence.`,
