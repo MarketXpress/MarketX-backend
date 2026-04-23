@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await */
 import { FraudService } from '../fraud.service';
-import { Order } from '../../orders/entities/order.entity';
 import { OrderStatus } from '../../orders/dto/create-order.dto';
 import { evaluateAllRules } from '../score';
 
@@ -33,7 +33,38 @@ describe('Fraud rules and service', () => {
       save: jest.fn(async (o: any) => o),
     };
 
-    const svc = new FraudService(fakeRepo, fakeOrderRepo);
+    const fakeUserRepo: any = {
+      findOne: jest.fn(async () => null),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const fakeGeolocationService: any = {
+      getLocationFromIp: jest.fn(async () => null),
+      geocodeAddress: jest.fn(async () => null),
+      distanceMiles: jest.fn(() => 0),
+    };
+
+    const fakeCacheService: any = {
+      increment: jest.fn(async () => 0),
+    };
+
+    const fakeEmailService: any = {
+      sendAccountLocked: jest.fn(async () => ({})),
+    };
+
+    const fakeAdminWebhookService: any = {
+      notifyAdmin: jest.fn(async () => ({})),
+    };
+
+    const svc = new FraudService(
+      fakeRepo,
+      fakeOrderRepo,
+      fakeUserRepo,
+      fakeGeolocationService,
+      fakeCacheService,
+      fakeEmailService,
+      fakeAdminWebhookService,
+    );
 
     const result = await svc.analyzeRequest({
       userId: 'user-highrisk',
@@ -69,11 +100,45 @@ describe('Fraud rules and service', () => {
       save: jest.fn(async (o: any) => o),
     };
 
-    const svc = new FraudService(fakeRepo, fakeOrderRepo);
+    const fakeUserRepo: any = {
+      findOne: jest.fn(async () => null),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const fakeGeolocationService: any = {
+      getLocationFromIp: jest.fn(async () => null),
+      geocodeAddress: jest.fn(async () => null),
+      distanceMiles: jest.fn(() => 0),
+    };
+
+    const fakeCacheService: any = {
+      increment: jest.fn(async () => 0),
+    };
+
+    const fakeEmailService: any = {
+      sendAccountLocked: jest.fn(async () => ({})),
+    };
+
+    const fakeAdminWebhookService: any = {
+      notifyAdmin: jest.fn(async () => ({})),
+    };
+
+    const svc = new FraudService(
+      fakeRepo,
+      fakeOrderRepo,
+      fakeUserRepo,
+      fakeGeolocationService,
+      fakeCacheService,
+      fakeEmailService,
+      fakeAdminWebhookService,
+    );
 
     // prime velocity: call rules repeatedly to build internal state
     for (let i = 0; i < 30; i++) {
-      await evaluateAllRules({ userId: 'u-progressive', metadata: { i } });
+      await evaluateAllRules({
+        userId: 'u-progressive',
+        metadata: { orderCount: i },
+      });
     }
 
     // prime fingerprint: same fingerprint from multiple IPs

@@ -7,10 +7,15 @@ import { RequestMonitorMiddleware } from './middleware/request-monitor.middlewar
 import { AdminModule } from '../admin/admin.module';
 import { GeolocationService } from '../geolocation/geolocation.service';
 import { Order } from '../orders/entities/order.entity';
+import { User } from '../entities/user.entity';
 import { CacheModule } from '../cache/cache.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FraudAlert, Order]), AdminModule, CacheModule],
+  imports: [
+    TypeOrmModule.forFeature([FraudAlert, Order, User]),
+    AdminModule,
+    CacheModule,
+  ],
   providers: [FraudService, RequestMonitorMiddleware, GeolocationService],
   controllers: [FraudController],
   exports: [FraudService],
