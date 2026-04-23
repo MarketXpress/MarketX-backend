@@ -94,11 +94,11 @@ export class Order {
   @Column({ nullable: true })
   expectedDeliveryDate?: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   @Index()
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @Column({ nullable: true })
@@ -142,7 +142,19 @@ export class Order {
   @JoinColumn({ name: 'sellerId' })
   seller?: User;
 
-  // Computed properties
+  // Computed properties for reporting/export
+  get orderId(): string {
+    return this.id;
+  }
+
+  get orderDate(): Date {
+    return this.createdAt;
+  }
+
+  get customerName(): string {
+    return this.buyer?.name ?? '';
+  }
+
   get itemCount(): number {
     return this.items.reduce((sum, item) => sum + item.quantity, 0);
   }
@@ -156,6 +168,6 @@ export class Order {
   }
 
   get displayTotal(): string {
-    return `$${this.totalAmount.toFixed(2)}`;
+    return `$${Number(this.totalAmount).toFixed(2)}`;
   }
 }
