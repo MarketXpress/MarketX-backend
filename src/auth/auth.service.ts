@@ -8,7 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { crypto } from 'crypto'; // Built-in Node module
-import { authenticator } from 'otplib';
+import { generateSecret, generateURI, verify } from 'otplib';
 import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma.service';
 import {
@@ -99,14 +99,18 @@ export class AuthService {
   }
 
   async enable2FA(userId: string) {
-    const secret = authenticator.generateSecret();
+    const secret = generateSecret();
 
     await this.prisma.user.update({
       where: { id: userId },
       data: { twoFASecret: secret, twoFAEnabled: true },
     });
 
-    const otpauth = authenticator.keyuri(userId, 'YourAppName', secret);
+    const otpauth = generateURI({
+      issuer: 'MarketX',
+      label: userId,
+      secret,
+    });
     const qrCodeDataURL = await qrcode.toDataURL(otpauth);
 
     return { qrCodeDataURL, otpauth };
@@ -127,11 +131,11 @@ export class AuthService {
       throw new BadRequestException('2FA not enabled for this user');
     }
 
-    const isValid = authenticator.verify({
-      token: code,
+    const result = await verify({
       secret: user.twoFASecret,
+      token: code,
     });
-    if (!isValid) throw new BadRequestException('Invalid 2FA code');
+    if (!result.valid) throw new BadRequestException('Invalid 2FA code');
 
     return true;
   }
