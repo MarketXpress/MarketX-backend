@@ -46,10 +46,10 @@ describe('AuditService', () => {
     it('should create an audit log entry', async () => {
       const mockSave = jest
         .spyOn(repository, 'save')
-        .mockResolvedValue(mockAuditLog as AuditLog);
+        .mockResolvedValue(mockAuditLog as unknown as AuditLog);
       jest
         .spyOn(repository, 'create')
-        .mockReturnValue(mockAuditLog as AuditLog);
+        .mockReturnValue(mockAuditLog as unknown as AuditLog);
 
       const result = await service.createAuditLog({
         userId: 'user-123',
@@ -89,12 +89,12 @@ describe('AuditService', () => {
       const mockSave = jest.spyOn(repository, 'save').mockResolvedValue({
         ...mockAuditLog,
         action: AuditActionType.EMAIL_CHANGE,
-      } as AuditLog);
+      } as unknown as AuditLog);
 
       jest.spyOn(repository, 'create').mockReturnValue({
         ...mockAuditLog,
         action: AuditActionType.EMAIL_CHANGE,
-      } as AuditLog);
+      } as unknown as AuditLog);
 
       const result = await service.logStateChange(event);
 
@@ -121,10 +121,12 @@ describe('AuditService', () => {
         changedFields: 'age',
       };
 
-      jest.spyOn(repository, 'create').mockReturnValue(savedLog as AuditLog);
+      jest
+        .spyOn(repository, 'create')
+        .mockReturnValue(savedLog as unknown as AuditLog);
       const mockSave = jest
         .spyOn(repository, 'save')
-        .mockResolvedValue(savedLog as AuditLog);
+        .mockResolvedValue(savedLog as unknown as AuditLog);
 
       const result = await service.logStateChange(event);
 
@@ -146,8 +148,12 @@ describe('AuditService', () => {
         changedFields: '',
       };
 
-      jest.spyOn(repository, 'create').mockReturnValue(savedLog as AuditLog);
-      jest.spyOn(repository, 'save').mockResolvedValue(savedLog as AuditLog);
+      jest
+        .spyOn(repository, 'create')
+        .mockReturnValue(savedLog as unknown as AuditLog);
+      jest
+        .spyOn(repository, 'save')
+        .mockResolvedValue(savedLog as unknown as AuditLog);
 
       const result = await service.logStateChange(event);
 
@@ -181,10 +187,12 @@ describe('AuditService', () => {
         },
       ];
 
-      jest.spyOn(repository, 'create').mockReturnValue(mockLogs[0] as AuditLog);
+      jest
+        .spyOn(repository, 'create')
+        .mockReturnValue(mockLogs[0] as unknown as AuditLog);
       const mockSave = jest
         .spyOn(repository, 'save')
-        .mockResolvedValue(mockLogs as AuditLog[]);
+        .mockResolvedValue(mockLogs as any);
 
       const result = await service.createBulkAuditLogs(events);
 
@@ -283,8 +291,8 @@ describe('AuditService', () => {
         .mockReturnValue(mockQueryBuilder as any);
 
       const result = await service.getAuditLogs({
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-12-31'),
+        startDate: '2024-01-01',
+        endDate: '2024-12-31',
         page: 1,
         limit: 10,
       });
@@ -378,7 +386,7 @@ describe('AuditService', () => {
     it('should retrieve a specific audit log by ID', async () => {
       jest
         .spyOn(repository, 'findOne')
-        .mockResolvedValue(mockAuditLog as AuditLog);
+        .mockResolvedValue(mockAuditLog as unknown as AuditLog);
 
       const result = await service.getAuditLogById('test-id-123');
 
@@ -389,7 +397,7 @@ describe('AuditService', () => {
     });
 
     it('should throw error if audit log not found', async () => {
-      jest.spyOn(repository, 'findOne').mockResolvedValue(undefined);
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
       await expect(service.getAuditLogById('non-existent')).rejects.toThrow(
         'Audit log with ID non-existent not found',

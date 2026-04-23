@@ -95,7 +95,7 @@ describe('Wishlist Controller (e2e)', () => {
     );
 
     // Create a test product
-    const product = await productRepo.save(
+    const product: any = await productRepo.save(
       productRepo.create({
         id: 'test-product-id',
         title: 'Test Product',
@@ -105,7 +105,7 @@ describe('Wishlist Controller (e2e)', () => {
         available: 5,
         isActive: true,
         userId: 'test-user-id',
-      }),
+      } as any),
     );
 
     const addItemDto = {

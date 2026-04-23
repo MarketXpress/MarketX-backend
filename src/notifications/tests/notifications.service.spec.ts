@@ -117,12 +117,12 @@ describe.skip('NotificationsService', () => {
       mockRepository.create.mockReturnValue(mockNotification);
       mockRepository.save.mockResolvedValue(mockNotification);
 
-      const result = await service.sendTransactionReceivedNotification(
+      const result = (await service.sendTransactionReceivedNotification(
         userId,
         transactionId,
         amount,
         currency,
-      );
+      )) as NotificationEntity;
 
       expect(result.title).toBe('Transaction Received');
       expect(result.message).toBe('You received USD 100.50');
@@ -150,9 +150,8 @@ describe.skip('NotificationsService', () => {
 
       const result = await service.getUserNotifications(userId, queryDto);
 
-      expect(result.notifications).toEqual(mockNotifications);
+      expect(result.items).toEqual(mockNotifications);
       expect(result.total).toBe(2);
-      expect(result.unreadCount).toBe(1);
     });
   });
 
@@ -177,7 +176,7 @@ describe.skip('NotificationsService', () => {
       mockRepository.findOne.mockResolvedValue(mockNotification);
       mockRepository.save.mockResolvedValue(updatedNotification);
 
-      const result = await service.markAsRead(notificationId, userId);
+      const result = await service.markAsRead(userId, notificationId);
 
       expect(result.read).toBe(true);
       expect(result.readAt).toBeDefined();
@@ -193,7 +192,7 @@ describe.skip('NotificationsService', () => {
 
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.markAsRead(notificationId, userId)).rejects.toThrow(
+      await expect(service.markAsRead(userId, notificationId)).rejects.toThrow(
         'Notification not found',
       );
     });

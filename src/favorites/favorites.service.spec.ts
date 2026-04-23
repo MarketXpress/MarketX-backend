@@ -5,6 +5,7 @@ import { FavoritesService } from './favorites.service';
 import { Users } from '../users/users.entity';
 import { Listing } from '../listing/entities/listing.entity';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { CacheManagerService } from '../cache/cache-manager.service';
 
 describe('FavoritesService', () => {
   let service: FavoritesService;
