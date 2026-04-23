@@ -24,6 +24,11 @@ export class CreateListingDto {
   @IsNotEmpty()
   location: string;
 
+  // Legacy fallback fields for single-variant listings
+  currency?: string;
+  quantity?: number;
+  reserved?: number;
+
   expiresAt?: Date;
   variants?: ListingVariantDto[];
 }

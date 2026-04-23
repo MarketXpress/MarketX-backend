@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FavoritesService } from './favorites.service';
 import { Users } from '../users/users.entity';
-import { Listing } from '../listings/listing.entity';
+import { Listing } from '../listing/entities/listing.entity';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 
 describe.skip('FavoritesService', () => {

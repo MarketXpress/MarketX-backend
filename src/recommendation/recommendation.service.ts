@@ -53,7 +53,7 @@ export class RecommendationsService {
     userLat: number,
     userLng: number,
     maxDistanceInMeters: number,
-  ): Promise<(Listing & { distance: number })[]> {
+  ): Promise<Array<Partial<Listing> & { distance: number }>> {
     const rawResults = await this.listingRepository
       .createQueryBuilder('listing')
       .select([
@@ -421,7 +421,7 @@ export class RecommendationsService {
   private async getCollaborativeRecommendations(
     userId: string,
     limit: number,
-  ): Promise<Listing[]> {
+  ): Promise<Array<Partial<Listing>>> {
     // Find similar users
     const similarUsers = await this.userSimilarityRepository.find({
       where: [{ userIdA: userId }, { userIdB: userId }],
