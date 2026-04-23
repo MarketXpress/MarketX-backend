@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import redis from '../store/redis.store';
 
-type Input = { ip?: string; deviceFingerprint?: string };
+type Input = { ip?: string; deviceFingerprint?: string; metadata?: any };
 
 export async function evaluateIpFingerprint(input: Input) {
+  if (!input.ip || !input.deviceFingerprint)
+    return { score: 0, reason: 'ip-fingerprint:insufficient' };
+
   let score = 0;
   const reasons: string[] = [];
 

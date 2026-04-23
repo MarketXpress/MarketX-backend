@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import redis from '../store/redis.store';
 
 type Input = { userId?: string; metadata?: any };
 
 export async function evaluateVelocity(input: Input) {
   const user = input.userId || 'anon';
+  if (!input.userId) return { score: 0, reason: 'velocity:insufficient' };
   const windowSec = 60; // 1 minute window
   const threshold = 20; // suspicious if >20 reqs/min
 

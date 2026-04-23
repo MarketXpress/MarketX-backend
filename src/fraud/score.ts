@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await */
 /**
  * Pure scoring engine — no DB deps, fully testable in isolation.
  * Each rule returns a partial score (0-100). Total is capped at 100.
@@ -56,11 +57,14 @@ const RULES: Rule[] = [
   {
     name: 'billing_shipping_mismatch',
     score: 30,
-    check: ({ metadata }) =>
-      metadata?.billingAddress &&
-      metadata?.shippingAddress &&
-      metadata.billingAddress.trim().toLowerCase() !==
-        metadata.shippingAddress.trim().toLowerCase(),
+    check: ({ metadata }) => {
+      return !!(
+        metadata?.billingAddress &&
+        metadata?.shippingAddress &&
+        metadata.billingAddress.trim().toLowerCase() !==
+          metadata.shippingAddress.trim().toLowerCase()
+      );
+    },
   },
   {
     name: 'high_velocity',

@@ -5,7 +5,12 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 
-export type FraudStatus = 'pending' | 'reviewed' | 'suspended' | 'safe';
+export type FraudStatus =
+  | 'pending'
+  | 'reviewed'
+  | 'suspended'
+  | 'safe'
+  | 'manual_review';
 
 @Entity({ name: 'fraud_alerts' })
 export class FraudAlert {
