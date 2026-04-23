@@ -18,11 +18,11 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
 } from './auth.dto';
-import { LocalAuthGuard } from './local-auth.guard';
-import { JwtAuthGuard } from './jwt-auth-guard';
-import { JwtRefreshGuard } from './jwt-refresh.guard';
-import { Public } from './public.decorator';
-import { CurrentUser } from './current-user.decorator';
+import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtRefreshGuard } from '../auth/guards/jwt-refresh.guard';
+import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')

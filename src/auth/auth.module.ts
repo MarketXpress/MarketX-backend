@@ -11,6 +11,9 @@ import * as redisStore from 'cache-manager-redis-yet';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/jwt-refresh.strategy';
 import { TokenRegistryService } from './token-registry.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @Module({
   imports: [
@@ -38,6 +41,9 @@ import { TokenRegistryService } from './token-registry.service';
     TokenRegistryService,
     JwtStrategy,
     RefreshTokenStrategy,
+    JwtAuthGuard,
+    JwtRefreshGuard,
+    LocalAuthGuard,
   ],
   controllers: [AuthController],
   exports: [AuthService],
