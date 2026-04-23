@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { BullModule } from '@nestjs/bull';
 import { JwtModule } from '@nestjs/jwt';
 
 import { NotificationsController } from './notifications.controller';
@@ -12,6 +11,9 @@ import { NotificationEntity } from './notification.entity';
 import { NotificationPreferencesEntity } from './notification-preferences.entity';
 import { Users } from '../users/users.entity';
 import { CustomI18nModule } from '../i18n/i18n.module';
+import { CacheModule } from '../cache/cache.module';
+import { JobsModule } from '../job-processing/jobs.module';
+import { JWT_CONSTANTS } from '../Authentication/jwt-payload.interface';
 
 @Module({
   imports: [
@@ -20,11 +22,12 @@ import { CustomI18nModule } from '../i18n/i18n.module';
       NotificationPreferencesEntity,
       Users,
     ]),
-    EventEmitterModule.forRoot(),
-    BullModule.registerQueue({
-      name: 'email',
+    EventEmitterModule,
+    JobsModule,
+    JwtModule.register({
+      secret: JWT_CONSTANTS.accessTokenSecret,
     }),
-    JwtModule.register({}),
+    CacheModule,
     CustomI18nModule,
   ],
   controllers: [NotificationsController],
