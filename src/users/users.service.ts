@@ -162,11 +162,11 @@ export class UsersService {
   }
 
   async validateRefreshToken(
-    _userId: string,
-    _token: string,
+    userId: string,
+    token: string,
   ): Promise<boolean> {
-    // Stub implementation - should compare hashed tokens
-    return true;
+    const user = await this.findOne(parseInt(userId));
+    return user && user.refreshToken === token;
   }
 
   async updateRefreshToken(

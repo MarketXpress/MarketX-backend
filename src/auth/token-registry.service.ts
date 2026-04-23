@@ -10,6 +10,9 @@ export class TokenRegistryService {
   async store(userId: string, token: string): Promise<void> {
     const key = `refresh_token:${userId}:${token}`;
     await this.cacheManager.set(key, 'active', 604800000); // 7 days in ms
+
+    // Maintain list of tokens for the user
+    await this.addTokenToUserList(userId, token);
   }
 
   async exists(userId: string, token: string): Promise<boolean> {
@@ -21,15 +24,42 @@ export class TokenRegistryService {
   async invalidate(userId: string, token: string): Promise<void> {
     const key = `refresh_token:${userId}:${token}`;
     await this.cacheManager.del(key);
+
+    // Remove from user list
+    await this.removeTokenFromUserList(userId, token);
   }
 
   // REUSE DETECTION: Invalidate all tokens for a user
   async invalidateAllForUser(userId: string): Promise<void> {
-    const store: any = this.cacheManager.store;
-    // Note: 'keys' usage depends on your specific Redis store implementation
-    const keys = await store.keys(`refresh_token:${userId}:*`);
-    if (keys.length > 0) {
-      await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
+    const userTokensKey = `user_refresh_tokens:${userId}`;
+    const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
+
+    if (tokens.length > 0) {
+      const tokenKeys = tokens.map(token => `refresh_token:${userId}:${token}`);
+      await Promise.all(tokenKeys.map(key => this.cacheManager.del(key)));
+    }
+
+    // Clear the user tokens list
+    await this.cacheManager.del(userTokensKey);
+  }
+
+  private async addTokenToUserList(userId: string, token: string): Promise<void> {
+    const userTokensKey = `user_refresh_tokens:${userId}`;
+    const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
+    if (!tokens.includes(token)) {
+      tokens.push(token);
+      await this.cacheManager.set(userTokensKey, tokens, 604800000); // Same TTL
+    }
+  }
+
+  private async removeTokenFromUserList(userId: string, token: string): Promise<void> {
+    const userTokensKey = `user_refresh_tokens:${userId}`;
+    const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
+    const filteredTokens = tokens.filter(t => t !== token);
+    if (filteredTokens.length > 0) {
+      await this.cacheManager.set(userTokensKey, filteredTokens, 604800000);
+    } else {
+      await this.cacheManager.del(userTokensKey);
     }
   }
 }

@@ -12,6 +12,7 @@ import { generateSecret, generateURI, verify } from 'otplib';
 import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma.service';
 import { OAuthProfile, validateOAuthProfile } from './types/oauth-profile.types';
+import { TokenRegistryService } from './token-registry.service';
 import {
   UserPasswordChangedEvent,
   AuthPasswordResetRequestedEvent,
@@ -23,7 +24,7 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly redisService: RedisService,
+    private readonly tokenRegistry: TokenRegistryService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -42,11 +43,7 @@ export class AuthService {
 
     // Store RT in Redis with a TTL (e.g., 7 days)
     // Key pattern: refresh_token:user_id:token_value
-    await this.redisService.set(
-      `refresh_token:${userId}:${refreshToken}`,
-      'active',
-      604800, // 7 days in seconds
-    );
+    await this.tokenRegistry.store(userId, refreshToken);
 
     return { accessToken, refreshToken };
   }
@@ -69,8 +66,7 @@ export class AuthService {
    * Refreshes the Access Token and Rotates the Refresh Token
    */
   async refreshTokens(userId: string, email: string, oldRefreshToken: string) {
-    const tokenKey = `refresh_token:${userId}:${oldRefreshToken}`;
-    const tokenExists = await this.redisService.get(tokenKey);
+    const tokenExists = await this.tokenRegistry.exists(userId, oldRefreshToken);
 
     if (!tokenExists) {
       /**
@@ -85,18 +81,14 @@ export class AuthService {
     }
 
     // Delete the used token (Rotation)
-    await this.redisService.del(tokenKey);
+    await this.tokenRegistry.invalidate(userId, oldRefreshToken);
 
     // Issue new pair
     return this.getTokens(userId, email);
   }
 
   async revokeAllUserTokens(userId: string): Promise<void> {
-    const pattern = `refresh_token:${userId}:*`;
-    const keys = await this.redisService.keys(pattern);
-    if (keys.length > 0) {
-      await this.redisService.del(...keys);
-    }
+    await this.tokenRegistry.invalidateAllForUser(userId);
   }
 
   async enable2FA(userId: string) {
