@@ -6,7 +6,7 @@ import { ShippingService } from './shipping.service';
 import { Shipment } from './entities/shipment.entity';
 import { Order } from '../orders/entities/order.entity';
 import { ShipmentStatus, ShippingCarrier } from './dto/create-shipment.dto';
-import { OrderStatus } from '../orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/entities/order.entity';
 
 describe('ShippingService', () => {
   let service: ShippingService;

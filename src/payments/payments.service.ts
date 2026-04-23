@@ -21,7 +21,7 @@ import {
   PaymentResponseDto,
   InitiatePaymentDto,
 } from './dto/payment.dto';
-import { OrderStatus } from '../orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/entities/order.entity';
 import {
   PaymentInitiatedEvent,
   PaymentFailedEvent,

@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { SupportedCurrency } from '../../products/services/pricing.service';
-import { OrderStatus } from '../../orders/dto/create-order.dto';
+import { OrderStatus } from '../../orders/entities/order.entity';
 
 @Entity('archived_orders')
 export class ArchivedOrder {

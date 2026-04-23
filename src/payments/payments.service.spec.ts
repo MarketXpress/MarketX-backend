@@ -8,7 +8,7 @@ import { Payment } from './entities/payment.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { PaymentStatus, PaymentCurrency } from './dto/payment.dto';
-import { OrderStatus } from '../orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/entities/order.entity';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;

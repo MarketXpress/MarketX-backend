@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
-import { ConfigModule } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 
 import { AdminController } from './admin.controller';
@@ -19,7 +18,6 @@ import { FraudAlert } from '../fraud/entities/fraud-alert.entity';
 
 @Module({
   imports: [
-    ConfigModule,
     TypeOrmModule.forFeature([User, Order, FraudAlert]),
     HttpModule,
     // MailerModule is expected to be configured globally in AppModule

@@ -7,7 +7,16 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { SupportedCurrency } from '../../products/services/pricing.service';
-import { OrderStatus } from '../dto/create-order.dto';
+
+export enum OrderStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  SHIPPED = 'shipped',
+  DELIVERED = 'delivered',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+  MANUAL_REVIEW = 'manual_review',
+}
 
 export enum EscrowType {
   STANDARD = 'standard',

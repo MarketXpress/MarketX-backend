@@ -5,9 +5,9 @@ import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { OrdersService } from './orders.service';
-import { Order } from './entities/order.entity';
-import { OrderStatus } from './dto/create-order.dto';
+import { Order, OrderStatus } from './entities/order.entity';
 import { PricingService } from '../products/services/pricing.service';
+import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { AdminWebhookService } from '../admin/admin-webhook.service';
 import { EventNames } from '../common/events';
@@ -20,6 +20,7 @@ describe('OrdersService', () => {
   let mockDataSource: any;
   let mockManager: any;
   let mockAdminWebhookService: any;
+  let mockProductsService: any;
 
   const testBuyerId = 'buyer-1';
   const testOrderId = 'order-1';
@@ -54,6 +55,15 @@ describe('OrdersService', () => {
       notifyAdmin: jest.fn().mockResolvedValue(undefined),
     };
 
+    mockProductsService = {
+      findOne: jest.fn().mockReturnValue({
+        id: 'prod-1',
+        name: 'Test Product',
+        price: '50',
+        currency: 'USD',
+      }),
+    };
+
     mockManager = {
       create: jest.fn(),
       save: jest.fn(),
@@ -72,6 +82,7 @@ describe('OrdersService', () => {
         { provide: getRepositoryToken(Order), useValue: mockRepository },
         { provide: DataSource, useValue: mockDataSource },
         { provide: PricingService, useValue: {} },
+        { provide: ProductsService, useValue: mockProductsService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: AdminWebhookService, useValue: mockAdminWebhookService },

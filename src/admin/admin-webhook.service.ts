@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class AdminWebhookService {
   private readonly logger = new Logger(AdminWebhookService.name);
-  private readonly webhookUrl: string;
+  private readonly webhookUrl: string | undefined;
 
   constructor(
     private readonly configService: ConfigService,

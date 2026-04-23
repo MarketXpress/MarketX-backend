@@ -11,7 +11,7 @@ import { RefundsService } from './refunds.service';
 import { ReturnRequest, ReturnStatus, RefundType, ReturnReason } from './entities/return-request.entity';
 import { RefundHistory } from './entities/refund-history.entity';
 import { Order } from '../orders/entities/order.entity';
-import { OrderStatus } from '../orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/entities/order.entity';
 import { SupportedCurrency } from '../products/services/pricing.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { EventNames } from '../common/events';

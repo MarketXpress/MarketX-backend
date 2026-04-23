@@ -1,6 +1,5 @@
 import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from '../users/users.module';
 
@@ -17,7 +16,6 @@ import { EMAIL_QUEUE } from '../job-processing/queue.constants';
 @Global()
 @Module({
   imports: [
-    ConfigModule,
     TypeOrmModule.forFeature([EmailPreference, EmailLog]),
     BullModule.registerQueue({
       name: EMAIL_QUEUE,

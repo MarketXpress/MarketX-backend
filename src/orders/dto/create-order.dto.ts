@@ -19,16 +19,7 @@ import {
   MilestoneType,
   MilestoneTrigger,
 } from '../../milestones/enums/milestone.enums';
-
-export enum OrderStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  MANUAL_REVIEW = 'manual_review',
-}
+import { EscrowType, OrderStatus } from '../entities/order.entity';
 
 export class CreateOrderItemDto {
   @IsString()
@@ -109,9 +100,8 @@ export class CreateOrderDto {
   milestones?: CreateOrderMilestoneDto[];
 
   @IsOptional()
-  @IsString()
-  @SanitizeString()
-  escrowType?: string; // 'standard' or 'milestone'
+  @IsEnum(EscrowType)
+  escrowType?: EscrowType;
 }
 
 export class UpdateOrderStatusDto {

@@ -5,7 +5,7 @@ import {
   OrderCreatedEvent,
   OrderUpdatedEvent,
 } from '../../notifications/events/order.events';
-import { OrderStatus } from '../../orders/dto/create-order.dto';
+import { OrderStatus } from '../../orders/entities/order.entity';
 import { UsersService } from '../../users/users.service';
 import { ConfigService } from '@nestjs/config';
 
