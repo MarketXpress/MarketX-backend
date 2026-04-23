@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { Milestone } from './entities/milestone.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
@@ -54,6 +54,7 @@ export interface UpdateMilestoneStatusDto {
     reason: string;
     description: string;
     evidence: string[];
+    raisedBy?: string;
   };
 }
 
@@ -159,7 +160,7 @@ export class MilestonesService {
     // Update milestone status
     milestone.status = MilestoneStatus.RELEASED;
     milestone.releasedAt = new Date();
-    milestone.adminNotes = releaseData.notes;
+    milestone.adminNotes = releaseData.notes || '';
 
     // Add uploaded documents if provided
     if (releaseData.documents) {
@@ -199,7 +200,7 @@ export class MilestonesService {
     }
 
     milestone.status = MilestoneStatus.APPROVED;
-    milestone.adminNotes = notes;
+    milestone.adminNotes = notes || '';
 
     return this.milestoneRepo.save(milestone);
   }
@@ -225,8 +226,8 @@ export class MilestonesService {
     }
 
     milestone.status = MilestoneStatus.REJECTED;
-    milestone.rejectionReason = rejectionData.rejectionReason;
-    milestone.adminNotes = rejectionData.adminNotes;
+    milestone.rejectionReason = rejectionData.rejectionReason || '';
+    milestone.adminNotes = rejectionData.adminNotes || '';
 
     return this.milestoneRepo.save(milestone);
   }
@@ -252,7 +253,9 @@ export class MilestonesService {
 
     if (updateData.disputeDetails) {
       milestone.disputeDetails = {
-        ...updateData.disputeDetails,
+        reason: updateData.disputeDetails.reason || '',
+        description: updateData.disputeDetails.description || '',
+        evidence: updateData.disputeDetails.evidence || [],
         raisedBy: updateData.disputeDetails.raisedBy || 'system',
         raisedAt: new Date(),
       };
@@ -349,8 +352,8 @@ export class MilestonesService {
     const transactionData = {
       amount: Number(milestone.amount),
       description: `Milestone release: ${milestone.title}`,
-      senderId: parseInt(order.buyerId), // Escrow releases from buyer to seller
-      receiverId: parseInt(order.sellerId),
+      senderId: parseInt(order.buyerId || '0'), // Escrow releases from buyer to seller
+      receiverId: parseInt(order.sellerId || '0'),
       type: TransactionType.TRANSFER,
       status: TransactionStatus.PENDING,
       metadata: {
