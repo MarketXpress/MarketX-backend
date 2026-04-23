@@ -5,12 +5,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { crypto } from 'crypto'; // Built-in Node module
 import { generateSecret, generateURI, verify } from 'otplib';
 import * as qrcode from 'qrcode';
 import { PrismaService } from '../prisma.service';
+import { OAuthProfile, validateOAuthProfile } from './types/oauth-profile.types';
 import { TokenRegistryService } from './token-registry.service';
 import {
   UserPasswordChangedEvent,
@@ -295,8 +296,24 @@ export class AuthService {
   /**
    * Find an existing user by email (or provider ID) and return a JWT,
    * or create a new user record if none exists, then return a JWT.
+   *
+   * Enforces strict typing via OAuthProfile contract.
+   * Validates profile data before processing.
+   *
+   * @param profile - The OAuth profile (must conform to OAuthProfile contract)
+   * @returns JWT token for the user
+   * @throws BadRequestException if profile validation fails
    */
   async findOrCreateOAuthUser(profile: OAuthProfile): Promise<string> {
+    // Validate profile against contract
+    try {
+      validateOAuthProfile(profile);
+    } catch (error) {
+      throw new BadRequestException(
+        `Invalid OAuth profile: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+
     const { provider, providerId, email, name, avatarUrl } = profile;
 
     // 1. Try to find by email first (link social login to existing account)

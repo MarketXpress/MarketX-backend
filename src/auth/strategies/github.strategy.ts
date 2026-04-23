@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-github2';
+import { Strategy, Profile } from 'passport-github2';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
+import { createOAuthProfile, OAuthProvider } from '../types/oauth-profile.types';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
@@ -22,29 +23,39 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   async validate(
     _accessToken: string,
     _refreshToken: string,
-    profile: any,
+    profile: Profile,
     done: (err: any, user?: any) => void,
   ): Promise<void> {
-    const { id, displayName, username, emails, photos } = profile;
-
-    // GitHub may return emails as an array; pick the primary one
-    const email: string =
-      emails?.find((e: any) => e.primary)?.value ?? emails?.[0]?.value ?? '';
-
-    const name: string = displayName ?? username ?? '';
-    const avatarUrl: string = photos?.[0]?.value ?? '';
-
     try {
-      const jwt = await this.authService.findOrCreateOAuthUser({
-        provider: 'github',
-        providerId: String(id),
+      // Extract profile data from GitHub's response
+      const { id, displayName, username, emails, photos } = profile;
+
+      // GitHub may return emails as an array; pick the primary one
+      const email: string =
+        emails?.find((e: any) => e.primary)?.value ?? emails?.[0]?.value ?? '';
+
+      // Normalize name - prefer displayName, fall back to username
+      const name: string = displayName ?? username ?? 'GitHub User';
+      const avatarUrl: string = photos?.[0]?.value;
+
+      // Create a strictly typed OAuth profile contract
+      const oauthProfile = createOAuthProfile(
+        OAuthProvider.GITHUB,
+        String(id),
         email,
         name,
         avatarUrl,
-      });
+      );
+
+      // Pass to auth service for user creation/lookup
+      const jwt = await this.authService.findOrCreateOAuthUser(oauthProfile);
       done(null, { accessToken: jwt });
     } catch (err) {
-      done(err as Error);
+      done(
+        err instanceof Error
+          ? err
+          : new BadRequestException('GitHub OAuth validation failed'),
+      );
     }
   }
 }
