@@ -45,6 +45,7 @@ import { AdminModule } from './admin/admin.module';
 import { OrdersModule } from './orders/orders.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { ArchivingModule } from './archiving/archiving.module';
+import { AuthModule } from './Authentication/auth.module';
 
 // ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
@@ -112,6 +113,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     RabbitMqModule,
 
     // ── Features ──────────────────────────────────────────────────────────
+    AuthModule,
     PriceModule,
     ProductsModule,
     FraudModule,
