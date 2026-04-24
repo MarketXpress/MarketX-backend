@@ -117,12 +117,12 @@ export class AdminTaxExportService {
       created_at: o.createdAt.toISOString(),
       seller_id: o.sellerId,
       buyer_id: o.buyerId,
-      subtotal: o.subtotal,
-      tax_amount: o.taxAmount,
-      total: o.total,
+      subtotal: o.totalAmount,
+      tax_amount: 0,
+      total: o.totalAmount,
       currency: o.currency,
       status: o.status,
-      payment_method: o.paymentMethod,
+      payment_method: 'unknown',
     }));
 
     const csv = stringify(rows, { header: true });

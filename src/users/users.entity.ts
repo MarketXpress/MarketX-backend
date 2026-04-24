@@ -114,6 +114,15 @@ export class Users {
   @Column({ nullable: true, default: 'active' })
   status: string;
 
+  @Column({ default: false })
+  twoFAEnabled: boolean;
+
+  @Column({ nullable: true })
+  twoFASecret: string;
+
+  @Column({ nullable: true })
+  refreshToken: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

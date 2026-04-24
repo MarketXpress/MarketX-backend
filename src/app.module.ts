@@ -47,6 +47,7 @@ import { OrdersModule } from './orders/orders.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { ArchivingModule } from './archiving/archiving.module';
 
+
 // ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
 import { Coupon } from './coupons/entities/coupon.entity';
@@ -56,6 +57,7 @@ import { CouponUsage } from './coupons/entities/coupon-usage.entity';
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { ThrottleGuard } from './common/guards/throttle.guard';
+import { DynamicThrottlerGuard } from './auth/guards/dynamic-throttler.guard';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.middleware';
 
@@ -145,6 +147,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     AppService,
     AdminGuard,
     RolesGuard,
+    DynamicThrottlerGuard,
 
     /**
      * ── GLOBAL RATE LIMIT GUARD

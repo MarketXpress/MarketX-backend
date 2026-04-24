@@ -46,6 +46,7 @@ describe.skip('AdminGuard', () => {
       switchToWs: () => ({
         getData: () => ({}),
         getClient: () => ({}),
+        getPattern: () => '',
       }),
       getType: () => 'http',
     } as ExecutionContext;

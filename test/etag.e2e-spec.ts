@@ -42,7 +42,7 @@ describe('ETagInterceptor (e2e)', () => {
     // Subsequent request with If-None-Match
     await request(app.getHttpServer())
       .get('/')
-      .set('If-None-Match', etag)
+      .set('If-None-Match', etag || '')
       .expect(304)
       .expect((res) => {
         expect(res.body).toEqual({}); // Body must be empty (supertest might return empty object for null)

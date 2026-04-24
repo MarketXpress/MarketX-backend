@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import TypeSense from 'typesense';
+import * as TypeSense from 'typesense';
 
 export interface ListingDocument {
   id: string;
@@ -68,7 +68,7 @@ export class SearchService implements OnModuleInit {
       // Collection doesn't exist, create it
       if (error.status === 404) {
         try {
-          await this.client.collections.create({
+          await this.client.collections().create({
             name: this.collectionName,
             fields: [
               { name: 'id', type: 'string' },
@@ -88,7 +88,6 @@ export class SearchService implements OnModuleInit {
               { name: 'updatedAt', type: 'int64', facet: false },
             ],
             token_separators: ['&', '-', '.', ' ', '_'],
-            enable_default_fallback: true,
           });
           this.logger.log(
             `Created Typesense collection '${this.collectionName}'`,
@@ -113,7 +112,7 @@ export class SearchService implements OnModuleInit {
     try {
       await this.client
         .collections(this.collectionName)
-        .documents.upsert(listing);
+        .documents().upsert(listing);
       this.logger.debug(`Indexed listing: ${listing.id}`);
     } catch (error: any) {
       this.logger.error(

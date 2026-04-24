@@ -36,7 +36,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
 
       // Normalize name - prefer displayName, fall back to username
       const name: string = displayName ?? username ?? 'GitHub User';
-      const avatarUrl: string = photos?.[0]?.value;
+      const avatarUrl: string | undefined = photos?.[0]?.value;
 
       // Create a strictly typed OAuth profile contract
       const oauthProfile = createOAuthProfile(

@@ -4,18 +4,18 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from '../src/notifications/notification.entity';
+import { NotificationEntity, NotificationType } from '../src/notifications/notification.entity';
 import { Users } from '../src/users/users.entity';
 import { JwtService } from '@nestjs/jwt';
 
 describe('NotificationsController (e2e)', () => {
   let app: INestApplication;
-  let notificationRepository: Repository<Notification>;
+  let notificationRepository: Repository<NotificationEntity>;
   let userRepository: Repository<Users>;
   let jwtService: JwtService;
   let accessToken: string;
   let testUser: Users;
-  let testNotification: Notification;
+  let testNotificationEntity: NotificationEntity;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -25,8 +25,8 @@ describe('NotificationsController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
 
-    notificationRepository = moduleFixture.get<Repository<Notification>>(
-      getRepositoryToken(Notification),
+    notificationRepository = moduleFixture.get<Repository<NotificationEntity>>(
+      getRepositoryToken(NotificationEntity),
     );
     userRepository = moduleFixture.get<Repository<Users>>(
       getRepositoryToken(Users),
@@ -47,14 +47,14 @@ describe('NotificationsController (e2e)', () => {
     accessToken = jwtService.sign({ sub: testUser.id, email: testUser.email });
 
     // Create test notification
-    testNotification = await notificationRepository.save({
-      title: 'Test Notification',
+    testNotificationEntity = await notificationRepository.save({
+      title: 'Test NotificationEntity',
       message: 'This is a test notification',
-      type: 'info',
+      type: NotificationType.SYSTEM_ALERT,
       isRead: false,
       recipient: testUser,
       recipientId: testUser.id,
-    });
+    } as any);
   });
 
   afterAll(async () => {
@@ -66,14 +66,14 @@ describe('NotificationsController (e2e)', () => {
   describe('PATCH /notifications/:id/read', () => {
     it('should mark notification as read successfully', () => {
       return request(app.getHttpServer())
-        .patch(`/notifications/${testNotification.id}/read`)
+        .patch(`/notifications/${testNotificationEntity.id}/read`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
         .expect((res) => {
           expect(res.body.message).toBe(
-            'Notification marked as read successfully',
+            'NotificationEntity marked as read successfully',
           );
-          expect(res.body.notification.id).toBe(testNotification.id);
+          expect(res.body.notification.id).toBe(testNotificationEntity.id);
           expect(res.body.notification.isRead).toBe(true);
           expect(res.body.notification.readAt).toBeDefined();
         });
@@ -86,14 +86,14 @@ describe('NotificationsController (e2e)', () => {
         .expect(404)
         .expect((res) => {
           expect(res.body.message).toContain(
-            'Notification with ID 99999 not found',
+            'NotificationEntity with ID 99999 not found',
           );
         });
     });
 
     it('should return 401 without authentication', () => {
       return request(app.getHttpServer())
-        .patch(`/notifications/${testNotification.id}/read`)
+        .patch(`/notifications/${testNotificationEntity.id}/read`)
         .expect(401);
     });
 
@@ -107,17 +107,17 @@ describe('NotificationsController (e2e)', () => {
       });
 
       // Create notification for other user
-      const otherNotification = await notificationRepository.save({
-        title: 'Other User Notification',
+      const otherNotificationEntity = (await notificationRepository.save({
+        title: 'Other User NotificationEntity',
         message: 'This belongs to another user',
-        type: 'info',
+        type: NotificationType.SYSTEM_ALERT,
         isRead: false,
         recipient: otherUser,
         recipientId: otherUser.id,
-      });
+      } as any)) as any;
 
       return request(app.getHttpServer())
-        .patch(`/notifications/${otherNotification.id}/read`)
+        .patch(`/notifications/${otherNotificationEntity.id}/read`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(403)
         .expect((res) => {
@@ -156,12 +156,12 @@ describe('NotificationsController (e2e)', () => {
   describe('GET /notifications/:id', () => {
     it('should return specific notification for authorized user', () => {
       return request(app.getHttpServer())
-        .get(`/notifications/${testNotification.id}`)
+        .get(`/notifications/${testNotificationEntity.id}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.id).toBe(testNotification.id);
-          expect(res.body.title).toBe(testNotification.title);
+          expect(res.body.id).toBe(testNotificationEntity.id);
+          expect(res.body.title).toBe(testNotificationEntity.title);
         });
     });
 

@@ -76,13 +76,8 @@ export class OrdersService {
       const order = manager.create(Order, {
         buyerId: createOrderDto.buyerId,
         status: OrderStatus.PENDING,
-        items: orderItems,
-        currency: createOrderDto.paymentCurrency || SupportedCurrency.USD,
-        totalAmount,
-        escrowType: createOrderDto.escrowType,
-        milestones: orderMilestones,
-        releasedAmount: 0,
-        remainingAmount: totalAmount,
+        items: createOrderDto.items as any,
+        escrowType: createOrderDto.escrowType as any,
       });
 
       const savedOrder = await manager.save(order);

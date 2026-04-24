@@ -81,9 +81,9 @@ describe('Profile Update (e2e)', () => {
       const updatedUser = await userRepository.findOne({
         where: { id: userId },
       });
-      expect(updatedUser.name).toBe(updateData.name);
-      expect(updatedUser.bio).toBe(updateData.bio);
-      expect(updatedUser.avatarUrl).toBe(updateData.avatarUrl);
+      expect(updatedUser!.name).toBe(updateData.name);
+      expect(updatedUser!.bio).toBe(updateData.bio);
+      expect(updatedUser!.avatarUrl).toBe(updateData.avatarUrl);
     });
 
     it('should update only provided fields', async () => {
