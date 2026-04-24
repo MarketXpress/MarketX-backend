@@ -7,6 +7,8 @@ import {
 import { SkipRateLimit } from '../common/decorators/rate-limit.decorator';
 import { DatabaseIndicator } from './indicators/database.indicator';
 import { StellarIndicator } from './indicators/stellar.indicator';
+import { RabbitMqIndicator } from './indicators/rabbitmq.indicator';
+import { QueuesIndicator } from './indicators/queues.indicator';
 
 @Controller('health')
 export class HealthController {
@@ -14,6 +16,8 @@ export class HealthController {
     private health: HealthCheckService,
     private dbIndicator: DatabaseIndicator,
     private stellarIndicator: StellarIndicator,
+    private rabbitMqIndicator: RabbitMqIndicator,
+    private queuesIndicator: QueuesIndicator,
   ) {}
 
   @Get()
@@ -29,6 +33,8 @@ export class HealthController {
     const result = await this.health.check([
       async () => this.dbIndicator.isHealthy(),
       async () => this.stellarIndicator.isHealthy(),
+      async () => this.rabbitMqIndicator.isReady(),
+      async () => this.queuesIndicator.isReady(),
       async () => this.cacheHealthCheck(),
       async () => this.memoryHealthCheck(),
     ]);
@@ -58,6 +64,8 @@ export class HealthController {
     // Liveness probe - checks if the application is running
     return await this.health.check([
       async () => this.applicationLivenessCheck(),
+      async () => this.rabbitMqIndicator.isAlive(),
+      async () => this.queuesIndicator.isAlive(),
     ]);
   }
 
@@ -74,6 +82,8 @@ export class HealthController {
     return await this.health.check([
       async () => this.dbIndicator.isHealthy(),
       async () => this.stellarIndicator.isHealthy(),
+      async () => this.rabbitMqIndicator.isReady(),
+      async () => this.queuesIndicator.isReady(),
       async () => this.cacheHealthCheck(),
     ]);
   }

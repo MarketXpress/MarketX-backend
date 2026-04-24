@@ -234,6 +234,7 @@ export class PaymentsService {
       EventNames.PAYMENT_CONFIRMED,
       new PaymentConfirmedEvent(
         paymentId,
+        payment.buyerId,
         payment.orderId,
         payment.amount,
         payment.currency,

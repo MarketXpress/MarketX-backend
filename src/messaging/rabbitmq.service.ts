@@ -57,6 +57,22 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
     await this.connection?.close();
   }
 
+  isInitialized(): boolean {
+    return Boolean(this.connection && this.channel);
+  }
+
+  isConnected(): boolean {
+    if (!this.connection) {
+      return false;
+    }
+
+    const conn = this.connection as unknown as {
+      isConnected?: () => boolean;
+    };
+
+    return conn.isConnected ? conn.isConnected() : false;
+  }
+
   async publish(eventName: string, payload: unknown): Promise<void> {
     if (!this.channel) {
       this.logger.warn('RabbitMQ channel not available, skipping publish');

@@ -9,9 +9,9 @@ import {
   OrderCompletedEvent,
 } from '../events/order.events';
 import {
-  PaymentReceivedEvent,
   PaymentFailedEvent,
 } from '../events/payment.events';
+import { EventNames, PaymentConfirmedEvent } from '../../common/events';
 import { MessageReceivedEvent } from '../events/message.events';
 
 @Injectable()
@@ -80,18 +80,19 @@ export class NotificationEventListener {
     } as any);
   }
 
-  @OnEvent('payment.received')
-  async handlePaymentReceived(event: PaymentReceivedEvent) {
+  @OnEvent(EventNames.PAYMENT_CONFIRMED)
+  async handlePaymentReceived(event: PaymentConfirmedEvent) {
     await this.notificationsService.createNotification({
       userId: event.userId,
       type: NotificationType.PAYMENT_SUCCESS,
       title: 'Payment Received',
-      message: `Your payment of $${event.amount} has been received successfully via ${event.paymentMethod}`,
+      message: `Your payment of $${event.amount} ${event.currency} has been confirmed (tx: ${event.stellarTransactionId})`,
       metadata: {
         paymentId: event.paymentId,
         orderId: event.orderId,
         amount: event.amount,
-        paymentMethod: event.paymentMethod,
+        currency: event.currency,
+        stellarTransactionId: event.stellarTransactionId,
       },
     } as any);
   }
