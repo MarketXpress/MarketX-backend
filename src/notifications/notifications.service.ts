@@ -21,6 +21,8 @@ import { NotificationPreferencesEntity } from './notification-preferences.entity
 import { Users } from '../users/users.entity';
 import { I18nService } from '../i18n/i18n.service';
 import { EMAIL_QUEUE } from '../job-processing/queue.constants';
+import { RetryStrategyService } from './retry-strategy.service';
+import { DeadLetterQueueService } from './dead-letter-queue.service';
 
 import {
   CreateNotificationDto as CreateNotificationDtoV1,
@@ -72,6 +74,8 @@ export class NotificationsService {
     private readonly i18nService: I18nService,
     private readonly notificationGateway: NotificationGateway,
     @Optional() private readonly cacheManager?: CacheManagerService,
+    private readonly retryStrategy?: RetryStrategyService,
+    private readonly deadLetterQueueService?: DeadLetterQueueService,
   ) {}
 
   /**
@@ -232,33 +236,99 @@ export class NotificationsService {
 
   /**
    * Process one notification (send via appropriate channel)
+   * Now includes retry logic and DLQ routing on failure
    */
   private async processNotification(
     notification: NotificationEntity,
   ): Promise<void> {
+    const context = {
+      notificationId: notification.id,
+      userId: notification.userId,
+      channel: notification.channel,
+      type: notification.type,
+    };
+
     try {
-      switch (notification.channel) {
-        case NotificationChannel.EMAIL:
-          await this.queueEmailNotification(notification);
-          break;
-        case NotificationChannel.IN_APP:
-          await this.sendInAppNotification(notification);
-          break;
-        case NotificationChannel.PUSH:
-          await this.sendPushNotification(notification);
-          break;
-        default:
-          this.logger.warn(
-            `Unknown notification channel for ${notification.id}: ${notification.channel}`,
+      let result: { success: boolean; error?: Error };
+
+      // Use retry strategy if available
+      if (this.retryStrategy) {
+        const retryConfig = this.retryStrategy.getConfigForNotificationType(
+          notification.channel,
+        );
+
+        const retryResult = await this.retryStrategy.executeWithRetry(
+          async () => {
+            await this.sendViaChannel(notification);
+          },
+          retryConfig,
+          context,
+        );
+
+        result = {
+          success: retryResult.success,
+          error: retryResult.error,
+        };
+
+        // If all retries exhausted, route to DLQ
+        if (!retryResult.success && this.deadLetterQueueService) {
+          await this.deadLetterQueueService.routeToDLQ(
+            `notification.${notification.channel}`,
+            'notification',
+            {
+              notificationId: notification.id,
+              userId: notification.userId,
+              type: notification.type,
+              channel: notification.channel,
+              title: notification.title,
+              message: notification.message,
+            },
+            retryResult.error || new Error('Notification processing failed'),
+            {
+              attempts: retryResult.attempts.length,
+              retryHistory: retryResult.attempts.map((a) => ({
+                attemptNumber: a.attemptNumber,
+                timestamp: a.timestamp,
+                error: a.error?.message || 'Unknown error',
+              })),
+              eventId: notification.id,
+              metadata: {
+                priority: notification.priority,
+                relatedEntityType: notification.relatedEntityType,
+                relatedEntityId: notification.relatedEntityId,
+              },
+            },
           );
+        }
+      } else {
+        // Fallback to original behavior without retry
+        try {
+          await this.sendViaChannel(notification);
+          result = { success: true };
+        } catch (error) {
+          result = {
+            success: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          };
+        }
       }
 
-      notification.status = NotificationStatus.SENT;
-      notification.sentAt = new Date();
-      await this.notificationRepository.save(notification);
+      if (result.success) {
+        notification.status = NotificationStatus.SENT;
+        notification.sentAt = new Date();
+        await this.notificationRepository.save(notification);
+      } else {
+        notification.status = NotificationStatus.FAILED;
+        notification.metadata = {
+          ...(notification.metadata || {}),
+          lastError: result.error?.message,
+          lastErrorAt: new Date().toISOString(),
+        };
+        await this.notificationRepository.save(notification);
+      }
     } catch (error) {
       this.logger.error(
-        `Failed to send ${notification.channel} notification:`,
+        `Critical error processing notification ${notification.id}:`,
         error,
       );
       notification.status = NotificationStatus.FAILED;
@@ -270,6 +340,29 @@ export class NotificationsService {
           saveErr,
         );
       }
+    }
+  }
+
+  /**
+   * Send notification via the appropriate channel
+   */
+  private async sendViaChannel(
+    notification: NotificationEntity,
+  ): Promise<void> {
+    switch (notification.channel) {
+      case NotificationChannel.EMAIL:
+        await this.queueEmailNotification(notification);
+        break;
+      case NotificationChannel.IN_APP:
+        await this.sendInAppNotification(notification);
+        break;
+      case NotificationChannel.PUSH:
+        await this.sendPushNotification(notification);
+        break;
+      default:
+        this.logger.warn(
+          `Unknown notification channel for ${notification.id}: ${notification.channel}`,
+        );
     }
   }
 

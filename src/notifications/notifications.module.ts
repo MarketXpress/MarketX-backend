@@ -14,6 +14,8 @@ import { CustomI18nModule } from '../i18n/i18n.module';
 import { CacheModule } from '../cache/cache.module';
 import { JobsModule } from '../job-processing/jobs.module';
 import { JWT_CONSTANTS } from '../Authentication/jwt-payload.interface';
+import { RetryStrategyService } from './retry-strategy.service';
+import { DeadLetterQueueService, DeadLetterQueueEntity } from './dead-letter-queue.service';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { JWT_CONSTANTS } from '../Authentication/jwt-payload.interface';
       NotificationEntity,
       NotificationPreferencesEntity,
       Users,
+      DeadLetterQueueEntity,
     ]),
     EventEmitterModule,
     JobsModule,
@@ -35,7 +38,14 @@ import { JWT_CONSTANTS } from '../Authentication/jwt-payload.interface';
     NotificationsService,
     NotificationEventListener,
     NotificationGateway,
+    RetryStrategyService,
+    DeadLetterQueueService,
   ],
-  exports: [NotificationsService, NotificationGateway],
+  exports: [
+    NotificationsService,
+    NotificationGateway,
+    RetryStrategyService,
+    DeadLetterQueueService,
+  ],
 })
 export class NotificationsModule {}
