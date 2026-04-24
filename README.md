@@ -109,6 +109,14 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Security Checks
+
+Security scans are now part of the default CI process for `main` and `develop` branches, and on pull requests targeting those branches.
+
+- Secret scanning is performed with Gitleaks.
+- Dependency vulnerability reporting is performed with `npm audit --audit-level=moderate`.
+- The workflow is defined in `.github/workflows/security.yml`.
+
 ## Pull Request Quality Checklist
 
 We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.

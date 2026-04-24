@@ -40,7 +40,9 @@
     "mutation:refunds": "stryker run --mutate \"src/refunds/refunds.service.ts\"",
     "mutation:wallet": "stryker run --mutate \"src/wallet/wallet.service.ts\"",
     "docs:generate": "ts-node scripts/generate-api-docs.ts",
-    "docs:render": "redoc-cli bundle docs/api/openapi.json -o docs/api/index.html"
+    "docs:render": "redoc-cli bundle docs/api/openapi.json -o docs/api/index.html",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:audit:report": "npm audit --json > security/audit-report.json || true"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",
