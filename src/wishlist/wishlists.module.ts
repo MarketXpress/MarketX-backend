@@ -6,12 +6,11 @@ import { Wishlist } from './entities/wishlist.entity';
 import { WishlistItem } from './entities/wishlist-item.entity';
 import { WishlistPriceScheduler } from './wishlists.scheduler';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { Product } from '../entities/product.entity';
 import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Wishlist, WishlistItem, Product]),
+    TypeOrmModule.forFeature([Wishlist, WishlistItem]),
     NotificationsModule,
     ProductsModule,
   ],
