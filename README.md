@@ -96,6 +96,13 @@ $ npm run start:prod
 
 We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
 
+Before opening a PR, run the quick confidence suite:
+
+```bash
+$ npm run pr:check
+```
+
+This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
 ## Architecture Decisions
 
 We track major architectural choices in [docs/adr/README.md](docs/adr/README.md). If a change introduces or materially changes module boundaries, async data flow, infrastructure roles, or long-lived domain workflows, update the relevant ADR or add a new one in the same PR.
@@ -119,8 +126,14 @@ Blank issues are disabled so requests consistently include the details reviewers
 We heavily value test coverage to ensure marketplace stability.
 
 ```bash
+# Run the quick pre-PR confidence suite
+$ npm run pr:check
+
 # Run the unit test suite
 $ npm run test
+
+# Run the full repository TypeScript typecheck
+$ npm run typecheck
 
 # Watch mode for Active Test-Driven Development
 $ npm run test:watch
