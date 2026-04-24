@@ -19,6 +19,6 @@ import { OrderStateSubscriber } from './subscribers/order-state.subscriber';
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrderStateSubscriber],
-  exports: [OrdersService],
+  exports: [OrdersService, TypeOrmModule],
 })
 export class OrdersModule {}
