@@ -38,6 +38,24 @@ export class EscrowEntity {
   @Column('decimal', { precision: 20, scale: 7 })
   amount: number;
 
+  @Column({
+    name: 'released_amount',
+    type: 'decimal',
+    precision: 20,
+    scale: 7,
+    default: 0,
+  })
+  releasedAmount: number;
+
+  @Column({
+    name: 'refunded_amount',
+    type: 'decimal',
+    precision: 20,
+    scale: 7,
+    default: 0,
+  })
+  refundedAmount: number;
+
   @Column()
   escrowAccountPublicKey: string;
 

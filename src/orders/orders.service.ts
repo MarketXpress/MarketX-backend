@@ -14,6 +14,7 @@ import { ProductsService } from '../products/products.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order, OrderStatus } from './entities/order.entity';
 import { AdminWebhookService } from '../admin/admin-webhook.service';
+import { PaymentStatus } from '../payments/dto/payment.dto';
 
 @Injectable()
 export class OrdersService {
@@ -30,16 +31,24 @@ export class OrdersService {
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     return await this.dataSource.transaction(async (manager) => {
-      // Transform DTO items to entity structure with pricing info
+      const paymentCurrency =
+        createOrderDto.paymentCurrency || SupportedCurrency.USD;
+
       const orderItems = createOrderDto.items.map((item) => {
         const product = this.productsService.findOne(
           item.productId,
-          createOrderDto.paymentCurrency,
+          paymentCurrency,
         );
 
         if (!product) {
           throw new NotFoundException(
             `Product with ID ${item.productId} not found`,
+          );
+        }
+
+        if (product.currency !== paymentCurrency) {
+          throw new BadRequestException(
+            `Product ${item.productId} currency ${product.currency} does not match order currency ${paymentCurrency}`,
           );
         }
 
@@ -56,7 +65,6 @@ export class OrdersService {
         };
       });
 
-      // Transform milestones to entity structure
       const orderMilestones = createOrderDto.milestones?.map((milestone) => ({
         title: milestone.title,
         description: milestone.description,
@@ -73,11 +81,33 @@ export class OrdersService {
         0,
       );
 
+      if (totalAmount <= 0) {
+        throw new BadRequestException('Order total amount must be greater than zero');
+      }
+
+      const totalMilestoneAmount = orderMilestones?.reduce(
+        (sum, milestone) => sum + milestone.amount,
+        0,
+      );
+
+      if (totalMilestoneAmount && totalMilestoneAmount > totalAmount) {
+        throw new BadRequestException(
+          'Total milestone amount cannot exceed order total',
+        );
+      }
+
       const order = manager.create(Order, {
         buyerId: createOrderDto.buyerId,
+        totalAmount,
+        currency: paymentCurrency,
         status: OrderStatus.PENDING,
-        items: createOrderDto.items as any,
-        escrowType: createOrderDto.escrowType as any,
+        paymentStatus: PaymentStatus.UNPAID,
+        items: orderItems,
+        escrowType: createOrderDto.escrowType,
+        milestones: orderMilestones,
+        releasedAmount: 0,
+        remainingAmount: totalAmount,
+        shippingAddress: createOrderDto.shippingAddress,
       });
 
       const savedOrder = await manager.save(order);
@@ -91,7 +121,6 @@ export class OrdersService {
         );
       }
 
-      // Real-time Admin Webhook for Massive Orders (#231)
       if (savedOrder.totalAmount > 5000) {
         await this.adminWebhookService.notifyAdmin('Massive Order Detected', {
           orderId: savedOrder.id,
@@ -166,6 +195,8 @@ export class OrdersService {
     // Handle inventory based on status change
     if (updateOrderStatusDto.status === OrderStatus.PAID) {
       await this.inventoryService.confirmOrder(order);
+      order.paymentStatus = PaymentStatus.PAID;
+      order.confirmedAt = new Date();
     } else if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
       await this.inventoryService.cancelOrder(order);
       order.cancelledAt = new Date();
