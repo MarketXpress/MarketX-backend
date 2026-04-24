@@ -323,17 +323,13 @@ export class NotificationsService {
   }
 
   private async getUserLanguage(userId: string): Promise<string> {
-    const numericUserId = Number(userId);
-    if (Number.isNaN(numericUserId)) {
-      return 'en';
-    }
-
+    // User entity uses UUID (string), no conversion needed
     const user = await this.userRepository.findOne({
-      where: { id: numericUserId },
+      where: { id: userId },
       select: ['language'],
-    } as any);
+    });
 
-    return (user as any)?.language || 'en';
+    return user?.language || 'en';
   }
 
   private async sendInAppNotification(

@@ -21,17 +21,19 @@ export class ChatController {
   @Get('history/:listingId')
   async getChatHistory(
     @Param('listingId') listingId: string,
-    @Query('userId') userId: number,
+    @Query('userId') userId: string,
   ) {
+    // Chat entity uses numeric IDs
     return this.chatService.getChatHistory(listingId, Number(userId));
   }
 
   // PATCH /chat/read/:messageId
   @Patch('read/:messageId')
   async markAsRead(
-    @Param('messageId') messageId: number,
-    @Body('userId') userId: number,
+    @Param('messageId') messageId: string,
+    @Body('userId') userId: string,
   ) {
+    // Chat entity uses numeric IDs
     return this.chatService.markAsRead(Number(messageId), Number(userId));
   }
 }
