@@ -172,6 +172,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@scure|@noble|otplib)/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

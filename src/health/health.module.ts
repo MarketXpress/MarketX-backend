@@ -4,13 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseIndicator } from './indicators/database.indicator';
 import { StellarIndicator } from './indicators/stellar.indicator';
+import { HealthController } from './health.controller';
 
 @Module({
-  imports: [
-    TerminusModule,
-    TypeOrmModule,
-    CacheModule.register(),
-  ],
+  imports: [TerminusModule, TypeOrmModule, CacheModule.register()],
   controllers: [HealthController],
   providers: [DatabaseIndicator, StellarIndicator],
   exports: [DatabaseIndicator, StellarIndicator],

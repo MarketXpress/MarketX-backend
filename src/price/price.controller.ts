@@ -6,7 +6,7 @@ import {
   ConversionResultDto,
   RatesResponseDto,
 } from './dto/conversion.dto';
-import { Public } from 'src/decorators/roles.decorator';
+import { Public } from '../decorators/roles.decorator';
 
 @ApiTags('Price')
 @ApiSecurity('x-api-key')
