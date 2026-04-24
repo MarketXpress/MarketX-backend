@@ -92,6 +92,11 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Pull Request Quality Checklist
+
+We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
+
+
 ---
 
 ## 🧪 Testing
