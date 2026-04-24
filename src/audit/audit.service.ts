@@ -63,7 +63,17 @@ export class AuditService {
    * Create an immutable audit log entry with state tracking
    * This method ensures append-only behavior for compliance logging
    */
-  async createAuditLog(data: Partial<AuditLog>): Promise<AuditLog> {
+  async createAuditLog(data: {
+    userId: string;
+    action: AuditActionType;
+    status?: AuditStatus;
+    ipAddress?: string;
+    userAgent?: string;
+    resourceType?: string;
+    resourceId?: string;
+    details?: Record<string, any>;
+    errorMessage?: string;
+  }): Promise<AuditLog> {
     try {
       const auditLog = this.auditLogRepository.create(data);
       return await this.auditLogRepository.save(auditLog);
@@ -90,7 +100,9 @@ export class AuditService {
       const auditLog = this.auditLogRepository.create({
         userId: event.userId,
         action: event.actionType as AuditActionType,
-        status: (event.status as AuditStatus) || AuditStatus.SUCCESS,
+        status: event.status
+          ? (event.status as AuditStatus)
+          : AuditStatus.SUCCESS,
         ipAddress: event.ipAddress,
         userAgent: event.userAgent,
         resourceType: event.resourceType,
@@ -134,7 +146,9 @@ export class AuditService {
         return this.auditLogRepository.create({
           userId: event.userId,
           action: event.actionType as AuditActionType,
-          status: (event.status as AuditStatus) || AuditStatus.SUCCESS,
+          status: event.status
+            ? (event.status as AuditStatus)
+            : AuditStatus.SUCCESS,
           ipAddress: event.ipAddress,
           userAgent: event.userAgent,
           resourceType: event.resourceType,
