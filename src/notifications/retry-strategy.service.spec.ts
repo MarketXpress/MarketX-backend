@@ -71,7 +71,7 @@ describe('RetryStrategyService', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.attempts.length).toBe(2);
+      expect(result.attempts.length).toBe(3); // initial attempt + 2 retries
       expect(operation).toHaveBeenCalledTimes(3);
     });
 

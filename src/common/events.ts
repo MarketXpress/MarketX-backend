@@ -70,6 +70,7 @@ export class PaymentInitiatedEvent {
 export class PaymentConfirmedEvent {
   constructor(
     public readonly paymentId: string,
+    public readonly userId: string,
     public readonly orderId: string,
     public readonly amount: number,
     public readonly currency: string,
@@ -420,6 +421,7 @@ export const EventNames = {
 
   // User/Auth events
   USER_PASSWORD_CHANGED: 'user.password_changed',
+  USER_CREATED: 'user.created',
   USER_EMAIL_CHANGED: 'user.email_changed',
   USER_PROFILE_UPDATED: 'user.profile_updated',
   USER_PERMISSIONS_CHANGED: 'user.permissions_changed',

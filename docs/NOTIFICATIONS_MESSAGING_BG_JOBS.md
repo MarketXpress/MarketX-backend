@@ -6,6 +6,44 @@ This document describes the implementation of 4 critical tasks related to event 
 
 ## Tasks Completed
 
+### ✅ Task 5: Queue and Broker Health Probes
+
+**Problem:** Health endpoints did not clearly expose message broker and queue infrastructure status.
+
+**Solution:** Added explicit RabbitMQ and Bull queue readiness/liveness indicators and integrated them into `/health`, `/health/ready`, and `/health/live`.
+
+#### Files Created/Modified:
+- `src/health/indicators/rabbitmq.indicator.ts` - RabbitMQ readiness/liveness checks
+- `src/health/indicators/queues.indicator.ts` - Bull queue connectivity and liveness checks
+- `src/health/health.controller.ts` - Added queue-related checks to health probes
+- `src/health/health.module.ts` - Registered indicators and module dependencies
+- `src/messaging/rabbitmq.service.ts` - Added connectivity state helpers for health checks
+
+#### Probe Behavior:
+- **`GET /health/live`**: application process + queue subsystem liveness
+- **`GET /health/ready`**: database + stellar + cache + RabbitMQ + Bull queue connectivity
+- **`GET /health`**: full composite check with all readiness dependencies and memory/cache metrics
+
+### ✅ Task 6: Idempotency in Async Consumers
+
+**Problem:** Queue retries and event replays could duplicate side effects (emails, recommendation refreshes, image processing).
+
+**Solution:** Added a shared idempotency service with TTL-backed keys and applied guards in critical async consumers/listeners.
+
+#### Files Created/Modified:
+- `src/common/idempotency/idempotency.service.ts` - shared idempotent execution helper
+- `src/common/idempotency/idempotency.module.ts` - global module export
+- `src/common/idempotency/idempotency.service.spec.ts` - behavior tests
+- `src/email/email.processor.ts` - dedupe email job side effects
+- `src/media/media.processor.ts` - dedupe image processing side effects
+- `src/recommendation/recommendation.processor.ts` - dedupe recommendation refresh side effects
+- `src/email/listeners/order-email.listener.ts` - dedupe event-driven order emails
+
+#### Key behavior:
+- Consumers derive an idempotency key from payload/job identity.
+- `executeOnce(key, operation)` runs side effects once and marks completion.
+- Retries/replays with the same key are safely skipped.
+
 ### ✅ Task 1: Shared Event Contracts
 
 **Problem:** Event producers and consumers were using inconsistent payload shapes across domains.

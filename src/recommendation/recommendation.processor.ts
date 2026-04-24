@@ -7,6 +7,7 @@ import {
 } from '../job-processing/queue.constants';
 import { RefreshUserRecommendationsJobData } from './recommendation.jobs';
 import { RecommendationsService } from './recommendation.service';
+import { IdempotencyService } from '../common/idempotency/idempotency.service';
 
 @Processor(RECOMMENDATIONS_QUEUE)
 export class RecommendationProcessor {
@@ -14,19 +15,36 @@ export class RecommendationProcessor {
 
   constructor(
     private readonly recommendationsService: RecommendationsService,
+    private readonly idempotencyService: IdempotencyService,
   ) {}
 
   @Process(RECOMMENDATIONS_JOB_REFRESH)
   async refreshUserRecommendations(
     job: Job<RefreshUserRecommendationsJobData>,
   ): Promise<void> {
-    this.logger.debug(
-      `Refreshing recommendations for user ${job.data.userId} with limit ${job.data.limit}`,
+    const dedupKey =
+      (job.data as any).idempotencyKey ||
+      `recommendations-job:${job.data.userId}:${job.data.limit}`;
+
+    const guarded = await this.idempotencyService.executeOnce(
+      dedupKey,
+      async () => {
+        this.logger.debug(
+          `Refreshing recommendations for user ${job.data.userId} with limit ${job.data.limit}`,
+        );
+
+        await this.recommendationsService.precomputeRecommendations(
+          job.data.userId,
+          job.data.limit,
+        );
+      },
+      15 * 60,
     );
 
-    await this.recommendationsService.precomputeRecommendations(
-      job.data.userId,
-      job.data.limit,
-    );
+    if (!guarded.executed) {
+      this.logger.warn(
+        `Skipping duplicate recommendation refresh side effect for key ${dedupKey}`,
+      );
+    }
   }
 }

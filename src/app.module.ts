@@ -18,6 +18,7 @@ import { BackupModule } from './backup/backup.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RabbitMqModule } from './messaging/rabbitmq.module';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 
 // ── Features ───────────────────────────────────────────────────────────────
 import { AuthModule } from './auth/auth.module';
@@ -113,6 +114,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     SchedulerModule,
     EventEmitterModule.forRoot(),
     RabbitMqModule,
+    IdempotencyModule,
 
     // ── Features ──────────────────────────────────────────────────────────
     AuthModule,
