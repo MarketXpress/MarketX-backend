@@ -1,5 +1,3 @@
-import { Users } from '../../users/users.entity';
-import { ListingVariant } from './listing-variant.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -58,11 +56,11 @@ export class Listing {
   @DeleteDateColumn()
   deletedAt?: Date;
 
-  @ManyToOne(() => Users, (user) => user.listings, {
+  @ManyToOne('Users', 'listings', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userId' })
-  user: Users;
+  user: any;
 
   @Column('uuid')
   userId: string;
@@ -81,14 +79,14 @@ export class Listing {
   @Column({ default: true })
   shareLocation: boolean;
 
-  @ManyToMany(() => Users, (user) => user.favoriteListings)
-  favoritedBy: Users[];
+  @ManyToMany('Users', 'favoriteListings')
+  favoritedBy: any[];
 
-  @OneToMany(() => ListingVariant, (variant) => variant.listing, {
+  @OneToMany('ListingVariant', 'listing', {
     cascade: true,
     eager: true,
   })
-  variants?: ListingVariant[];
+  variants?: any[];
 
   @Column({ type: 'int', default: 0 })
   views: number;

@@ -8,7 +8,6 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Evidence } from './evidence.entity';
 import { EscrowEntity } from '../escrowes/entities/escrow.entity';
 
 export enum DisputeStatus {
@@ -45,8 +44,8 @@ export class Dispute {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Evidence, (evidence) => evidence.dispute)
-  evidences: Evidence[];
+  @OneToMany('Evidence', 'dispute')
+  evidences: any[];
 
   @Column({ nullable: true })
   escrowId?: string;
