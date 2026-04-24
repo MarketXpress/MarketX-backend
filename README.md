@@ -96,6 +96,10 @@ $ npm run start:prod
 
 We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
 
+## Architecture Decisions
+
+We track major architectural choices in [docs/adr/README.md](docs/adr/README.md). If a change introduces or materially changes module boundaries, async data flow, infrastructure roles, or long-lived domain workflows, update the relevant ADR or add a new one in the same PR.
+
 ## Issue Reporting
 
 We use standardized GitHub issue templates to keep triage fast and consistent. Please choose the template that matches your request:
@@ -145,4 +149,4 @@ To get started, please browse our active GitHub Issues (or Drips tasks). When yo
 
 ## 📜 License & Support
 
-MarketX is [MIT licensed](LICENSE). If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
+MarketX is MIT licensed. If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
