@@ -77,6 +77,11 @@ REDIS_URL=redis://localhost:6379
 AMQP_URL=amqp://guest:guest@localhost:5672
 ```
 
+### Local infrastructure (compose profile)
+
+We provide a minimal Docker Compose profile for local development that starts Postgres, Redis and RabbitMQ. See the full instructions in [docs/local-infra.md](docs/local-infra.md).
+
+
 ### 4. Running the App
 
 ```bash
@@ -86,6 +91,11 @@ $ npm run start:dev
 # Start in production mode
 $ npm run start:prod
 ```
+
+## Pull Request Quality Checklist
+
+We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
+
 
 ---
 
