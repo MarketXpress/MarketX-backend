@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from '../users/users.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 import { EmailService } from './email.service';
 import { EmailProcessor } from './email.processor';
@@ -30,6 +31,7 @@ import { EMAIL_QUEUE } from '../job-processing/queue.constants';
       },
     }),
     UsersModule, // provides UsersService for OrderEmailListener
+    WebhooksModule,
   ],
   controllers: [EmailController],
   providers: [
