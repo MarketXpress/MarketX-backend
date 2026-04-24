@@ -14,9 +14,28 @@ import { ProductsService } from '../products/products.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order, OrderStatus } from './entities/order.entity';
 import { AdminWebhookService } from '../admin/admin-webhook.service';
+import { StatusTransitionValidator } from '../common/validators';
 
 @Injectable()
 export class OrdersService {
+  // Order status transition validator
+  private readonly orderTransitionValidator = new StatusTransitionValidator<OrderStatus>(
+    {
+      [OrderStatus.PENDING]: [
+        OrderStatus.PAID,
+        OrderStatus.CANCELLED,
+        OrderStatus.MANUAL_REVIEW,
+      ],
+      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+      [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED],
+      [OrderStatus.CANCELLED]: [],
+      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.MANUAL_REVIEW]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+    },
+    'Order',
+  );
+
   constructor(
     @InjectRepository(Order)
     private ordersRepository: Repository<Order>,
@@ -162,6 +181,12 @@ export class OrdersService {
   ): Promise<Order> {
     const order = await this.findOne(id);
     const previousStatus = order.status;
+
+    // Validate status transition
+    this.orderTransitionValidator.validate(
+      previousStatus,
+      updateOrderStatusDto.status,
+    );
 
     // Handle inventory based on status change
     if (updateOrderStatusDto.status === OrderStatus.PAID) {

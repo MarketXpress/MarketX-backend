@@ -13,11 +13,34 @@ import {
   RefundEscrowDto,
   EscrowResponseDto,
 } from './dto/escrow-transaction.dto';
+import { StatusTransitionValidator } from '../common/validators';
 
 @Injectable()
 export class EscrowService {
   private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
+
+  // Escrow status transition validator
+  private readonly escrowTransitionValidator = new StatusTransitionValidator<EscrowStatus>(
+    {
+      [EscrowStatus.PENDING]: [EscrowStatus.LOCKED, EscrowStatus.CANCELLED],
+      [EscrowStatus.LOCKED]: [
+        EscrowStatus.RELEASED,
+        EscrowStatus.REFUNDED,
+        EscrowStatus.FROZEN,
+        EscrowStatus.PARTIALLY_RELEASED,
+      ],
+      [EscrowStatus.RELEASED]: [],
+      [EscrowStatus.REFUNDED]: [],
+      [EscrowStatus.CANCELLED]: [],
+      [EscrowStatus.FROZEN]: [EscrowStatus.LOCKED, EscrowStatus.REFUNDED],
+      [EscrowStatus.PARTIALLY_RELEASED]: [
+        EscrowStatus.RELEASED,
+        EscrowStatus.REFUNDED,
+      ],
+    },
+    'Escrow',
+  );
 
   constructor(
     @InjectRepository(EscrowEntity)
@@ -80,11 +103,11 @@ export class EscrowService {
   async releaseFunds(dto: ReleaseEscrowDto): Promise<EscrowResponseDto> {
     const escrow = await this.findEscrowOrFail(dto.escrowId);
 
-    if (escrow.status !== EscrowStatus.LOCKED) {
-      throw new BadRequestException(
-        `Cannot release escrow with status: ${escrow.status}`,
-      );
-    }
+    // Validate status transition
+    this.escrowTransitionValidator.validate(
+      escrow.status,
+      EscrowStatus.RELEASED,
+    );
 
     const tx = await this.buildTransaction(
       escrow.escrowAccountPublicKey,
@@ -116,11 +139,11 @@ export class EscrowService {
   ): Promise<EscrowResponseDto> {
     const escrow = await this.findEscrowOrFail(escrowId);
 
-    if (escrow.status !== EscrowStatus.LOCKED) {
-      throw new BadRequestException(
-        `Cannot partially release escrow with status: ${escrow.status}`,
-      );
-    }
+    // Validate status transition
+    this.escrowTransitionValidator.validate(
+      escrow.status,
+      EscrowStatus.PARTIALLY_RELEASED,
+    );
 
     if (releasedAmount <= 0) {
       throw new BadRequestException('Released amount must be positive');
@@ -194,11 +217,11 @@ export class EscrowService {
   async freezeEscrow(escrowId: string): Promise<EscrowResponseDto> {
     const escrow = await this.findEscrowOrFail(escrowId);
 
-    if (escrow.status !== EscrowStatus.LOCKED) {
-      throw new BadRequestException(
-        `Cannot freeze escrow with status: ${escrow.status}`,
-      );
-    }
+    // Validate status transition
+    this.escrowTransitionValidator.validate(
+      escrow.status,
+      EscrowStatus.FROZEN,
+    );
 
     escrow.status = EscrowStatus.FROZEN;
     await this.escrowRepository.save(escrow);
@@ -284,11 +307,11 @@ export class EscrowService {
   async refundBuyer(dto: RefundEscrowDto): Promise<EscrowResponseDto> {
     const escrow = await this.findEscrowOrFail(dto.escrowId);
 
-    if (escrow.status !== EscrowStatus.LOCKED) {
-      throw new BadRequestException(
-        `Cannot refund escrow with status: ${escrow.status}`,
-      );
-    }
+    // Validate status transition
+    this.escrowTransitionValidator.validate(
+      escrow.status,
+      EscrowStatus.REFUNDED,
+    );
 
     const tx = await this.buildTransaction(
       escrow.escrowAccountPublicKey,
