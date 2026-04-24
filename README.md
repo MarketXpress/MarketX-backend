@@ -96,6 +96,17 @@ $ npm run start:prod
 
 We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
 
+## Issue Reporting
+
+We use standardized GitHub issue templates to keep triage fast and consistent. Please choose the template that matches your request:
+
+- Bug report: for defects, regressions, and unexpected behavior. Include reproduction steps, impact, and a validation plan.
+- Feature request: for new capabilities or meaningful enhancements. Include the problem, expected value, acceptance criteria, and testing/docs expectations.
+- Refactor request: for behavior-preserving structural improvements. Include current pain, goals, non-goals, risks, and regression coverage expectations.
+- Tech debt: for shortcuts, brittle patterns, dependency alignment, or missing safeguards that reduce engineering velocity or increase risk over time.
+
+Blank issues are disabled so requests consistently include the details reviewers need to triage, scope, and ship changes safely.
+
 
 ---
 

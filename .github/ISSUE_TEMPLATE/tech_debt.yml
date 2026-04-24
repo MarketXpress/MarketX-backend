@@ -1,0 +1,92 @@
+name: Tech debt
+description: Track engineering debt that reduces velocity, increases risk, or makes future work harder.
+title: "[Tech Debt]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for debt that should be tracked, prioritized, and eventually retired.
+
+        The goal is to make the cost of delay visible and actionable.
+
+  - type: textarea
+    id: debt_summary
+    attributes:
+      label: Debt summary
+      description: What debt are we carrying?
+      placeholder: Describe the shortcut, outdated pattern, fragile implementation, or missing safeguard.
+    validations:
+      required: true
+
+  - type: textarea
+    id: origin
+    attributes:
+      label: Origin or context
+      description: Why does this debt exist?
+      placeholder: Historical reason, temporary tradeoff, missing dependency alignment, blocked refactor, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: affected_area
+    attributes:
+      label: Affected area or module
+      description: Which service, module, directory, workflow, or dependency is affected?
+      placeholder: e.g. payment retries, Redis caching, auth DTOs, package dependency versions
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Cost and impact
+      description: How does this debt slow us down or increase risk?
+      placeholder: Contributor friction, bug risk, release risk, operational load, test brittleness, performance cost.
+    validations:
+      required: true
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Proposed remediation
+      description: What should we do to reduce or remove the debt?
+      placeholder: Cleanup steps, dependency alignment, guardrails, follow-up refactors, docs updates.
+    validations:
+      required: true
+
+  - type: textarea
+    id: if_deferred
+    attributes:
+      label: If deferred
+      description: What happens if we leave this in place for another release cycle?
+      placeholder: Describe the likely cost of delay, risks, or temporary workaround.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How should this debt payoff be verified?
+      placeholder: Tests to add or preserve, manual checks, metrics to monitor, docs or migration notes to update.
+    validations:
+      required: true
+
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Dependencies or blockers
+      description: Note related issues, upstream changes, migrations, or modules that need to move first.
+      placeholder: Mention known blockers or linked work.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I described the debt and its impact on the team or product.
+          required: true
+        - label: I included a remediation direction rather than only stating the problem.
+          required: true
+        - label: I included validation expectations and any known blockers.
+          required: true
