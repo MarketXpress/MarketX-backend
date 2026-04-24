@@ -96,6 +96,14 @@ $ npm run start:prod
 
 We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
 
+Before opening a PR, run the quick confidence suite:
+
+```bash
+$ npm run pr:check
+```
+
+This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
+
 
 ---
 
@@ -104,8 +112,14 @@ We require PRs to follow a quality checklist (tests, migration notes, docs). See
 We heavily value test coverage to ensure marketplace stability.
 
 ```bash
+# Run the quick pre-PR confidence suite
+$ npm run pr:check
+
 # Run the unit test suite
 $ npm run test
+
+# Run the full repository TypeScript typecheck
+$ npm run typecheck
 
 # Watch mode for Active Test-Driven Development
 $ npm run test:watch

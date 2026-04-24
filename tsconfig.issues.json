@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest"]
+  },
+  "include": [
+    "src/job-processing/queue.constants.ts",
+    "src/job-processing/queue.constants.spec.ts"
+  ]
+}

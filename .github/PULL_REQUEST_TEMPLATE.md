@@ -16,7 +16,7 @@ Short description of the change and the problem it solves.
 - [ ] I added or updated tests that verify my change (unit / integration / e2e as appropriate).
 - [ ] I updated or added migrations, and included migration notes in the description if applicable.
 - [ ] I updated relevant documentation (README, docs/, or module-level docs).
-- [ ] I ran the full test suite locally and all tests pass.
+- [ ] I ran `npm run pr:check` locally and it passes.
 - [ ] I added steps for manual verification in the description.
 - [ ] This PR includes a concise changelog entry or references the issue tracking the user-visible change.
 

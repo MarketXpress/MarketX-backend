@@ -6,6 +6,7 @@ Purpose: ensure consistent quality, prevent regressions, and make reviews faster
 
 ## Required items
 
+- Quick confidence suite: run `npm run pr:check` before opening the PR so the maintained issue-slice lint, typecheck, and focused regression test all pass together.
 - Tests: include unit and/or integration tests that cover the change. For bug fixes, add regression tests.
 - Migrations: if schema or data changes are required, add migration files and clear instructions on applying/rolling back.
 - Documentation: update `README.md`, `docs/`, or module-level docs for any user-facing or developer-facing change.
@@ -28,6 +29,7 @@ Purpose: ensure consistent quality, prevent regressions, and make reviews faster
 
 ## Testing guidance
 
+- Use `npm run pr:check` as the default pre-PR command for fast confidence on the maintained issue slice.
 - Unit tests should be fast (<100ms each) and deterministic.
 - Integration/e2E tests should run in CI; local runs should be possible with the `local-dev` docker profile.
 
