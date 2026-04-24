@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 
 // New Strategies and Guards
@@ -20,7 +19,6 @@ import { UsersModule } from '../users/users.module';
 
     // Register JWT without static config; strategies will handle specific secrets/expiry
     JwtModule.register({}),
-    UsersModule,
   ],
   providers: [
     AuthService,

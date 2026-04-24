@@ -8,7 +8,7 @@ import {
 } from '../transactions/entities/transaction.entity';
 import { ArchivedOrder } from './entities/archived-order.entity';
 import { ArchivedTransaction } from './entities/archived-transaction.entity';
-import { OrderStatus } from '../orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/entities/order.entity';
 
 @Injectable()
 export class ArchivingService {

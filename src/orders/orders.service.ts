@@ -9,12 +9,10 @@ import { DataSource, Repository } from 'typeorm';
 import { InventoryService } from '../inventory/inventory.service';
 import { OrderUpdatedEvent, EventNames } from '../common/events';
 import { PricingService } from '../products/services/pricing.service';
-import {
-  CreateOrderDto,
-  OrderStatus,
-  UpdateOrderStatusDto,
-} from './dto/create-order.dto';
-import { Order } from './entities/order.entity';
+import { SupportedCurrency } from '../products/services/pricing.service';
+import { ProductsService } from '../products/products.service';
+import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
+import { Order, OrderStatus } from './entities/order.entity';
 import { AdminWebhookService } from '../admin/admin-webhook.service';
 
 @Injectable()
@@ -24,6 +22,7 @@ export class OrdersService {
     private ordersRepository: Repository<Order>,
     private dataSource: DataSource,
     private readonly pricingService: PricingService,
+    private readonly productsService: ProductsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryService: InventoryService,
     private readonly adminWebhookService: AdminWebhookService,
@@ -31,8 +30,51 @@ export class OrdersService {
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     return await this.dataSource.transaction(async (manager) => {
+      // Transform DTO items to entity structure with pricing info
+      const orderItems = createOrderDto.items.map((item) => {
+        const product = this.productsService.findOne(
+          item.productId,
+          createOrderDto.paymentCurrency,
+        );
+
+        if (!product) {
+          throw new NotFoundException(
+            `Product with ID ${item.productId} not found`,
+          );
+        }
+
+        const price = Number(product.price);
+        const subtotal = price * item.quantity;
+
+        return {
+          productId: item.productId,
+          productName: product.name,
+          quantity: item.quantity,
+          price,
+          subtotal,
+          priceCurrency: product.currency,
+        };
+      });
+
+      // Transform milestones to entity structure
+      const orderMilestones = createOrderDto.milestones?.map((milestone) => ({
+        title: milestone.title,
+        description: milestone.description,
+        amount: milestone.amount,
+        percentage: milestone.percentage,
+        type: milestone.type || 'standard',
+        trigger: milestone.trigger || 'manual',
+        autoRelease: milestone.autoRelease || false,
+        sortOrder: milestone.sortOrder || 0,
+      }));
+
+      const totalAmount = orderItems.reduce(
+        (sum, item) => sum + item.subtotal,
+        0,
+      );
+
       const order = manager.create(Order, {
-        ...createOrderDto,
+        buyerId: createOrderDto.buyerId,
         status: OrderStatus.PENDING,
         items: createOrderDto.items as any,
         escrowType: createOrderDto.escrowType as any,

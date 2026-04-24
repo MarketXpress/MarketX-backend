@@ -7,7 +7,7 @@ import { evaluateAllRules } from './score';
 import { AdminService } from '../admin/admin.service';
 import { GeolocationService } from '../geolocation/geolocation.service';
 import { Order } from '../orders/entities/order.entity';
-import { OrderStatus } from '../orders/dto/create-order.dto';
+import { OrderStatus } from '../orders/entities/order.entity';
 import { CacheService } from '../cache/cache.service';
 import { EmailService } from '../email/email.service';
 import { User, UserStatus } from '../entities/user.entity';

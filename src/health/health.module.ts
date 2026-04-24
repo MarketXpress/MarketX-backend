@@ -1,16 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
-import { HealthController } from './health.controller';
-import { DatabaseIndicator } from './indicators/database.indicator';
-import { StellarIndicator } from './indicators/stellar.indicator';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
+import { DatabaseIndicator } from './indicators/database.indicator';
+import { StellarIndicator } from './indicators/stellar.indicator';
 
 @Module({
   imports: [
     TerminusModule,
-    ConfigModule,
     TypeOrmModule,
     CacheModule.register(),
   ],

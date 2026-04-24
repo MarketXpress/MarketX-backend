@@ -4,8 +4,7 @@ import {
   InsertEvent,
   UpdateEvent,
 } from 'typeorm';
-import { Order } from '../entities/order.entity';
-import { OrderStatus } from '../dto/create-order.dto';
+import { Order, OrderStatus } from '../entities/order.entity';
 import {
   BadRequestException,
   InternalServerErrorException,
@@ -34,7 +33,7 @@ export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
     return Order;
   }
 
-  async beforeInsert(event: InsertEvent<Order>): Promise<void> {
+  beforeInsert(event: InsertEvent<Order>): void {
     // For new orders, ensure status starts as PENDING
     if (event.entity.status && event.entity.status !== OrderStatus.PENDING) {
       throw new BadRequestException(
@@ -43,16 +42,16 @@ export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
     }
   }
 
-  async beforeUpdate(event: UpdateEvent<Order>): Promise<void> {
+  beforeUpdate(event: UpdateEvent<Order>): void {
     if (!event.entity || !event.databaseEntity) {
       return;
     }
 
-    const newStatus = event.entity.status;
-    const oldStatus = event.databaseEntity.status;
+    const newStatus = event.entity.status as OrderStatus | undefined;
+    const oldStatus = event.databaseEntity.status as OrderStatus | undefined;
 
-    // Skip validation if status hasn't changed
-    if (!newStatus || newStatus === oldStatus) {
+    // Skip validation if status hasn't changed or is undefined
+    if (!newStatus || !oldStatus || newStatus === oldStatus) {
       return;
     }
 

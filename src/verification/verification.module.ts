@@ -1,19 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { CommonModule } from '../common/common.module';
 import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
-import { UserVerification } from './user-verification.entity';
-import { Users } from '../users/users.entity';
-import { DocumentProcessorService } from '../documents/document-processor.service';
-import { DocumentStorageService } from '../documents/document-storage.service';
-import { CommonModule } from '../common/common.module';
+import { DocumentProcessorService } from './document-processor.service';
+import { DocumentStorageService } from './document-storage.service';
 import { VerifiedSellerGuard } from './guards/verified-seller.guard';
+import { UserVerification } from './entities/user-verification.entity';
+import { Users } from '../users/users.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserVerification, Users]),
-    ConfigModule,
     CommonModule,
   ],
   controllers: [VerificationController],

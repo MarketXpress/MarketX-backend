@@ -313,6 +313,23 @@ export class EscrowService {
    * =========================
    */
 
+  async getEscrow(escrowId: string): Promise<EscrowResponseDto> {
+    const escrow = await this.findEscrowOrFail(escrowId);
+    return this.mapToResponse(escrow);
+  }
+
+  async getEscrowByOrderId(orderId: string): Promise<EscrowResponseDto> {
+    const escrow = await this.escrowRepository.findOne({
+      where: { orderId },
+    });
+
+    if (!escrow) {
+      throw new NotFoundException(`Escrow not found for order: ${orderId}`);
+    }
+
+    return this.mapToResponse(escrow);
+  }
+
   async findEscrowOrFail(id: string): Promise<EscrowEntity> {
     const escrow = await this.escrowRepository.findOne({ where: { id } });
 

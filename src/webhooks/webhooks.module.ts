@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
-import { ConfigModule } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
+
 import { WebhooksService } from './webhooks.service';
-import { WebhooksController } from './webhooks.controller';
+import { EventDispatcherService } from './event-dispatcher.service';
 import { Webhook } from './entities/webhook.entity';
-import { EventDispatcherService } from './events/event-dispatcher.service';
+import { WebhooksController } from './webhooks.controller';
 
 @Module({
   imports: [
@@ -15,8 +14,6 @@ import { EventDispatcherService } from './events/event-dispatcher.service';
       timeout: 10000,
       maxRedirects: 3,
     }),
-    ConfigModule,
-    ScheduleModule.forRoot(),
   ],
   controllers: [WebhooksController],
   providers: [WebhooksService, EventDispatcherService],
