@@ -90,6 +90,11 @@ export class CreateOrderDto {
   buyerId: string;
 
   @IsOptional()
+  @IsString()
+  @SanitizeString()
+  shippingAddress?: string;
+
+  @IsOptional()
   @IsEnum(SupportedCurrency)
   paymentCurrency?: SupportedCurrency;
 

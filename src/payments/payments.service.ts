@@ -222,6 +222,8 @@ export class PaymentsService {
     // Update order status to PAID
     const order = payment.order;
     order.status = OrderStatus.PAID;
+    order.paymentStatus = PaymentStatus.PAID;
+    order.confirmedAt = new Date();
     order.updatedAt = new Date();
     await this.ordersRepository.save(order);
 

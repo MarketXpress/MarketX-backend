@@ -187,9 +187,8 @@ export class EscrowService {
        */
       escrow.releaseTransactionHash = releaseHash;
       escrow.refundTransactionHash = refundHash;
-
-      (escrow as any).releasedAmount = releasedAmount;
-      (escrow as any).refundedAmount = refundAmount;
+      escrow.releasedAmount = releasedAmount;
+      escrow.refundedAmount = refundAmount;
 
       escrow.status =
         refundAmount > 0
@@ -322,6 +321,8 @@ export class EscrowService {
     const hash = await this.submitTransaction(tx);
 
     escrow.refundTransactionHash = hash;
+    escrow.refundedAmount = escrow.amount;
+    escrow.releasedAmount = 0;
     escrow.status = EscrowStatus.REFUNDED;
     escrow.cancelledAt = new Date();
 
