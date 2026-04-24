@@ -77,6 +77,11 @@ REDIS_URL=redis://localhost:6379
 AMQP_URL=amqp://guest:guest@localhost:5672
 ```
 
+### Local infrastructure (compose profile)
+
+We provide a minimal Docker Compose profile for local development that starts Postgres, Redis and RabbitMQ. See the full instructions in [docs/local-infra.md](docs/local-infra.md).
+
+
 ### 4. Running the App
 
 ```bash
