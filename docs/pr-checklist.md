@@ -10,6 +10,7 @@ Purpose: ensure consistent quality, prevent regressions, and make reviews faster
 - Tests: include unit and/or integration tests that cover the change. For bug fixes, add regression tests.
 - Migrations: if schema or data changes are required, add migration files and clear instructions on applying/rolling back.
 - Documentation: update `README.md`, `docs/`, or module-level docs for any user-facing or developer-facing change.
+- ADRs: add or update an ADR in `docs/adr/` when the change affects architecture, module boundaries, infrastructure roles, or long-lived domain workflows.
 - Coverage: run the test suite locally; the change should not reduce global coverage meaningfully for the touched area.
 - Issue link: reference an open issue or explain the motivation if one does not exist.
 - Changelog: add a short entry explaining the user-visible impact (or link to the issue). This helps release notes.
@@ -19,6 +20,7 @@ Purpose: ensure consistent quality, prevent regressions, and make reviews faster
 - [ ] Tests added/updated
 - [ ] Migrations included (if applicable) and instructions provided
 - [ ] Documentation updated
+- [ ] ADR updated or added when architecture changed
 - [ ] Manual verification steps added
 - [ ] CI green (unit + e2e where relevant)
 

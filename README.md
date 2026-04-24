@@ -103,6 +103,20 @@ $ npm run pr:check
 ```
 
 This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
+## Architecture Decisions
+
+We track major architectural choices in [docs/adr/README.md](docs/adr/README.md). If a change introduces or materially changes module boundaries, async data flow, infrastructure roles, or long-lived domain workflows, update the relevant ADR or add a new one in the same PR.
+
+## Issue Reporting
+
+We use standardized GitHub issue templates to keep triage fast and consistent. Please choose the template that matches your request:
+
+- Bug report: for defects, regressions, and unexpected behavior. Include reproduction steps, impact, and a validation plan.
+- Feature request: for new capabilities or meaningful enhancements. Include the problem, expected value, acceptance criteria, and testing/docs expectations.
+- Refactor request: for behavior-preserving structural improvements. Include current pain, goals, non-goals, risks, and regression coverage expectations.
+- Tech debt: for shortcuts, brittle patterns, dependency alignment, or missing safeguards that reduce engineering velocity or increase risk over time.
+
+Blank issues are disabled so requests consistently include the details reviewers need to triage, scope, and ship changes safely.
 
 
 ---
@@ -148,4 +162,4 @@ To get started, please browse our active GitHub Issues (or Drips tasks). When yo
 
 ## 📜 License & Support
 
-MarketX is [MIT licensed](LICENSE). If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
+MarketX is MIT licensed. If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
