@@ -1,11 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as AWS from 'aws-sdk';
+import {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const execAsync = promisify(exec);
 
@@ -18,16 +24,23 @@ export interface BackupResult {
   sizeBytes?: number;
 }
 
+export type BackupObject = {
+  Key?: string;
+  LastModified?: Date;
+};
+
 @Injectable()
 export class BackupService {
   private readonly logger = new Logger(BackupService.name);
-  private readonly s3: AWS.S3;
+  private readonly s3: S3Client;
   private readonly tmpDir = '/tmp/pg-backups';
 
   constructor(private readonly config: ConfigService) {
-    this.s3 = new AWS.S3({
-      accessKeyId: this.config.get('AWS_ACCESS_KEY_ID'),
-      secretAccessKey: this.config.get('AWS_SECRET_ACCESS_KEY'),
+    this.s3 = new S3Client({
+      credentials: {
+        accessKeyId: this.config.get('AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.config.get('AWS_SECRET_ACCESS_KEY'),
+      },
       region: this.config.get('AWS_REGION', 'us-east-1'),
     });
 
@@ -122,26 +135,26 @@ export class BackupService {
     const s3Key = `${prefix}/${filename}`;
 
     const fileStream = fs.createReadStream(localPath);
-    await this.s3
-      .upload({
+    await this.s3.send(
+      new PutObjectCommand({
         Bucket: bucket,
         Key: s3Key,
         Body: fileStream,
         ServerSideEncryption: 'AES256',
         StorageClass: 'STANDARD_IA', // Cost-optimized for backups
-      })
-      .promise();
+      }),
+    );
 
     return s3Key;
   }
 
-  async listBackups(limit = 20): Promise<AWS.S3.Object[]> {
+  async listBackups(limit = 20): Promise<BackupObject[]> {
     const bucket = this.config.get('AWS_S3_BACKUP_BUCKET');
     const prefix = this.config.get('AWS_S3_BACKUP_PREFIX', 'postgres-backups');
 
-    const result = await this.s3
-      .listObjectsV2({ Bucket: bucket, Prefix: prefix, MaxKeys: limit })
-      .promise();
+    const result = await this.s3.send(
+      new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, MaxKeys: limit }),
+    );
 
     return (result.Contents || []).sort(
       (a, b) =>
@@ -151,11 +164,11 @@ export class BackupService {
 
   async generateRestoreUrl(s3Key: string): Promise<string> {
     const bucket = this.config.get('AWS_S3_BACKUP_BUCKET');
-    return this.s3.getSignedUrlPromise('getObject', {
-      Bucket: bucket,
-      Key: s3Key,
-      Expires: 3600, // 1 hour
-    });
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({ Bucket: bucket, Key: s3Key }),
+      { expiresIn: 3600 },
+    );
   }
 
   private async sendAlertOnFailure(result: BackupResult): Promise<void> {
