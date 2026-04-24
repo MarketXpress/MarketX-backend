@@ -82,6 +82,23 @@ AMQP_URL=amqp://guest:guest@localhost:5672
 We provide a minimal Docker Compose profile for local development that starts Postgres, Redis and RabbitMQ. See the full instructions in [docs/local-infra.md](docs/local-infra.md).
 
 
+### API Documentation
+
+API documentation is generated from NestJS Swagger metadata and published automatically when changes land on `main`.
+
+```bash
+npm run docs:generate
+npm run docs:render
+```
+
+This creates:
+
+- `docs/api/openapi.json`
+- `docs/api/index.html`
+
+The API docs workflow is defined in `.github/workflows/api-docs.yml` and publishes the rendered docs to GitHub Pages.
+
+
 ### 4. Running the App
 
 ```bash

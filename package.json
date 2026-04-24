@@ -38,7 +38,9 @@
     "mutation:escrow": "stryker run --mutate \"src/escrow/escrow.service.ts\"",
     "mutation:transactions": "stryker run --mutate \"src/transactions/transactions.service.ts\"",
     "mutation:refunds": "stryker run --mutate \"src/refunds/refunds.service.ts\"",
-    "mutation:wallet": "stryker run --mutate \"src/wallet/wallet.service.ts\""
+    "mutation:wallet": "stryker run --mutate \"src/wallet/wallet.service.ts\"",
+    "docs:generate": "ts-node scripts/generate-api-docs.ts",
+    "docs:render": "redoc-cli bundle docs/api/openapi.json -o docs/api/index.html"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",
@@ -159,7 +161,8 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript-eslint": "^8.20.0",
+    "redoc-cli": "^0.15.0"
   },
   "jest": {
     "moduleFileExtensions": [
