@@ -5,7 +5,6 @@ import {
   CreateDateColumn,
   ManyToOne,
 } from 'typeorm';
-import { Dispute } from './dispute.entity';
 
 @Entity('evidence')
 export class Evidence {
@@ -15,10 +14,10 @@ export class Evidence {
   @Column()
   disputeId: string;
 
-  @ManyToOne(() => Dispute, (dispute) => dispute.evidences, {
+  @ManyToOne('Dispute', 'evidences', {
     onDelete: 'CASCADE',
   })
-  dispute: Dispute;
+  dispute: any;
 
   @Column()
   submittedBy: string;

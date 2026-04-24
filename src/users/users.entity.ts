@@ -11,7 +11,6 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { Listing } from '../listing/entities/listing.entity';
 import {
   VerificationLevel,
   VerificationStatus,
@@ -132,10 +131,10 @@ export class Users {
   @DeleteDateColumn()
   deletedAt?: Date;
 
-  @OneToMany(() => Listing, (listing) => listing.user)
-  listings: Listing[];
+  @OneToMany('Listing', 'user')
+  listings: any[];
 
-  @ManyToMany(() => Listing, (listing) => listing.favoritedBy)
+  @ManyToMany('Listing', 'favoritedBy')
   @JoinTable({
     name: 'user_favorites',
     joinColumn: {
@@ -147,7 +146,7 @@ export class Users {
       referencedColumnName: 'id',
     },
   })
-  favoriteListings: Listing[];
+  favoriteListings: any[];
 
   async validatePassword(password: string): Promise<boolean> {
     if (!this.password) return false;

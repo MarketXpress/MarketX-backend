@@ -27,11 +27,11 @@ export class Wishlist {
   @Column({ type: 'varchar', nullable: true, unique: true })
   shareToken: string | null;
 
-  @OneToMany(() => WishlistItem, (item) => item.wishlist, {
+  @OneToMany('WishlistItem', 'wishlist', {
     cascade: true,
     eager: false,
   })
-  items: WishlistItem[];
+  items: any[];
 
   @CreateDateColumn()
   createdAt: Date;
@@ -39,6 +39,3 @@ export class Wishlist {
   @UpdateDateColumn()
   updatedAt: Date;
 }
-
-// Avoid circular import by co-locating a forward reference
-import { WishlistItem } from './wishlist-item.entity';

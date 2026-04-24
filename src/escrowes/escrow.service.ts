@@ -340,21 +340,6 @@ export class EscrowService {
     return escrow;
   }
 
-  async getEscrow(id: string): Promise<EscrowResponseDto> {
-    const escrow = await this.findEscrowOrFail(id);
-    return this.mapToResponse(escrow);
-  }
-
-  async getEscrowByOrderId(orderId: string): Promise<EscrowResponseDto> {
-    const escrow = await this.escrowRepository.findOne({ where: { orderId } });
-
-    if (!escrow) {
-      throw new NotFoundException(`Escrow for order ${orderId} not found`);
-    }
-
-    return this.mapToResponse(escrow);
-  }
-
   private async buildTransaction(from: string, to: string, amount: number) {
     const account = await this.stellarServer.loadAccount(from);
 

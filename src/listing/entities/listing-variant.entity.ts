@@ -9,7 +9,6 @@ import {
   DeleteDateColumn,
   Index,
 } from 'typeorm';
-import { Listing } from './listing.entity';
 
 @Entity('listing_variants')
 export class ListingVariant {
@@ -20,11 +19,11 @@ export class ListingVariant {
   @Index()
   listingId: string;
 
-  @ManyToOne(() => Listing, (listing) => listing.variants, {
+  @ManyToOne('Listing', 'variants', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'listingId' })
-  listing: Listing;
+  listing: any;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   sku?: string;

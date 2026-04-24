@@ -8,7 +8,6 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Wishlist } from './wishlist.entity';
 
 @Entity('wishlist_items')
 @Index(['wishlistId'])
@@ -21,11 +20,11 @@ export class WishlistItem {
   @Column()
   wishlistId: string;
 
-  @ManyToOne(() => Wishlist, (wishlist) => wishlist.items, {
+  @ManyToOne('Wishlist', 'items', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'wishlistId' })
-  wishlist: Wishlist;
+  wishlist: any;
 
   @Column()
   productId: string;
