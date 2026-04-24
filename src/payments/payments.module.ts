@@ -11,6 +11,7 @@ import { Order } from '../orders/entities/order.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { OrdersModule } from '../orders/orders.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { WalletModule } from '../wallet/wallet.module';
     ScheduleModule.forRoot(),
     OrdersModule,
     WalletModule,
+    WebhooksModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService, PaymentMonitorService],
