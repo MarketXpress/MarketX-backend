@@ -17,14 +17,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   // Track userId <-> socketId
-  private userSocketMap = new Map<number, string>();
-  private socketUserMap = new Map<string, number>();
+  // Note: Users entity uses numeric IDs, while most other entities use UUIDs
+  private userSocketMap = new Map<string, string>();
+  private socketUserMap = new Map<string, string>();
 
   constructor(private readonly chatService: ChatService) {}
 
   async handleConnection(client: Socket) {
     // Expect userId as a query param for identification
-    const userId = Number(client.handshake.query.userId);
+    const userId = client.handshake.query.userId as string;
     if (userId) {
       this.userSocketMap.set(userId, client.id);
       this.socketUserMap.set(client.id, userId);
