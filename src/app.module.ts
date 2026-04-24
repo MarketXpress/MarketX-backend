@@ -47,12 +47,14 @@ import { AdminModule } from './admin/admin.module';
 import { OrdersModule } from './orders/orders.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { ArchivingModule } from './archiving/archiving.module';
+import { RewardsModule } from './rewards/rewards.module';
 
 
 // ── Entities ───────────────────────────────────────────────────────────────
 import { ProductImage } from './media/entities/image.entity';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
+import { RewardPoints } from './rewards/entities/reward-points.entity';
 
 // ── Guards & Middleware ─────────────────────────────────────────────────────
 import { AdminGuard } from './guards/admin.guard';
@@ -95,7 +97,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
       migrations: ['dist/migrations/*.js'],
       migrationsRun: false,
     }),
-    TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage]),
+    TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage, RewardPoints]),
 
     // ── Queue ─────────────────────────────────────────────────────────────
     BullModule.forRoot({
@@ -143,6 +145,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     AdminModule,
     OrdersModule,
     ArchivingModule,
+    RewardsModule,
   ],
   controllers: [AppController],
   providers: [

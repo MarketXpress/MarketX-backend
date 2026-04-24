@@ -7,7 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { InventoryService } from '../inventory/inventory.service';
-import { OrderUpdatedEvent, EventNames } from '../common/events';
+import { OrderUpdatedEvent, OrderCompletedEvent, EventNames } from '../common/events';
 import { PricingService } from '../products/services/pricing.service';
 import { SupportedCurrency } from '../products/services/pricing.service';
 import { ProductsService } from '../products/products.service';
@@ -253,6 +253,19 @@ export class OrdersService {
         previousStatus,
       ),
     );
+
+    // Emit order.completed event when order is completed
+    if (updateOrderStatusDto.status === OrderStatus.COMPLETED) {
+      this.eventEmitter.emit(
+        EventNames.ORDER_COMPLETED,
+        new OrderCompletedEvent(
+          updatedOrder.id,
+          updatedOrder.buyerId,
+          `ORD-${updatedOrder.id.substring(0, 8)}`,
+          Number(updatedOrder.totalAmount),
+        ),
+      );
+    }
 
     return updatedOrder;
   }
