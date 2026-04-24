@@ -1,11 +1,14 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as AWS from 'aws-sdk';
+import {
+  RekognitionClient,
+  DetectModerationLabelsCommand,
+} from '@aws-sdk/client-rekognition';
 
 @Injectable()
 export class ModerationService {
   private readonly logger = new Logger(ModerationService.name);
-  private readonly rekognition: AWS.Rekognition;
+  private readonly rekognition?: RekognitionClient;
   private readonly isEnabled: boolean;
 
   constructor(private readonly configService: ConfigService) {
@@ -18,10 +21,12 @@ export class ModerationService {
     this.isEnabled = !!(accessKeyId && secretAccessKey);
 
     if (this.isEnabled) {
-      this.rekognition = new AWS.Rekognition({
+      this.rekognition = new RekognitionClient({
         region,
-        accessKeyId,
-        secretAccessKey,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
       });
     } else {
       this.logger.warn(
@@ -41,9 +46,9 @@ export class ModerationService {
         MinConfidence: 80,
       };
 
-      const response = await this.rekognition
-        .detectModerationLabels(params)
-        .promise();
+      const response = await this.rekognition.send(
+        new DetectModerationLabelsCommand(params),
+      );
       const labels = response.ModerationLabels || [];
 
       this.logger.debug(
