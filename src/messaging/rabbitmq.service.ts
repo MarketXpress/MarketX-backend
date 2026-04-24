@@ -11,6 +11,12 @@ import {
   ChannelWrapper,
   connect,
 } from 'amqp-connection-manager';
+import { ConfirmChannel, Options } from 'amqplib';
+import {
+  createEventEnvelope,
+  validateEventContract,
+  EventEnvelope,
+} from '../common/event-contracts';
 
 @Injectable()
 export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
@@ -53,21 +59,50 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
 
   async publish(eventName: string, payload: unknown): Promise<void> {
     if (!this.channel) {
+      this.logger.warn('RabbitMQ channel not available, skipping publish');
       return;
     }
 
-    const body = Buffer.from(
-      JSON.stringify({
+    try {
+      // Extract domain from event name (e.g., 'order.created' -> 'order')
+      const domain = eventName.split('.')[0] || 'unknown';
+      
+      // Create event envelope with contract
+      const envelope: EventEnvelope = createEventEnvelope(
+        domain,
         eventName,
         payload,
-        occurredAt: new Date().toISOString(),
-      }),
-    );
+      );
 
-    await this.channel.publish(this.exchange, '', body, {
-      contentType: 'application/json',
-      persistent: true,
-      type: eventName,
-    } as any);
+      // Validate the envelope before publishing
+      if (!validateEventContract(envelope)) {
+        this.logger.error(`Invalid event contract for ${eventName}`);
+        return;
+      }
+
+      const body = Buffer.from(JSON.stringify(envelope));
+
+      // Use properly typed publish options
+      const publishOptions: Options.Publish = {
+        contentType: 'application/json',
+        contentEncoding: 'utf-8',
+        persistent: true,
+        type: eventName,
+        timestamp: Math.floor(Date.now() / 1000),
+        headers: {
+          'x-event-type': eventName,
+          'x-domain': domain,
+          'x-schema-version': envelope.schemaVersion,
+          'x-event-id': envelope.eventId,
+        },
+      };
+
+      await this.channel.publish(this.exchange, '', body, publishOptions);
+      
+      this.logger.debug(`Published event: ${eventName} (${envelope.eventId})`);
+    } catch (error) {
+      this.logger.error(`Failed to publish event ${eventName}:`, error);
+      throw error;
+    }
   }
 }
