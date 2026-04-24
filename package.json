@@ -21,6 +21,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+"test:smoke": "jest --testPathPattern=module-wiring.smoke.spec.ts --runInBand",
     "security:scan": "node security/zap/security-tester.js",
     "security:docker": "docker compose --profile security-test up -d",
     "security:zap": "docker compose run --rm zap",
@@ -173,8 +174,8 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(@scure|@noble|otplib)/)"
-    ],
+  "node_modules/(?!(@scure|@noble|otplib|@otplib)/)"
+],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

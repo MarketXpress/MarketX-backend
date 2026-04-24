@@ -18,7 +18,7 @@ import {
   NotificationStatus,
 } from './notification.entity';
 import { NotificationPreferencesEntity } from './notification-preferences.entity';
-import { Users } from '../users/users.entity';
+import { User as Users } from '../entities/user.entity';
 import { I18nService } from '../i18n/i18n.service';
 import { EMAIL_QUEUE } from '../job-processing/queue.constants';
 import { RetryStrategyService } from './retry-strategy.service';
