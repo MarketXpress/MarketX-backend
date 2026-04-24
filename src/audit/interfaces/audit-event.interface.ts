@@ -2,19 +2,13 @@
  * Standard interface for all audit events
  * This ensures consistency across all events emitted in the application
  */
+import { AuditActionType, AuditStatus } from '../entities/audit-log.entity';
+
 export interface IAuditEvent {
   /**
    * Event type - corresponds to AuditActionType
    */
-  actionType:
-    | 'PASSWORD_CHANGE'
-    | 'EMAIL_CHANGE'
-    | 'WITHDRAWAL'
-    | 'DEPOSIT'
-    | 'UPDATE'
-    | 'DELETE'
-    | 'CREATE'
-    | string;
+  actionType: AuditActionType | string;
 
   /**
    * User ID performing the action
@@ -64,7 +58,7 @@ export interface IAuditEvent {
   /**
    * Status of the operation
    */
-  status?: 'SUCCESS' | 'FAILURE' | 'WARNING';
+  status?: AuditStatus | string;
 
   /**
    * Error message if operation failed
