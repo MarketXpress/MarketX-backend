@@ -56,6 +56,13 @@ describe('Fraud rules and service', () => {
       notifyAdmin: jest.fn(async () => ({})),
     };
 
+    const fakeLogger: any = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const svc = new FraudService(
       fakeRepo,
       fakeOrderRepo,
@@ -64,6 +71,7 @@ describe('Fraud rules and service', () => {
       fakeCacheService,
       fakeEmailService,
       fakeAdminWebhookService,
+      fakeLogger,
     );
 
     const result = await svc.analyzeRequest({
@@ -123,6 +131,13 @@ describe('Fraud rules and service', () => {
       notifyAdmin: jest.fn(async () => ({})),
     };
 
+    const fakeLogger: any = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const svc = new FraudService(
       fakeRepo,
       fakeOrderRepo,
@@ -131,6 +146,7 @@ describe('Fraud rules and service', () => {
       fakeCacheService,
       fakeEmailService,
       fakeAdminWebhookService,
+      fakeLogger,
     );
 
     // prime velocity: call rules repeatedly to build internal state
