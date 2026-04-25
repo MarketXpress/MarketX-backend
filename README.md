@@ -82,6 +82,23 @@ AMQP_URL=amqp://guest:guest@localhost:5672
 We provide a minimal Docker Compose profile for local development that starts Postgres, Redis and RabbitMQ. See the full instructions in [docs/local-infra.md](docs/local-infra.md).
 
 
+### API Documentation
+
+API documentation is generated from NestJS Swagger metadata and published automatically when changes land on `main`.
+
+```bash
+npm run docs:generate
+npm run docs:render
+```
+
+This creates:
+
+- `docs/api/openapi.json`
+- `docs/api/index.html`
+
+The API docs workflow is defined in `.github/workflows/api-docs.yml` and publishes the rendered docs to GitHub Pages.
+
+
 ### 4. Running the App
 
 ```bash
@@ -92,9 +109,39 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Security Checks
+
+Security scans are now part of the default CI process for `main` and `develop` branches, and on pull requests targeting those branches.
+
+- Secret scanning is performed with Gitleaks.
+- Dependency vulnerability reporting is performed with `npm audit --audit-level=moderate`.
+- The workflow is defined in `.github/workflows/security.yml`.
+
 ## Pull Request Quality Checklist
 
 We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
+
+Before opening a PR, run the quick confidence suite:
+
+```bash
+$ npm run pr:check
+```
+
+This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
+## Architecture Decisions
+
+We track major architectural choices in [docs/adr/README.md](docs/adr/README.md). If a change introduces or materially changes module boundaries, async data flow, infrastructure roles, or long-lived domain workflows, update the relevant ADR or add a new one in the same PR.
+
+## Issue Reporting
+
+We use standardized GitHub issue templates to keep triage fast and consistent. Please choose the template that matches your request:
+
+- Bug report: for defects, regressions, and unexpected behavior. Include reproduction steps, impact, and a validation plan.
+- Feature request: for new capabilities or meaningful enhancements. Include the problem, expected value, acceptance criteria, and testing/docs expectations.
+- Refactor request: for behavior-preserving structural improvements. Include current pain, goals, non-goals, risks, and regression coverage expectations.
+- Tech debt: for shortcuts, brittle patterns, dependency alignment, or missing safeguards that reduce engineering velocity or increase risk over time.
+
+Blank issues are disabled so requests consistently include the details reviewers need to triage, scope, and ship changes safely.
 
 
 ---
@@ -104,8 +151,14 @@ We require PRs to follow a quality checklist (tests, migration notes, docs). See
 We heavily value test coverage to ensure marketplace stability.
 
 ```bash
+# Run the quick pre-PR confidence suite
+$ npm run pr:check
+
 # Run the unit test suite
 $ npm run test
+
+# Run the full repository TypeScript typecheck
+$ npm run typecheck
 
 # Watch mode for Active Test-Driven Development
 $ npm run test:watch
@@ -134,4 +187,4 @@ To get started, please browse our active GitHub Issues (or Drips tasks). When yo
 
 ## 📜 License & Support
 
-MarketX is [MIT licensed](LICENSE). If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
+MarketX is MIT licensed. If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀

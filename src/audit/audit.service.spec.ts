@@ -21,6 +21,16 @@ describe('AuditService', () => {
     ipAddress: '192.168.1.1',
     userAgent: 'Mozilla/5.0...',
     createdAt: new Date(),
+    statePreviousValue: null,
+    stateNewValue: null,
+    stateDiff: {},
+    changedFields: '',
+    resourceType: null,
+    resourceId: null,
+    details: null,
+    errorMessage: null,
+    responseTime: null,
+    expiresAt: null,
   };
 
   beforeEach(async () => {
@@ -67,7 +77,7 @@ describe('AuditService', () => {
       });
 
       await expect(
-        service.createAuditLog({ userId: 'user-123' }),
+        service.createAuditLog({ userId: 'user-123', action: AuditActionType.PASSWORD_CHANGE }),
       ).rejects.toThrow(error);
     });
   });
@@ -204,12 +214,11 @@ describe('AuditService', () => {
   describe('getAuditLogs', () => {
     it('should retrieve audit logs with pagination', async () => {
       const mockQueryBuilder = {
-        createQueryBuilder: jest.fn(),
-        andWhere: jest.fn(),
-        where: jest.fn(),
-        orderBy: jest.fn(),
-        skip: jest.fn(),
-        take: jest.fn(),
+        andWhere: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue([[mockAuditLog], 1]),
       };
 

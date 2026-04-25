@@ -19,6 +19,8 @@ import { SendEmailDto } from './dto/send-email.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../guards/admin.guard';
 import { Public } from '../auth/decorators/public.decorator';
+import { WebhookVerified } from '../webhooks/decorators/webhook-verified.decorator';
+import { WebhookVerificationGuard } from '../webhooks/guards/webhook-verification.guard';
 
 @ApiTags('Email')
 @Controller('email')
@@ -75,6 +77,14 @@ export class EmailController {
    */
   @Public()
   @Post('webhook/sendgrid')
+  @UseGuards(WebhookVerificationGuard)
+  @WebhookVerified({
+    provider: 'sendgrid',
+    signatureHeader: 'X-SendGrid-Signature',
+    timestampHeader: 'X-SendGrid-Timestamp',
+    nonceHeader: 'X-SendGrid-Nonce',
+    timestampToleranceMs: 300000, // 5 minutes
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'SendGrid delivery event webhook receiver' })
   async handleSendGridWebhook(@Body() events: SendGridWebhookEventDto[]) {

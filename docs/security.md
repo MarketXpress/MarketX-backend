@@ -4,6 +4,22 @@
 
 This document outlines the comprehensive API security and rate limiting policies implemented in the MarketX backend. The system is designed to protect against abuse, data breaches, and attacks while maintaining a positive experience for legitimate users.
 
+## Security Pipeline
+
+MarketX now runs default security checks on push and pull request workflows for `main` and `develop`.
+
+- Secret scanning uses `zricethezav/gitleaks-action` to detect leaked credentials and secrets in the repository.
+- Dependency vulnerability reporting uses `npm audit --audit-level=moderate` to fail builds on moderate or higher vulnerabilities.
+- Workflow definition: `.github/workflows/security.yml`
+
+For local verification, run:
+
+```bash
+npm run security:audit
+npm run security:scan
+```
+
+
 **Last Updated**: January 22, 2026  
 **Version**: 1.0.0
 

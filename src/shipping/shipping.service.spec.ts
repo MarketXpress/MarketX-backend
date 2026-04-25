@@ -7,6 +7,7 @@ import { Shipment } from './entities/shipment.entity';
 import { Order } from '../orders/entities/order.entity';
 import { ShipmentStatus, ShippingCarrier } from './dto/create-shipment.dto';
 import { OrderStatus } from '../orders/entities/order.entity';
+import { EventNames } from '../common/events';
 
 describe('ShippingService', () => {
   let service: ShippingService;
@@ -202,10 +203,10 @@ describe('ShippingService', () => {
 
       expect(result.status).toBe(ShipmentStatus.PICKED_UP);
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        'shipment.status_updated',
+        EventNames.SHIPMENT_STATUS_UPDATED,
         expect.objectContaining({
           previousStatus: ShipmentStatus.LABEL_CREATED,
-          newStatus: ShipmentStatus.PICKED_UP,
+          status: ShipmentStatus.PICKED_UP,
         }),
       );
     });

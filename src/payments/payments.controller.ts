@@ -18,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 
 import { PaymentsService } from './payments.service';
+import { WebhookVerified } from '../webhooks/decorators/webhook-verified.decorator';
+import { WebhookVerificationGuard } from '../webhooks/guards/webhook-verification.guard';
 import { PaymentMonitorService } from './payment-monitor.service';
 import {
   InitiatePaymentDto,
@@ -144,6 +146,14 @@ export class PaymentsController {
    * This endpoint receives transaction callbacks from Stellar Horizon
    */
   @Post('webhook/stellar')
+  @UseGuards(WebhookVerificationGuard)
+  @WebhookVerified({
+    provider: 'stellar',
+    signatureHeader: 'X-Stellar-Signature',
+    timestampHeader: 'X-Stellar-Timestamp',
+    nonceHeader: 'X-Stellar-Nonce',
+    timestampToleranceMs: 300000, // 5 minutes
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Stellar payment webhook',
@@ -157,6 +167,10 @@ export class PaymentsController {
   @ApiResponse({
     status: 400,
     description: 'Invalid webhook data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Webhook signature verification failed',
   })
   async handleStellarWebhook(
     @Body() webhookData: PaymentWebhookDto,

@@ -24,8 +24,8 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
-      - name: Run issue-slice tests
-        run: npm run test:issues
+      - name: Run quick confidence suite
+        run: npm run pr:check
 
       - name: Smoke-check worker and messaging files
         run: |

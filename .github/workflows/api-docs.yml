@@ -1,0 +1,69 @@
+name: API Documentation
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish-api-docs:
+    name: Generate and Publish API Docs
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: marketx_docs
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate OpenAPI schema
+        run: npm run docs:generate
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_USER: test
+          DATABASE_PASSWORD: test
+          DATABASE_NAME: marketx_docs
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Render static API docs
+        run: npm run docs:render
+
+      - name: Publish API docs to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/api
+          keep_files: true
+          publish_branch: gh-pages
+          commit_message: "Publish API docs from main @${{ github.sha }}"
