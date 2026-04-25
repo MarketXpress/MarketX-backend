@@ -24,6 +24,9 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      - name: Lint verification
+        run: npm run lint
+
       - name: Run quick confidence suite
         run: npm run pr:check
 
