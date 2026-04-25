@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  Logger,
   Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -29,10 +28,10 @@ import {
   PaymentTimeoutEvent,
   EventNames,
 } from '../common/events';
+import { LoggerService } from '../common/logger/logger.service';
 
 @Injectable()
 export class PaymentsService {
-  private readonly logger = new Logger(PaymentsService.name);
   private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
 
@@ -45,6 +44,7 @@ export class PaymentsService {
     private walletsRepository: Repository<Wallet>,
     private configService: ConfigService,
     private eventEmitter: EventEmitter2,
+    private readonly logger: LoggerService,
   ) {
     // Initialize Stellar SDK
     const horizonUrl = this.configService.get<string>(
@@ -134,7 +134,7 @@ export class PaymentsService {
 
     const savedPayment = await this.paymentsRepository.save(payment);
 
-    this.logger.log(
+    this.logger.info(
       `Payment initiated for order ${initiatePaymentDto.orderId}: ${savedPayment.id}`,
     );
 
@@ -227,7 +227,7 @@ export class PaymentsService {
     order.updatedAt = new Date();
     await this.ordersRepository.save(order);
 
-    this.logger.log(
+    this.logger.info(
       `Payment ${paymentId} confirmed. Order ${payment.orderId} updated to PAID status`,
     );
 
