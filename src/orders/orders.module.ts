@@ -8,6 +8,7 @@ import { Order } from './entities/order.entity';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrderStateSubscriber } from './subscribers/order-state.subscriber';
+import { LoggerModule } from '../common/logger/logger.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OrderStateSubscriber } from './subscribers/order-state.subscriber';
     CouponsModule,
     InventoryModule,
     AdminModule,
+    LoggerModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrderStateSubscriber],

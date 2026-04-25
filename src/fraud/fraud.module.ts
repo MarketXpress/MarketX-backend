@@ -9,12 +9,14 @@ import { GeolocationService } from '../geolocation/geolocation.service';
 import { Order } from '../orders/entities/order.entity';
 import { User } from '../entities/user.entity';
 import { CacheModule } from '../cache/cache.module';
+import { LoggerModule } from '../common/logger/logger.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([FraudAlert, Order, User]),
     AdminModule,
     CacheModule,
+    LoggerModule,
   ],
   providers: [FraudService, RequestMonitorMiddleware, GeolocationService],
   controllers: [FraudController],

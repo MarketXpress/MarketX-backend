@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FraudAlert } from './entities/fraud-alert.entity';
@@ -12,10 +12,11 @@ import { CacheService } from '../cache/cache.service';
 import { EmailService } from '../email/email.service';
 import { User, UserStatus } from '../entities/user.entity';
 import { AdminWebhookService } from '../admin/admin-webhook.service';
+import { LoggerService } from '../common/logger/logger.service';
 
 @Injectable()
 export class FraudService {
-  private readonly logger = new Logger(FraudService.name);
+  private readonly logger: LoggerService;
 
   constructor(
     @InjectRepository(FraudAlert)
@@ -28,9 +29,12 @@ export class FraudService {
     private readonly cacheService: CacheService,
     private readonly emailService: EmailService,
     private readonly adminWebhookService: AdminWebhookService,
+    logger: LoggerService,
     @Optional()
     private readonly adminService?: AdminService,
-  ) {}
+  ) {
+    this.logger = logger;
+  }
 
   async analyzeRequest(input: {
     userId?: string;
@@ -117,7 +121,9 @@ export class FraudService {
             }
           } catch (err) {
             this.logger.error(
-              `Failed to lock account for user ${input.userId}: ${err.message}`,
+              `Failed to lock account for user ${input.userId}`,
+              { userId: input.userId },
+              err instanceof Error ? err : new Error(String(err)),
             );
           }
         }

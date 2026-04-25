@@ -2,8 +2,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  Logger,
-  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -29,10 +27,11 @@ import {
   PaymentTimeoutEvent,
   EventNames,
 } from '../common/events';
+import { LoggerService } from '../common/logger/logger.service';
 
 @Injectable()
 export class PaymentsService {
-  private readonly logger = new Logger(PaymentsService.name);
+  private readonly logger: LoggerService;
   private stellarServer: StellarSdk.Horizon.Server;
   private networkPassphrase: string;
 
@@ -45,7 +44,9 @@ export class PaymentsService {
     private walletsRepository: Repository<Wallet>,
     private configService: ConfigService,
     private eventEmitter: EventEmitter2,
+    logger: LoggerService,
   ) {
+    this.logger = logger;
     // Initialize Stellar SDK
     const horizonUrl = this.configService.get<string>(
       'STELLAR_HORIZON_URL',
@@ -134,9 +135,10 @@ export class PaymentsService {
 
     const savedPayment = await this.paymentsRepository.save(payment);
 
-    this.logger.log(
-      `Payment initiated for order ${initiatePaymentDto.orderId}: ${savedPayment.id}`,
-    );
+    this.logger.info('Payment initiated', {
+      orderId: initiatePaymentDto.orderId,
+      paymentId: savedPayment.id,
+    });
 
     // Emit event for payment monitoring
     this.eventEmitter.emit(
@@ -191,9 +193,10 @@ export class PaymentsService {
       payment.failedAt = new Date();
       await this.paymentsRepository.save(payment);
 
-      this.logger.warn(
-        `Payment ${paymentId} validation failed: ${errorMessage}`,
-      );
+      this.logger.warn('Payment validation failed', {
+        paymentId,
+        reason: errorMessage,
+      });
 
       this.eventEmitter.emit(
         EventNames.PAYMENT_FAILED,
@@ -227,9 +230,10 @@ export class PaymentsService {
     order.updatedAt = new Date();
     await this.ordersRepository.save(order);
 
-    this.logger.log(
-      `Payment ${paymentId} confirmed. Order ${payment.orderId} updated to PAID status`,
-    );
+    this.logger.info('Payment confirmed', {
+      paymentId,
+      orderId: payment.orderId,
+    });
 
     // Emit event for downstream services
     this.eventEmitter.emit(
@@ -266,7 +270,7 @@ export class PaymentsService {
       payment.failedAt = new Date();
       await this.paymentsRepository.save(payment);
 
-      this.logger.warn(`Payment ${paymentId} timed out`);
+      this.logger.warn('Payment timed out', { paymentId });
 
       this.eventEmitter.emit(
         EventNames.PAYMENT_TIMEOUT,
