@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
 import * as path from 'path';
 import 'winston-daily-rotate-file';
+import { getCorrelationId } from '../context/correlation.context';
 
 interface SanitizedData {
   [key: string]: any;
@@ -135,36 +136,44 @@ export class LoggerService {
     });
   }
 
+  private withCorrelationId(meta: Record<string, any>): Record<string, any> {
+    const correlationId = getCorrelationId();
+    return correlationId ? { correlationId, ...meta } : meta;
+  }
+
   /**
    * Log error level message
    */
   error(message: string, context?: any, error?: Error): void {
-    this.logger.error(message, {
-      context,
-      stack: error?.stack,
-      errorMessage: error?.message,
-    });
+    this.logger.error(
+      message,
+      this.withCorrelationId({
+        context,
+        stack: error?.stack,
+        errorMessage: error?.message,
+      }),
+    );
   }
 
   /**
    * Log warning level message
    */
   warn(message: string, context?: any): void {
-    this.logger.warn(message, { context });
+    this.logger.warn(message, this.withCorrelationId({ context }));
   }
 
   /**
    * Log info level message
    */
   info(message: string, context?: any): void {
-    this.logger.info(message, { context });
+    this.logger.info(message, this.withCorrelationId({ context }));
   }
 
   /**
    * Log debug level message
    */
   debug(message: string, context?: any): void {
-    this.logger.debug(message, { context });
+    this.logger.debug(message, this.withCorrelationId({ context }));
   }
 
   /**

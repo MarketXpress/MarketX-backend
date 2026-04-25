@@ -64,6 +64,7 @@ import { ThrottleGuard } from './common/guards/throttle.guard';
 import { DynamicThrottlerGuard } from './auth/guards/dynamic-throttler.guard';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.middleware';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 
 @Module({
   imports: [
@@ -168,6 +169,8 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SecurityMiddleware, RequestMonitorMiddleware).forRoutes('*');
+    consumer
+      .apply(CorrelationIdMiddleware, SecurityMiddleware, RequestMonitorMiddleware)
+      .forRoutes('*');
   }
 }
