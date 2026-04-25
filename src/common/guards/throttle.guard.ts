@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { RATE_LIMIT_CONFIG } from '../config/rate-limit.config';
 
 interface RateLimitConfig {
   limit: number;
@@ -21,28 +22,41 @@ interface ClientRecord {
   resetTime: number;
 }
 
+/**
+ * Route-tier mapping: path segment → RATE_LIMIT_CONFIG key.
+ * Ordered from most-specific to least-specific so the first match wins.
+ */
+const ROUTE_TIER_MAP: Array<[string, keyof typeof RATE_LIMIT_CONFIG]> = [
+  ['login', 'LOGIN'],
+  ['register', 'REGISTER'],
+  ['forgot-password', 'PASSWORD_RESET'],
+  ['reset-password', 'PASSWORD_RESET'],
+  ['auth', 'AUTH'],
+  ['payment', 'PAYMENT'],
+  ['transaction', 'TRANSACTION'],
+  ['upload', 'UPLOAD'],
+  ['export', 'EXPORT'],
+  ['search', 'SEARCH'],
+];
+
 @Injectable()
 export class ThrottleGuard implements CanActivate {
   private readonly logger = new Logger(ThrottleGuard.name);
   private clientRequests = new Map<string, ClientRecord>();
   private readonly defaultConfig: RateLimitConfig = {
-    limit: 100,
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: RATE_LIMIT_CONFIG.API.limit,
+    windowMs: RATE_LIMIT_CONFIG.API.windowMs,
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
   };
 
-  // Custom rate limit configs for different endpoint types
-  private readonly endpointConfigs: Map<string, RateLimitConfig> = new Map([
-    ['auth', { limit: 5, windowMs: 15 * 60 * 1000 }], // 5 attempts per 15 minutes
-    ['login', { limit: 5, windowMs: 15 * 60 * 1000 }],
-    ['register', { limit: 3, windowMs: 60 * 60 * 1000 }], // 3 per hour
-    ['password-reset', { limit: 3, windowMs: 60 * 60 * 1000 }],
-    ['api', { limit: 100, windowMs: 15 * 60 * 1000 }], // Standard API: 100 per 15 min
-    ['upload', { limit: 10, windowMs: 60 * 60 * 1000 }], // 10 uploads per hour
-    ['transaction', { limit: 20, windowMs: 60 * 1000 }], // 20 per minute
-    ['payment', { limit: 10, windowMs: 60 * 60 * 1000 }], // 10 per hour
-  ]);
+  // Custom rate limit configs for different endpoint types — sourced from RATE_LIMIT_CONFIG
+  private readonly endpointConfigs: Map<string, RateLimitConfig> = new Map(
+    ROUTE_TIER_MAP.map(([segment, key]) => [
+      segment,
+      { limit: RATE_LIMIT_CONFIG[key].limit, windowMs: RATE_LIMIT_CONFIG[key].windowMs },
+    ]),
+  );
 
   constructor(private reflector: Reflector) {
     // Cleanup expired records every 5 minutes

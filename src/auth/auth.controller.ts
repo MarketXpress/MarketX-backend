@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags } from '@nestjs/swagger';
-import { StrictRateLimit } from '../decorators/rate-limit.decorator';
+import { StrictRateLimit, NoRateLimit } from '../decorators/rate-limit.decorator';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { Enable2FADto } from './dto/enable-2fa.dto';
@@ -16,6 +16,11 @@ import { Verify2FADto } from './dto/verify-2fa.dto';
 
 @ApiTags('auth')
 @Controller('auth')
+@UseGuards(RateLimitGuard)
+@StrictRateLimit({
+  maxRequests: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes — default for all auth routes
+})
 export class AuthController {
   constructor(private authService: AuthService) {}
 
