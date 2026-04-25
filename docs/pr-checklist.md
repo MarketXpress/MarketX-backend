@@ -49,3 +49,7 @@ If a change touches complex domains (payments, escrow, reconciliation, migration
 ---
 
 Thank you for contributing — clear PRs make everyone's life easier.
+
+## PR template
+
+We provide an official PR template at `.github/PULL_REQUEST_TEMPLATE.md` that surfaces the checklist items automatically when opening a Pull Request. Please use that template — it includes sections for migrations, documentation changes, test instructions, and changelog notes.
