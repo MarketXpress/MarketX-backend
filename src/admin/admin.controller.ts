@@ -5,9 +5,11 @@ import { AdminService } from './admin.service';
 import { AdminStatsDto } from './dtos/admin-stats.dto';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
+import { NoRateLimit } from '../decorators/rate-limit.decorator';
 
 @Controller('admin')
 @UseGuards(RolesGuard)
+@NoRateLimit()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 

@@ -28,9 +28,22 @@ import {
   PaymentWebhookDto,
   PaymentCurrency,
 } from './dto/payment.dto';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import {
+  StrictRateLimit,
+  RateLimit,
+  NoRateLimit,
+} from '../decorators/rate-limit.decorator';
+import { UserTier } from '../rate-limiting/rate-limit.service';
 
 @ApiTags('Payments')
 @Controller('payments')
+@UseGuards(RateLimitGuard)
+@StrictRateLimit({
+  maxRequests: 10,
+  windowMs: 60 * 60 * 1000, // 10 per hour — strict for all payment routes
+  message: 'Too many payment requests. Please try again later.',
+})
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 
@@ -146,6 +159,7 @@ export class PaymentsController {
    * This endpoint receives transaction callbacks from Stellar Horizon
    */
   @Post('webhook/stellar')
+  @NoRateLimit() // Webhook called by external system — not user-initiated
   @UseGuards(WebhookVerificationGuard)
   @WebhookVerified({
     provider: 'stellar',

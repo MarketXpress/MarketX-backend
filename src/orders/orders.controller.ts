@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,9 +31,26 @@ import {
   OrderCancelledEvent,
   EventNames,
 } from '../common/events';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import {
+  RateLimit,
+  UserRateLimit,
+} from '../decorators/rate-limit.decorator';
+import { UserTier } from '../rate-limiting/rate-limit.service';
 
 @ApiTags('Orders')
 @Controller('orders')
+@UseGuards(RateLimitGuard)
+@UserRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 30,
+  tierLimits: {
+    [UserTier.FREE]: { maxRequests: 10 },
+    [UserTier.PREMIUM]: { maxRequests: 50 },
+    [UserTier.ENTERPRISE]: { maxRequests: 200 },
+    [UserTier.ADMIN]: { maxRequests: 1000 },
+  },
+})
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
@@ -42,6 +60,16 @@ export class OrdersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @RateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    maxRequests: 10,
+    tierLimits: {
+      [UserTier.PREMIUM]: { maxRequests: 30 },
+      [UserTier.ENTERPRISE]: { maxRequests: 100 },
+      [UserTier.ADMIN]: { maxRequests: 1000 },
+    },
+    message: 'Too many orders created. Please wait before placing another order.',
+  })
   async create(@Body() createOrderDto: CreateOrderDto) {
     const order = await this.ordersService.create(createOrderDto);
 

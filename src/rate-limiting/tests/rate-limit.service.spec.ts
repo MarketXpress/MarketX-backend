@@ -200,4 +200,46 @@ describe('RateLimitService', () => {
       expect(analytics[0].data[0].identifier).toBe('user:123');
     });
   });
+
+  describe('loadConfigurations', () => {
+    it('should load tier configs from Redis on startup', async () => {
+      mockRedis.get = jest.fn().mockResolvedValue(
+        JSON.stringify({ windowMs: 30000, maxRequests: 25, burstAllowance: 5 }),
+      );
+      mockRedis.keys = jest.fn().mockResolvedValue([]);
+
+      await service.loadConfigurations();
+
+      // get should have been called once per UserTier
+      expect(mockRedis.get).toHaveBeenCalledWith(
+        expect.stringContaining('rate_limit_config:tier:'),
+      );
+    });
+
+    it('should load endpoint configs from Redis on startup', async () => {
+      mockRedis.get = jest.fn().mockResolvedValue(null);
+      mockRedis.keys = jest.fn().mockResolvedValue([
+        'rate_limit_config:endpoint:/api/custom',
+      ]);
+      // Second call for the endpoint key
+      mockRedis.get = jest
+        .fn()
+        .mockResolvedValueOnce(null) // tier keys return null
+        .mockResolvedValueOnce(
+          JSON.stringify({ windowMs: 60000, maxRequests: 15 }),
+        );
+
+      await service.loadConfigurations();
+
+      expect(mockRedis.keys).toHaveBeenCalledWith(
+        'rate_limit_config:endpoint:*',
+      );
+    });
+
+    it('should not throw when Redis is unavailable during load', async () => {
+      mockRedis.get = jest.fn().mockRejectedValue(new Error('Redis down'));
+
+      await expect(service.loadConfigurations()).resolves.not.toThrow();
+    });
+  });
 });

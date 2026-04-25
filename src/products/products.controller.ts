@@ -21,10 +21,27 @@ import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
 import { VerifiedSellerGuard } from '../verification/guards/verified-seller.guard';
 import { CurrencyInterceptor } from '../common/interceptors/currency.interceptor';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import {
+  RateLimit,
+  UserRateLimit,
+} from '../decorators/rate-limit.decorator';
+import { UserTier } from '../rate-limiting/rate-limit.service';
 
 @ApiTags('Products')
 @Controller('products')
+@UseGuards(RateLimitGuard)
 @UseInterceptors(CurrencyInterceptor)
+@UserRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 30,
+  tierLimits: {
+    [UserTier.FREE]: { maxRequests: 30 },
+    [UserTier.PREMIUM]: { maxRequests: 100 },
+    [UserTier.ENTERPRISE]: { maxRequests: 300 },
+    [UserTier.ADMIN]: { maxRequests: 1000 },
+  },
+})
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
@@ -49,6 +66,16 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(VerifiedSellerGuard)
   @ApiOperation({ summary: 'Create product (verified seller only)' })
+  @RateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    maxRequests: 10,
+    tierLimits: {
+      [UserTier.PREMIUM]: { maxRequests: 30 },
+      [UserTier.ENTERPRISE]: { maxRequests: 100 },
+      [UserTier.ADMIN]: { maxRequests: 1000 },
+    },
+    message: 'Too many products created. Please wait before creating more.',
+  })
   create(@Req() req, @Body() dto: CreateProductDto) {
     return this.productsService.create(req.user.id.toString(), dto);
   }

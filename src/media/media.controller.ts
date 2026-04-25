@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -25,9 +26,26 @@ import { MediaService } from './media.service';
 import { QueuedImageUploadResult } from './media.jobs';
 import { UploadImageDto, ReorderImagesDto } from './dto/upload-image.dto';
 import { ProductImage } from './entities/image.entity';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import {
+  RateLimit,
+  UserRateLimit,
+} from '../decorators/rate-limit.decorator';
+import { UserTier } from '../rate-limiting/rate-limit.service';
 
 @ApiTags('Media')
 @Controller('media')
+@UseGuards(RateLimitGuard)
+@UserRateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxRequests: 10,
+  tierLimits: {
+    [UserTier.FREE]: { maxRequests: 10 },
+    [UserTier.PREMIUM]: { maxRequests: 50 },
+    [UserTier.ENTERPRISE]: { maxRequests: 200 },
+    [UserTier.ADMIN]: { maxRequests: 1000 },
+  },
+})
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 

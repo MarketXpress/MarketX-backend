@@ -19,6 +19,9 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TransactionsService } from './transactions.service';
 import { Transaction } from './entities/transaction.entity';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { UserRateLimit } from '../decorators/rate-limit.decorator';
+import { UserTier } from '../rate-limiting/rate-limit.service';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -31,7 +34,17 @@ interface AuthenticatedRequest extends Request {
 @ApiTags('Transactions')
 @Controller('transactions')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RateLimitGuard)
+@UserRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 20,
+  tierLimits: {
+    [UserTier.FREE]: { maxRequests: 20 },
+    [UserTier.PREMIUM]: { maxRequests: 60 },
+    [UserTier.ENTERPRISE]: { maxRequests: 200 },
+    [UserTier.ADMIN]: { maxRequests: 1000 },
+  },
+})
 export class TransactionsController {
   private readonly logger = new Logger(TransactionsController.name);
 
