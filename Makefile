@@ -3,7 +3,9 @@
 
 COVERAGE_THRESHOLD ?= 95
 
-.PHONY: coverage coverage-check ci
+.PHONY: coverage coverage-check ci node-coverage node-coverage-check node-coverage-domain ci-node
+
+# ── Rust / Tarpaulin targets ─────────────────────────────────────────────────
 
 coverage:
 	@command -v cargo >/dev/null 2>&1 || { echo "ERROR: cargo not found"; exit 1; }
@@ -33,3 +35,23 @@ PY "$$coverage_line_rate"); \
 
 ci: coverage-check
 	@echo "CI coverage gate passed"
+
+# ── Node.js / Jest coverage targets ──────────────────────────────────────────
+
+node-coverage:
+	@echo "Running Jest coverage ..."
+	npm run test:cov
+
+node-coverage-check:
+	@echo "Running Jest coverage with per-domain thresholds ..."
+	npm run test:coverage:check
+
+node-coverage-domain:
+	@echo "Running per-domain coverage reports ..."
+	@echo "\n=== Auth Domain ===" && npm run test:coverage:auth || true
+	@echo "\n=== Payments Domain ===" && npm run test:coverage:payments || true
+	@echo "\n=== Orders Domain ===" && npm run test:coverage:orders || true
+	@echo "\n=== Escrow Domain ===" && npm run test:coverage:escrow || true
+
+ci-node: node-coverage-check
+	@echo "CI Node.js coverage gate passed"

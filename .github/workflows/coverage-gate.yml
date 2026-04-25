@@ -1,0 +1,84 @@
+name: Coverage Gate
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/auth/**'
+      - 'src/payments/**'
+      - 'src/orders/**'
+      - 'src/escrowes/**'
+      - 'package.json'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/auth/**'
+      - 'src/payments/**'
+      - 'src/orders/**'
+      - 'src/escrowes/**'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  coverage-check:
+    name: Core Domain Coverage Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run coverage with per-domain thresholds
+        run: npm run test:coverage:check
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  domain-coverage-summary:
+    name: Domain Coverage Summary
+    runs-on: ubuntu-latest
+    needs: coverage-check
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Auth domain coverage
+        run: npm run test:coverage:auth
+        continue-on-error: true
+
+      - name: Payments domain coverage
+        run: npm run test:coverage:payments
+        continue-on-error: true
+
+      - name: Orders domain coverage
+        run: npm run test:coverage:orders
+        continue-on-error: true
+
+      - name: Escrow domain coverage
+        run: npm run test:coverage:escrow
+        continue-on-error: true

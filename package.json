@@ -23,6 +23,11 @@
     "pr:check": "npm run lint:issues && npm run typecheck:issues && npm run test:issues",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
+    "test:coverage:check": "jest --coverage --ci",
+    "test:coverage:auth": "jest --coverage --testPathPattern='src/auth/' --ci",
+    "test:coverage:payments": "jest --coverage --testPathPattern='src/payments/' --ci",
+    "test:coverage:orders": "jest --coverage --testPathPattern='src/orders/' --ci",
+    "test:coverage:escrow": "jest --coverage --testPathPattern='src/escrowes/' --ci",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
 "test:smoke": "jest --testPathPattern=module-wiring.smoke.spec.ts --runInBand",
@@ -169,7 +174,7 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
-    "redoc-cli": "^0.15.0"
+    "redoc-cli": "^0.13.21"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -186,9 +191,55 @@
   "node_modules/(?!(@scure|@noble|otplib|@otplib)/)"
 ],
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.(t|j)s"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      ".module.ts$",
+      ".entity.ts$",
+      ".dto.ts$",
+      ".interface.ts$",
+      ".types.ts$",
+      ".decorator.ts$",
+      ".guard.ts$",
+      ".strategy.ts$",
+      ".subscriber.ts$",
+      "index.ts$"
     ],
     "coverageDirectory": "../coverage",
+    "coverageThreshold": {
+      "global": {
+        "branches": 50,
+        "functions": 50,
+        "lines": 50,
+        "statements": 50
+      },
+      "./src/auth/": {
+        "branches": 70,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./src/payments/": {
+        "branches": 70,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./src/orders/": {
+        "branches": 70,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./src/escrowes/": {
+        "branches": 70,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    },
     "testEnvironment": "node"
   }
 }
