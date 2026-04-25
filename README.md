@@ -173,15 +173,15 @@ $ npm run test:cov
 
 Interested in collaborating? We'd love your help!
 
-To get started, please browse our active GitHub Issues (or Drips tasks). When you find an issue you'd like to tackle, please **read the issue description thoroughly** to understand the context, problem, and specific acceptance criteria before beginning your work.
+Please read our **[Contributing Guide](CONTRIBUTING.md)** for detailed instructions on how to set up your environment, follow our coding standards, and submit your changes.
 
-**Workflow:**
+**Quick Setup Check:**
+If you encounter any issues during setup, run our environment diagnostics tool:
+```bash
+npm run doctor
+```
 
-1. Fork the repo and identify the issue you want to work on.
-2. Create your feature branch (`git checkout -b feature/amazing-feature`).
-3. Implement the feature or fix, ensuring you meet all acceptance criteria.
-4. Commit your changes strictly following conventional commit messages.
-5. Open a Pull Request and link the relevant issue!
+To get started, browse our active [GitHub Issues](https://github.com/Cybermaxi7/MarketX-backend/issues). When you find an issue you'd like to tackle, please **read the issue description thoroughly** before beginning your work.
 
 ---
 
