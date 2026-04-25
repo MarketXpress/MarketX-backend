@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await */
 import { FraudService } from '../fraud.service';
-import { OrderStatus } from '../../orders/dto/create-order.dto';
+import { OrderStatus } from '../../orders/entities/order.entity';
 import { evaluateAllRules } from '../score';
+import { UserStatus } from '../../entities/user.entity';
 
 describe('Fraud rules and service', () => {
   it('evaluateAllRules returns numeric score and reason', async () => {
@@ -23,6 +24,7 @@ describe('Fraud rules and service', () => {
       save: jest.fn(async (o: any) => ({ ...o, id: 'fake-id' })),
       findAndCount: jest.fn(async () => [[], 0]),
       findOneBy: jest.fn(async () => null),
+      findOne: jest.fn(async () => null),
     };
 
     const fakeOrderRepo: any = {
@@ -56,6 +58,14 @@ describe('Fraud rules and service', () => {
       notifyAdmin: jest.fn(async () => ({})),
     };
 
+    const fakeAuditService: any = {
+      logStateChange: jest.fn(async () => ({})),
+    };
+
+    const fakeEventEmitter: any = {
+      emit: jest.fn(),
+    };
+
     const svc = new FraudService(
       fakeRepo,
       fakeOrderRepo,
@@ -64,6 +74,8 @@ describe('Fraud rules and service', () => {
       fakeCacheService,
       fakeEmailService,
       fakeAdminWebhookService,
+      fakeAuditService,
+      fakeEventEmitter,
     );
 
     const result = await svc.analyzeRequest({
@@ -90,6 +102,7 @@ describe('Fraud rules and service', () => {
       save: jest.fn(async (o: any) => ({ ...o, id: 'fake-id' })),
       findAndCount: jest.fn(async () => [[], 0]),
       findOneBy: jest.fn(async () => null),
+      findOne: jest.fn(async () => null),
     };
 
     const fakeOrderRepo: any = {
@@ -123,6 +136,14 @@ describe('Fraud rules and service', () => {
       notifyAdmin: jest.fn(async () => ({})),
     };
 
+    const fakeAuditService: any = {
+      logStateChange: jest.fn(async () => ({})),
+    };
+
+    const fakeEventEmitter: any = {
+      emit: jest.fn(),
+    };
+
     const svc = new FraudService(
       fakeRepo,
       fakeOrderRepo,
@@ -131,6 +152,8 @@ describe('Fraud rules and service', () => {
       fakeCacheService,
       fakeEmailService,
       fakeAdminWebhookService,
+      fakeAuditService,
+      fakeEventEmitter,
     );
 
     // prime velocity: call rules repeatedly to build internal state
@@ -170,4 +193,178 @@ describe('Fraud rules and service', () => {
 
     expect(fakeRepo.save).toHaveBeenCalled();
   }, 20000);
+
+  it('FraudService emits audit events on alert creation', async () => {
+    const fakeRepo: any = {
+      create: (o: any) => ({ ...o, id: 'alert-123' }),
+      save: jest.fn(async (o: any) => ({ ...o, id: 'alert-123' })),
+      findAndCount: jest.fn(async () => [[], 0]),
+      findOneBy: jest.fn(async () => null),
+      findOne: jest.fn(async () => null),
+    };
+
+    const fakeOrderRepo: any = {
+      findOne: jest.fn(async () => null),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const fakeUserRepo: any = {
+      findOne: jest.fn(async () => null),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const fakeGeolocationService: any = {
+      getLocationFromIp: jest.fn(async () => null),
+      geocodeAddress: jest.fn(async () => null),
+      distanceMiles: jest.fn(() => 0),
+    };
+
+    const fakeCacheService: any = {
+      increment: jest.fn(async () => 0),
+    };
+
+    const fakeEmailService: any = {
+      sendAccountLocked: jest.fn(async () => ({})),
+    };
+
+    const fakeAdminWebhookService: any = {
+      notifyAdmin: jest.fn(async () => ({})),
+    };
+
+    const fakeAuditService: any = {
+      logStateChange: jest.fn(async () => ({})),
+    };
+
+    const fakeEventEmitter: any = {
+      emit: jest.fn(),
+    };
+
+    const svc = new FraudService(
+      fakeRepo,
+      fakeOrderRepo,
+      fakeUserRepo,
+      fakeGeolocationService,
+      fakeCacheService,
+      fakeEmailService,
+      fakeAdminWebhookService,
+      fakeAuditService,
+      fakeEventEmitter,
+    );
+
+    await svc.analyzeRequest({
+      userId: 'user-audit-test',
+      orderId: 'ord-audit',
+      ip: '192.168.1.100',
+      metadata: {
+        amount: 1000,
+        accountAgeHours: 1,
+        billingAddress: '123 A St',
+        shippingAddress: '456 B Ave',
+      },
+    });
+
+    // Verify audit event was emitted
+    expect(fakeEventEmitter.emit).toHaveBeenCalled();
+    const emitCalls = fakeEventEmitter.emit.mock.calls;
+    const fraudAlertEvent = emitCalls.find(
+      (call: any[]) => call[0] === 'fraud.alert_created',
+    );
+    expect(fraudAlertEvent).toBeDefined();
+    expect(fraudAlertEvent[1].userId).toBe('user-audit-test');
+    expect(fraudAlertEvent[1].actionType).toBe('FRAUD_ALERT');
+  });
+
+  it('FraudService emits lockout audit event after 3 flags', async () => {
+    let flagCount = 0;
+    const fakeRepo: any = {
+      create: (o: any) => ({ ...o, id: 'alert-lock' }),
+      save: jest.fn(async (o: any) => ({ ...o, id: 'alert-lock' })),
+      findAndCount: jest.fn(async () => [[], 0]),
+      findOneBy: jest.fn(async () => null),
+      findOne: jest.fn(async () => null),
+    };
+
+    const fakeOrderRepo: any = {
+      findOne: jest.fn(async () => null),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const fakeUserRepo: any = {
+      findOne: jest.fn(async () => ({
+        id: 'user-lock',
+        email: 'test@example.com',
+        firstName: 'Test',
+        status: UserStatus.ACTIVE,
+      })),
+      save: jest.fn(async (o: any) => o),
+    };
+
+    const fakeGeolocationService: any = {
+      getLocationFromIp: jest.fn(async () => null),
+      geocodeAddress: jest.fn(async () => null),
+      distanceMiles: jest.fn(() => 0),
+    };
+
+    const fakeCacheService: any = {
+      increment: jest.fn(async () => {
+        flagCount++;
+        return flagCount;
+      }),
+    };
+
+    const fakeEmailService: any = {
+      sendAccountLocked: jest.fn(async () => ({})),
+    };
+
+    const fakeAdminWebhookService: any = {
+      notifyAdmin: jest.fn(async () => ({})),
+    };
+
+    const fakeAuditService: any = {
+      logStateChange: jest.fn(async () => ({})),
+    };
+
+    const fakeEventEmitter: any = {
+      emit: jest.fn(),
+    };
+
+    const svc = new FraudService(
+      fakeRepo,
+      fakeOrderRepo,
+      fakeUserRepo,
+      fakeGeolocationService,
+      fakeCacheService,
+      fakeEmailService,
+      fakeAdminWebhookService,
+      fakeAuditService,
+      fakeEventEmitter,
+    );
+
+    // Trigger high-risk request that will increment flag count to 3
+    await svc.analyzeRequest({
+      userId: 'user-lock',
+      orderId: 'ord-lock',
+      ip: '10.0.0.1',
+      metadata: {
+        amount: 1000,
+        accountAgeHours: 1,
+        billingAddress: '123 A St',
+        shippingAddress: '456 B Ave',
+      },
+    });
+
+    // Verify lockout audit event was emitted
+    expect(fakeEventEmitter.emit).toHaveBeenCalled();
+    const emitCalls = fakeEventEmitter.emit.mock.calls;
+    const lockoutEvent = emitCalls.find(
+      (call: any[]) => call[0] === 'fraud.account_locked',
+    );
+
+    if (flagCount >= 3) {
+      expect(lockoutEvent).toBeDefined();
+      expect(lockoutEvent[1].userId).toBe('user-lock');
+      expect(lockoutEvent[1].actionType).toBe('FRAUD_LOCKOUT');
+      expect(lockoutEvent[1].status).toBe('WARNING');
+    }
+  });
 });

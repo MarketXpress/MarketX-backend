@@ -19,6 +19,9 @@ export enum AuditActionType {
   WITHDRAWAL = 'WITHDRAWAL',
   DEPOSIT = 'DEPOSIT',
   SYSTEM = 'SYSTEM',
+  FRAUD_ALERT = 'FRAUD_ALERT',
+  FRAUD_LOCKOUT = 'FRAUD_LOCKOUT',
+  FRAUD_REVIEW = 'FRAUD_REVIEW',
 }
 
 export enum AuditStatus {

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Fraud Detection System is a comprehensive fraud prevention service that monitors suspicious activity, flags risky transactions, and implements automated protection measures. It combines multiple detection rules to calculate a risk score and automatically takes protective actions.
+The Fraud Detection System is a comprehensive fraud prevention service that monitors suspicious activity, flags risky transactions, and implements automated protection measures. It combines multiple detection rules to calculate a risk score and automatically takes protective actions with **complete audit trail logging** for compliance and security review.
 
 ## Features
 
@@ -10,9 +10,11 @@ The Fraud Detection System is a comprehensive fraud prevention service that moni
 - **Duplicate Order Detection**: Identifies repeated order attempts
 - **IP/Device Fingerprinting**: Tracks and flags suspicious device reuse patterns
 - **Risk Scoring**: Weighted aggregation of multiple fraud signals (0-100)
-- **Automatic Suspension**: Auto-blocks high-risk requests (score ≥ 70)
+- **Automatic Suspension**: Auto-blocks high-risk requests (score ≥ 75)
+- **Account Lockout Protocol**: Automated lockout after 3 fraud flags within 60 minutes
 - **Admin Review Queue**: Manual review interface for flagged transactions
-- **Audit Logging**: Maintains comprehensive fraud attempt logs
+- **Complete Audit Trail**: Immutable audit logs for all fraud actions and lockouts
+- **Admin Visibility Dashboard**: Comprehensive stats, lockout tracking, and audit trail endpoints
 - **Request Monitoring**: Global middleware that analyzes all requests
 
 ## Architecture
@@ -23,8 +25,10 @@ The Fraud Detection System is a comprehensive fraud prevention service that moni
 Stores fraud detection records with:
 - Risk score (0-100)
 - User, order, IP, and device fingerprint tracking
-- Status: `pending`, `reviewed`, `suspended`, `safe`
+- Status: `pending`, `reviewed`, `suspended`, `safe`, `manual_review`
 - Metadata for additional context
+- **Lockout tracking**: `lockoutReason`, `lockoutTimestamp`, `lockoutDurationMinutes`
+- **Review tracking**: `reviewedBy`, `reviewedAt`, `reviewNotes`
 
 #### 2. **Detection Rules** (`rules/`)
 
@@ -54,6 +58,7 @@ Main business logic:
 - `analyzeRequest()`: Evaluates request, creates alert if score ≥ 20
 - `getAlerts()`: Paginated alert retrieval
 - `reviewAlert()`: Admin action to update alert status
+- **Audit Integration**: Emits events for all fraud actions (alerts, lockouts, reviews)
 
 #### 5. **RequestMonitorMiddleware** (`middleware/request-monitor.middleware.ts`)
 Global middleware applied to all requests:
@@ -63,12 +68,44 @@ Global middleware applied to all requests:
 
 #### 6. **Admin Controllers** (`../admin/admin-fraud.controller.ts`)
 HTTP endpoints for admin dashboard:
-- `GET /admin/fraud/alerts` - List all alerts
-- `PATCH /admin/fraud/:id/review` - Update alert status
+- `GET /admin/fraud/alerts` - List all alerts (paginated, filterable)
+- `GET /admin/fraud/alerts/:id` - Get single alert details
+- `PATCH /admin/fraud/alerts/:id/review` - Update alert status with audit logging
+- `GET /admin/fraud/alerts/:id/audit-trail` - Complete audit trail for an alert
+- `GET /admin/fraud/lockouts` - List all account lockouts (paginated)
+- `GET /admin/fraud/stats` - Fraud statistics (24h, 7d, 30d)
 
 #### 7. **Public Controller** (`fraud.controller.ts`)
 Public endpoints:
 - `GET /fraud/alerts` - Paginated alert list (public)
+
+### Audit Trail Integration
+
+The fraud system integrates with the central audit logging system via event emission:
+
+#### Audit Action Types
+- `FRAUD_ALERT`: Created when a fraud alert is generated
+- `FRAUD_LOCKOUT`: Created when an account is automatically locked
+- `FRAUD_REVIEW`: Created when an admin reviews a fraud alert
+
+#### Events Emitted
+1. **`fraud.alert_created`**: Emitted when a new fraud alert is created
+   - Includes: userId, riskScore, triggeredRules, ipAddress, deviceId
+   - Logged to audit system with full state tracking
+
+2. **`fraud.account_locked`**: Emitted when automated lockout is triggered
+   - Includes: userId, fraudAlertId, flagCount, riskScore, lockoutReason
+   - Previous and new user status tracked in audit log
+
+3. **`fraud.alert_reviewed`**: Emitted when admin reviews an alert
+   - Includes: reviewer ID, previous status, new status, review notes
+   - Full state diff recorded for compliance
+
+#### Audit Listener
+The `AuditEventListener` (`src/audit/audit.listener.ts`) handles all fraud events:
+- `handleFraudAlertCreated()`: Logs alert creation
+- `handleFraudAccountLocked()`: Logs account lockout
+- `handleFraudAlertReviewed()`: Logs admin review actions
 
 ## Database Schema
 
@@ -83,11 +120,20 @@ CREATE TABLE fraud_alerts (
   reason TEXT NULL,
   status VARCHAR(32) DEFAULT 'pending',
   metadata JSON NULL,
-  createdAt TIMESTAMP DEFAULT NOW()
+  lockoutReason TEXT NULL,
+  lockoutTimestamp TIMESTAMP NULL,
+  lockoutDurationMinutes INT NULL,
+  reviewedBy VARCHAR NULL,
+  reviewedAt TIMESTAMP NULL,
+  reviewNotes TEXT NULL,
+  createdAt TIMESTAMP DEFAULT NOW(),
+  updatedAt TIMESTAMP DEFAULT NOW()
 );
 ```
 
 **Migration**: `src/migrations/1680000000000-CreateFraudAlerts.ts`
+
+**Note**: After deploying these changes, run a database migration to add the new columns for lockout and review tracking.
 
 ## Thresholds and Tuning
 
@@ -126,27 +172,81 @@ REDIS_URL=redis://localhost:6379
 ### For Admin: Review Flagged Transactions
 
 ```bash
-# Get all alerts
-curl http://localhost:3000/admin/fraud/alerts
+# Get all alerts with pagination
+curl "http://localhost:3000/admin/fraud/alerts?page=1&limit=50"
+
+# Filter by status
+curl "http://localhost:3000/admin/fraud/alerts?status=pending"
+
+# Filter by user
+curl "http://localhost:3000/admin/fraud/alerts?userId=user-123"
 
 # Response:
-[
-  {
-    "id": "uuid-1",
-    "userId": "user-123",
-    "riskScore": 65,
-    "status": "pending",
-    "reason": "velocity:25/min;duplicate:repeat-order",
-    "createdAt": "2026-02-19T20:30:00Z"
+{
+  "data": [
+    {
+      "id": "uuid-1",
+      "userId": "user-123",
+      "riskScore": 65,
+      "status": "pending",
+      "reason": "velocity:25/min;duplicate:repeat-order",
+      "createdAt": "2026-02-19T20:30:00Z",
+      "updatedAt": "2026-02-19T20:30:00Z"
+    }
+  ],
+  "meta": {
+    "total": 42,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 1
   }
-]
+}
 
-# Mark as reviewed
-curl -X PATCH http://localhost:3000/admin/fraud/468/review \
+# Get single alert details
+curl http://localhost:3000/admin/fraud/alerts/uuid-1
+
+# Mark as reviewed with notes
+curl -X PATCH http://localhost:3000/admin/fraud/alerts/uuid-1/review \
   -H "Content-Type: application/json" \
-  -d '{"mark": "safe"}'
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"mark": "safe", "notes": "Reviewed and cleared - false positive"}'
 
-# Response: Updated alert with status="safe"
+# Response: Updated alert with status="safe", reviewedBy, reviewedAt, reviewNotes
+
+# Get complete audit trail for an alert
+curl http://localhost:3000/admin/fraud/alerts/uuid-1/audit-trail
+
+# Response:
+{
+  "alert": {...},
+  "auditTrail": {
+    "alertEvents": [...],
+    "lockoutEvents": [...],
+    "total": 3
+  }
+}
+
+# View all account lockouts
+curl "http://localhost:3000/admin/fraud/lockouts?page=1&limit=50"
+
+# Filter lockouts by user
+curl "http://localhost:3000/admin/fraud/lockouts?userId=user-123"
+
+# Get fraud statistics
+curl http://localhost:3000/admin/fraud/stats
+
+# Response:
+{
+  "alerts": {
+    "last24Hours": 15,
+    "last7Days": 87,
+    "last30Days": 342
+  },
+  "lockouts": {
+    "last24Hours": 3,
+    "last7Days": 12
+  }
+}
 ```
 
 ### For Users: View Alerts (Read-Only)
@@ -162,6 +262,24 @@ curl "http://localhost:3000/fraud/alerts?page=1&pageSize=25"
   "page": 1,
   "pageSize": 25
 }
+```
+
+### Audit Trail Queries
+
+Admins can query the audit system directly for fraud-related events:
+
+```bash
+# Get all fraud alerts from audit logs
+curl "http://localhost:3000/admin/audit?action=FRAUD_ALERT&page=1&limit=100"
+
+# Get all lockout events
+curl "http://localhost:3000/admin/audit?action=FRAUD_LOCKOUT&page=1&limit=50"
+
+# Get fraud reviews by specific admin
+curl "http://localhost:3000/admin/audit?action=FRAUD_REVIEW&userId=admin-123"
+
+# Get fraud events in date range
+curl "http://localhost:3000/admin/audit?action=FRAUD_ALERT&startDate=2026-04-01&endDate=2026-04-25"
 ```
 
 ## Testing
@@ -242,11 +360,16 @@ if (result.riskScore >= 70) { /* suspend */ }              // Suspend threshold
 
 ## Security Notes
 
-- All alerts are logged with full context for audit compliance
-- Admin endpoints should be protected with role-based access control
-- Risk scores are recalculated on each request (no caching)
-- Automatic suspension provides real-time protection against brute attacks
-- Middleware fails open: allows requests if fraud service fails
+- **All fraud actions are logged** with full context for audit compliance
+- **Immutable audit trail**: All fraud alerts, lockouts, and reviews are recorded in the central audit system
+- **Admin endpoints are protected** with role-based access control (JWT + AdminGuard)
+- **Risk scores are recalculated** on each request (no caching)
+- **Automatic suspension** provides real-time protection against brute attacks
+- **Middleware fails open**: allows requests if fraud service fails
+- **Lockout semantics**: Accounts are locked after 3 fraud flags within 60 minutes
+- **Complete state tracking**: Previous and new states are recorded for all fraud actions
+- **Searchable audit logs**: Admins can query fraud events by user, date range, action type, and resource
+- **Review accountability**: All admin reviews are tracked with reviewer ID, timestamp, and notes
 
 ## References
 
