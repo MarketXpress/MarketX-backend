@@ -1,6 +1,8 @@
 ## Summary
 
-Separated the CI lint check from the auto-fix behavior. This ensures that linting in CI remains strictly a validation step (non-mutating) while maintaining the auto-fix convenience for local development workflows.
+This pull request addresses the requirement to decouple linting validation in CI from the auto-fixing behavior used by developers. Previously, the primary `lint` command included the `--fix` flag, which could lead to unexpected mutations of source files during CI runs. 
+
+The implementation now follows a strict validation-only approach for CI while providing a dedicated `lint:fix` command for local development, ensuring repository stability and consistent code quality without silent side effects.
 
 ---
 
@@ -22,16 +24,35 @@ Separated the CI lint check from the auto-fix behavior. This ensures that lintin
 
 ---
 
+## Implementation Details
+
+### 1. Script Updates in `package.json`
+- **`lint`**: Updated to be strictly validation-only. It now uses `--max-warnings=0` to ensure that any linting issue (even warnings) triggers a failure in the pipeline. Removed the `--fix` flag.
+- **`lint:fix`**: Introduced a new script specifically for developers to use locally. This script retains the `--fix` functionality to allow for rapid style corrections.
+- **`lint:issues`**: Maintained for focused checks on specific issue-related files.
+
+### 2. CI/CD Pipeline Integration
+- **`.github/workflows/ci.yml`**: Added a dedicated `Lint verification` step that executes `npm run lint`. This step is positioned early in the pipeline to provide fast feedback on code style compliance before running more intensive tests.
+
+---
+
 ## Testing Steps
 
-1.  Run `npm run lint` locally. It should perform a strict validation and fail if issues are found, without modifying any files.
-2.  Run `npm run lint:fix` locally. It should automatically fix any linting issues it can.
-3.  The CI pipeline now automatically includes a `Lint verification` step in `.github/workflows/ci.yml`.
+### Manual Verification (Local)
+1.  **Validation Check**: Run `npm run lint`. Verify that it reports errors if they exist but does **not** change any files.
+2.  **Auto-Fix Check**: Introduce a simple linting error (e.g., extra semicolon or incorrect quoting), then run `npm run lint:fix`. Verify that the error is automatically resolved.
+3.  **Comprehensive Check**: Run `npm run pr:check` to ensure the new scripts integrate correctly with the existing verification suite.
+
+### Automated Verification (CI)
+- Once pushed, verify the `CI Pipeline` run on GitHub. The `Lint verification` step should pass successfully (or fail if issues are present), confirming the configuration is active.
+
+---
 
 ## Migration Notes
 
-N/A
+No database or data migrations are required. Developers should update their workflow to use `npm run lint:fix` when they want to automatically resolve linting errors.
 
 ## Docs / Release Notes
 
-Updated `package.json` with a new `lint:fix` command. The existing `lint` command is now validation-only for CI stability.
+- **Developers**: Use `npm run lint` for validation and `npm run lint:fix` for auto-fixing.
+- **CI/CD**: The pipeline now enforces a zero-warning linting policy (`--max-warnings=0`) to maintain high code quality standards.
