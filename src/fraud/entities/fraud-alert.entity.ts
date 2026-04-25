@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 export type FraudStatus =
@@ -41,6 +42,27 @@ export class FraudAlert {
   @Column({ type: 'json', nullable: true })
   metadata?: any;
 
+  @Column({ type: 'text', nullable: true })
+  lockoutReason?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lockoutTimestamp?: Date;
+
+  @Column({ type: 'int', nullable: true })
+  lockoutDurationMinutes?: number;
+
+  @Column({ nullable: true })
+  reviewedBy?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNotes?: string;
+
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

@@ -228,4 +228,95 @@ export class AuditEventListener {
       );
     }
   }
+
+  /**
+   * Handle fraud alert creation events
+   * Event: fraud.alert_created
+   * Required fields: userId, ipAddress, riskScore, triggeredRules
+   */
+  @OnEvent('fraud.alert_created')
+  async handleFraudAlertCreated(event: IAuditEvent) {
+    try {
+      this.logger.debug(
+        `Audit: Fraud alert created event received for user ${event.userId}`,
+      );
+
+      await this.auditService.logStateChange({
+        ...event,
+        actionType: 'FRAUD_ALERT',
+        resourceType: 'fraud_alert',
+        resourceId: event.resourceId,
+      });
+
+      this.logger.log(
+        `✓ Audit log recorded: Fraud alert created for user ${event.userId} (score: ${event.metadata?.riskScore})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to log fraud alert creation: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /**
+   * Handle fraud account lockout events
+   * Event: fraud.account_locked
+   * Required fields: userId, ipAddress, fraudAlertId, riskScore, flagCount
+   */
+  @OnEvent('fraud.account_locked')
+  async handleFraudAccountLocked(event: IAuditEvent) {
+    try {
+      this.logger.debug(
+        `Audit: Fraud account lockout event received for user ${event.userId}`,
+      );
+
+      await this.auditService.logStateChange({
+        ...event,
+        actionType: 'FRAUD_LOCKOUT',
+        resourceType: 'user',
+        resourceId: event.userId,
+        status: 'WARNING',
+      });
+
+      this.logger.log(
+        `✓ Audit log recorded: Account locked due to fraud for user ${event.userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to log fraud account lockout: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /**
+   * Handle fraud alert review events
+   * Event: fraud.alert_reviewed
+   * Required fields: userId (reviewer), resourceId (alertId), reviewAction
+   */
+  @OnEvent('fraud.alert_reviewed')
+  async handleFraudAlertReviewed(event: IAuditEvent) {
+    try {
+      this.logger.debug(
+        `Audit: Fraud alert reviewed event received for alert ${event.resourceId}`,
+      );
+
+      await this.auditService.logStateChange({
+        ...event,
+        actionType: 'FRAUD_REVIEW',
+        resourceType: 'fraud_alert',
+        resourceId: event.resourceId,
+      });
+
+      this.logger.log(
+        `✓ Audit log recorded: Fraud alert ${event.resourceId} reviewed by ${event.userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to log fraud alert review: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
 }
