@@ -1,6 +1,6 @@
 #!/bin/sh
 # setup_hooks.sh
-# Installs a Git pre-commit hook that runs cargo fmt and cargo clippy.
+# Installs a Git pre-commit hook that runs linting and typechecking.
 
 set -e
 
@@ -13,23 +13,23 @@ if [ ! -d "$ROOT_DIR/.git" ]; then
   exit 1
 fi
 
-if [ ! command -v cargo >/dev/null 2>&1 ]; then
-  echo "Error: cargo command not found. Install Rust toolchain first."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "Error: npm command not found. Install Node.js first."
   exit 1
 fi
 
 cat > "$PRE_COMMIT" <<'EOF'
 #!/bin/sh
 
-echo "Running cargo fmt --all -- --check"
-if ! cargo fmt --all -- --check; then
-  echo "\nERROR: cargo fmt check failed. Please run 'cargo fmt --all' and commit again."
+echo "Running npm run lint..."
+if ! npm run lint; then
+  echo "\nERROR: lint check failed. Please fix issues and commit again."
   exit 1
 fi
 
-echo "Running cargo clippy --all-targets --all-features -- -D warnings"
-if ! cargo clippy --all-targets --all-features -- -D warnings; then
-  echo "\nERROR: cargo clippy failed. Fix issues and commit again."
+echo "Running npm run typecheck..."
+if ! npm run typecheck; then
+  echo "\nERROR: typecheck failed. Fix issues and commit again."
   exit 1
 fi
 
