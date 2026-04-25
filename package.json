@@ -52,7 +52,8 @@
     "docs:generate": "ts-node scripts/generate-api-docs.ts",
     "docs:render": "redoc-cli bundle docs/api/openapi.json -o docs/api/index.html",
     "security:audit": "npm audit --audit-level=moderate",
-    "security:audit:report": "npm audit --json > security/audit-report.json || true"
+    "security:audit:report": "npm audit --json > security/audit-report.json || true",
+    "doctor": "bash scripts/doctor.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",
