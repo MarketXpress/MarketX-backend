@@ -9,8 +9,10 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
+  Headers,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -18,20 +20,24 @@ import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
 import { VerifiedSellerGuard } from '../verification/guards/verified-seller.guard';
+import { CurrencyInterceptor } from '../common/interceptors/currency.interceptor';
 
 @ApiTags('Products')
 @Controller('products')
+@UseInterceptors(CurrencyInterceptor)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
   @ApiOperation({ summary: 'List products with filters & pagination' })
+  @ApiHeader({ name: 'X-Currency', required: false, description: 'Target currency (USD, EUR, GBP, etc.)' })
   findAll(@Query() filters: FilterProductDto) {
     return this.productsService.findAll(filters);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
+  @ApiHeader({ name: 'X-Currency', required: false, description: 'Target currency (USD, EUR, GBP, etc.)' })
   findOne(
     @Param('id') id: string,
     @Query('preferredCurrency') preferredCurrency?: SupportedCurrency,

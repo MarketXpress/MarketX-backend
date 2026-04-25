@@ -9,12 +9,14 @@ import { ProductPriceEntity } from './entities/product-price.entity';
 import { Product } from '../entities/product.entity';
 import { MediaModule } from '../media/media.module';
 import { PriceModule } from '../price/price.module';
+import { CurrencyModule } from '../currency/currency.module';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
     MediaModule,
     PriceModule,
+    CurrencyModule,
     TypeOrmModule.forFeature([Product, ProductPriceEntity]),
   ],
   controllers: [ProductsController, ProductImagesController],

@@ -48,6 +48,7 @@ import { OrdersModule } from './orders/orders.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { ArchivingModule } from './archiving/archiving.module';
 import { RewardsModule } from './rewards/rewards.module';
+import { CurrencyModule } from './currency/currency.module';
 
 
 // ── Entities ───────────────────────────────────────────────────────────────
@@ -146,6 +147,7 @@ import { RequestMonitorMiddleware } from './fraud/middleware/request-monitor.mid
     OrdersModule,
     ArchivingModule,
     RewardsModule,
+    CurrencyModule,
   ],
   controllers: [AppController],
   providers: [
