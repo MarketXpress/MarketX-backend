@@ -272,6 +272,14 @@ export class CouponsService {
       };
     }
 
+    // Check if coupon is user-specific
+    if (coupon.userId && coupon.userId !== userId) {
+      return {
+        valid: false,
+        message: 'This coupon is not valid for your account',
+      };
+    }
+
     // Check per-user limit
     if (coupon.perUserLimit > 0) {
       const userUsageCount = await this.couponUsageRepository.count({
@@ -552,6 +560,7 @@ export class CouponsService {
       totalUsageLimit: coupon.totalUsageLimit,
       perUserLimit: coupon.perUserLimit,
       currentUsageCount: coupon.currentUsageCount,
+      userId: coupon.userId,
       restrictions: coupon.restrictions,
       createdAt: coupon.createdAt,
       updatedAt: coupon.updatedAt,

@@ -64,6 +64,9 @@ export class CouponResponseDto {
   @ApiProperty()
   currentUsageCount: number;
 
+  @ApiPropertyOptional()
+  userId?: string;
+
   @ApiPropertyOptional({ type: CouponRestrictionResponseDto })
   restrictions?: CouponRestrictionResponseDto;
 

@@ -6,7 +6,10 @@ import {
   UpdateDateColumn,
   Index,
   DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from '../../entities/user.entity';
 
 export enum DiscountType {
   PERCENTAGE = 'percentage',
@@ -80,6 +83,10 @@ export class Coupon {
   @Column({ type: 'int', default: 0 })
   currentUsageCount: number;
 
+  @Column({ type: 'uuid', nullable: true, name: 'user_id' })
+  @Index()
+  userId?: string;
+
   @Column({ type: 'jsonb', nullable: true })
   restrictions?: CouponRestriction;
 
@@ -91,6 +98,10 @@ export class Coupon {
 
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 
   // Helper methods
   isValid(): boolean {

@@ -101,6 +101,7 @@ export class RewardsService {
       totalUsageLimit: 1,
       perUserLimit: 1,
       currentUsageCount: 0,
+      userId: userId,
       restrictions: {
         minimumOrderAmount: 0,
       },
