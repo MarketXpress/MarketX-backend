@@ -51,4 +51,47 @@ export class RewardsController {
       body.orderTotal,
     );
   }
+
+  @Get('loyalty-summary')
+  async getLoyaltySummary(@Request() req) {
+    return await this.rewardsService.getUserLoyaltySummary(req.user.userId);
+  }
+
+  @Post('calculate-tier-discount')
+  @HttpCode(HttpStatus.OK)
+  async calculateTierDiscount(
+    @Request() req,
+    @Body() body: { orderTotal: number },
+  ) {
+    const discount = await this.rewardsService.calculateTierDiscount(
+      req.user.userId,
+      body.orderTotal,
+    );
+    return { tierDiscount: discount };
+  }
+
+  @Post('check-free-shipping')
+  @HttpCode(HttpStatus.OK)
+  async checkFreeShipping(
+    @Request() req,
+    @Body() body: { orderTotal: number },
+  ) {
+    const hasFreeShipping = await this.rewardsService.hasFreeShipping(
+      req.user.userId,
+      body.orderTotal,
+    );
+    return { hasFreeShipping };
+  }
+
+  @Post('birthday-bonus')
+  @HttpCode(HttpStatus.OK)
+  async grantBirthdayBonus(@Request() req) {
+    return await this.rewardsService.grantBirthdayBonus(req.user.userId);
+  }
+
+  @Post('anniversary-bonus')
+  @HttpCode(HttpStatus.OK)
+  async grantAnniversaryBonus(@Request() req) {
+    return await this.rewardsService.grantAnniversaryBonus(req.user.userId);
+  }
 }

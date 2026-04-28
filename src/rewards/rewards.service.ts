@@ -6,6 +6,7 @@ import { CreateRewardDto } from './dto/create-reward.dto';
 import { RedeemPointsDto } from './dto/redeem-points.dto';
 import { Coupon } from '../coupons/entities/coupon.entity';
 import { DiscountType } from '../coupons/entities/coupon.entity';
+import { LoyaltyService } from './loyalty.service';
 
 @Injectable()
 export class RewardsService {
@@ -17,6 +18,7 @@ export class RewardsService {
     private rewardsRepository: Repository<RewardPoints>,
     @InjectRepository(Coupon)
     private couponsRepository: Repository<Coupon>,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   async getUserBalance(userId: string): Promise<number> {
@@ -62,17 +64,23 @@ export class RewardsService {
     orderId: string,
     totalAmount: number,
   ): Promise<RewardPoints> {
-    const pointsEarned = Math.floor(totalAmount * this.POINTS_PER_DOLLAR);
+    const basePoints = Math.floor(totalAmount * this.POINTS_PER_DOLLAR);
 
-    if (pointsEarned <= 0) {
+    if (basePoints <= 0) {
       throw new BadRequestException('Order amount must be greater than zero to earn points');
     }
 
+    // Apply loyalty tier multiplier
+    const finalPoints = await this.loyaltyService.calculatePointsWithMultiplier(userId, basePoints);
+
+    // Update user's loyalty tier points
+    await this.loyaltyService.updateUserLoyaltyPoints(userId, finalPoints);
+
     return await this.createReward({
       userId,
-      points: pointsEarned,
+      points: finalPoints,
       transactionType: PointsTransactionType.EARNED,
-      description: `Points earned for order ${orderId}`,
+      description: `Points earned for order ${orderId} (${finalPoints - basePoints > 0 ? `includes ${finalPoints - basePoints} tier bonus` : 'no tier bonus'})`,
       referenceId: orderId,
       referenceType: 'order',
     });
@@ -175,5 +183,31 @@ export class RewardsService {
       referenceId,
       referenceType: 'admin_adjustment',
     });
+  }
+
+  async getUserLoyaltySummary(userId: string) {
+    return await this.loyaltyService.getUserLoyaltySummary(userId);
+  }
+
+  async calculateTierDiscount(userId: string, orderAmount: number): Promise<number> {
+    return await this.loyaltyService.calculateTierDiscount(userId, orderAmount);
+  }
+
+  async hasFreeShipping(userId: string, orderAmount: number): Promise<boolean> {
+    return await this.loyaltyService.hasFreeShipping(userId, orderAmount);
+  }
+
+  async grantBirthdayBonus(userId: string): Promise<{ bonusPoints: number; newBalance: number }> {
+    const bonusPoints = await this.loyaltyService.grantBirthdayBonus(userId);
+    const newBalance = await this.getUserBalance(userId);
+    
+    return { bonusPoints, newBalance };
+  }
+
+  async grantAnniversaryBonus(userId: string): Promise<{ bonusPoints: number; newBalance: number }> {
+    const bonusPoints = await this.loyaltyService.grantAnniversaryBonus(userId);
+    const newBalance = await this.getUserBalance(userId);
+    
+    return { bonusPoints, newBalance };
   }
 }
