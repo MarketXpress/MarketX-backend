@@ -56,6 +56,8 @@ import { ProductImage } from './media/entities/image.entity';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
 import { RewardPoints } from './rewards/entities/reward-points.entity';
+import { LoyaltyTier } from './rewards/entities/loyalty-tier.entity';
+import { UserLoyaltyTier } from './rewards/entities/user-loyalty-tier.entity';
 
 // ── Guards & Middleware ─────────────────────────────────────────────────────
 import { AdminGuard } from './guards/admin.guard';
@@ -99,7 +101,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
       migrations: ['dist/migrations/*.js'],
       migrationsRun: false,
     }),
-    TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage, RewardPoints]),
+    TypeOrmModule.forFeature([ProductImage, Coupon, CouponUsage, RewardPoints, LoyaltyTier, UserLoyaltyTier]),
 
     // ── Queue ─────────────────────────────────────────────────────────────
     BullModule.forRoot({
