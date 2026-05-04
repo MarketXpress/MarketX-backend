@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DisputeAiWorker } from './dispute-ai.worker';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Dispute } from './dispute.entity';
 import { Evidence } from './evidence.entity';
@@ -13,7 +14,7 @@ import { EscrowEntity } from '../escrowes/entities/escrow.entity';
     TypeOrmModule.forFeature([Dispute, Evidence, EscrowEntity]),
     EscrowModule,
   ],
-  providers: [DisputesService],
+  providers: [DisputesService, DisputeAiWorker],
   controllers: [DisputesController, AdminDisputesController],
   exports: [DisputesService],
 })

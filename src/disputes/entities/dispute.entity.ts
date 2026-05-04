@@ -40,6 +40,12 @@ export class Dispute {
   @Column('text', { nullable: true })
   adminDecision: string;
 
+  @Column('text', { nullable: true })
+  aiSummary: string;
+
+  @Column('text', { nullable: true })
+  aiRecommendation: string;
+
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   refundAmount: number;
 

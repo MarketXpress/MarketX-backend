@@ -52,6 +52,8 @@ export class DisputesService {
           { id: dto.escrowId },
           { disputeFlag: true },
         );
+  Inject,
+  forwardRef,
 
         this.logger.log(
           `Escrow ${dto.escrowId} frozen and disputeFlag set for dispute ${savedDispute.id}`,
@@ -65,6 +67,7 @@ export class DisputesService {
         );
       }
     }
+import { DisputeAiWorker } from './dispute-ai.worker';
 
     return savedDispute;
   }
@@ -78,6 +81,7 @@ export class DisputesService {
     return dispute;
   }
 
+    private readonly disputeAiWorker: DisputeAiWorker,
   async listDisputes(filter: Partial<Dispute> = {}): Promise<Dispute[]> {
     return this.disputeRepo.find({
       where: filter,
@@ -114,6 +118,12 @@ export class DisputesService {
       !DisputeStateMachine.canTransition(
         dispute.status,
         DisputeStatus.ESCALATED,
+    // Trigger AI worker (TOS string should be passed here)
+    try {
+      await this.disputeAiWorker.processDispute(savedDispute.id, 'PLATFORM_TOS_STRING');
+    } catch (err) {
+      this.logger.error(`AI worker failed for dispute ${savedDispute.id}: ${err.message}`);
+    }
       )
     ) {
       throw new BadRequestException(
@@ -129,6 +139,14 @@ export class DisputesService {
     if (
       dto.status &&
       !DisputeStateMachine.canTransition(dispute.status, dto.status)
+    const updated = await this.disputeRepo.save(dispute);
+    // Re-run AI worker after admin update (optional, can be removed if not needed)
+    try {
+      await this.disputeAiWorker.processDispute(updated.id, 'PLATFORM_TOS_STRING');
+    } catch (err) {
+      this.logger.error(`AI worker failed for dispute ${updated.id}: ${err.message}`);
+    }
+    return updated;
     ) {
       throw new BadRequestException('Invalid status transition');
     }
