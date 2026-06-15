@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore placeholder values in example/sample env files"
+paths = [
+  '''.env\.example''',
+  '''.env\.sample''',
+  '''.env\..+\.example''',
+  '''load-testing/.env\.load-test\.example''',
+]

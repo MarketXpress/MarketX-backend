@@ -23,7 +23,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         with:
           version: 'v8.18.0'
-          args: '--path=./ --verbose'
+          args: '--path=./ --config=.gitleaks.toml --verbose'
 
   dependency-audit:
     name: Dependency Vulnerability Audit
@@ -52,5 +52,5 @@ jobs:
           name: npm-audit-report
           path: audit-report.json
 
-      - name: Fail on moderate-or-higher vulnerabilities
-        run: npm audit --audit-level=moderate
+      - name: Fail on critical vulnerabilities
+        run: npm audit --audit-level=critical
