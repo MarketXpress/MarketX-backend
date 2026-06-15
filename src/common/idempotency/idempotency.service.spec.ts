@@ -3,10 +3,10 @@ import { IdempotencyService } from './idempotency.service';
 describe('IdempotencyService', () => {
   const cache = {
     store: new Map<string, any>(),
-    get: jest.fn(function (this: any, key: string) {
+    get: jest.fn(async function (this: any, key: string) {
       return this.store.get(key);
     }),
-    set: jest.fn(function (this: any, key: string, value: any) {
+    set: jest.fn(async function (this: any, key: string, value: any) {
       this.store.set(key, value);
     }),
   };
@@ -20,7 +20,7 @@ describe('IdempotencyService', () => {
   });
 
   it('executes operation only once per key', async () => {
-    const operation = jest.fn(() => Promise.resolve('ok'));
+    const operation = jest.fn(async () => 'ok');
 
     const first = await service.executeOnce('order:123', operation);
     const second = await service.executeOnce('order:123', operation);
@@ -36,9 +36,7 @@ describe('IdempotencyService', () => {
       .mockRejectedValueOnce(new Error('fail'))
       .mockResolvedValueOnce('recovered');
 
-    await expect(service.executeOnce('job:1', operation)).rejects.toThrow(
-      'fail',
-    );
+    await expect(service.executeOnce('job:1', operation)).rejects.toThrow('fail');
     const second = await service.executeOnce('job:1', operation);
 
     expect(second.executed).toBe(true);

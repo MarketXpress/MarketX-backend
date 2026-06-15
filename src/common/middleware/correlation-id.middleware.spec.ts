@@ -1,11 +1,5 @@
-import {
-  CorrelationIdMiddleware,
-  CORRELATION_ID_HEADER,
-} from './correlation-id.middleware';
-import {
-  getCorrelationId,
-  runWithCorrelationId,
-} from '../logger/correlation-context';
+import { CorrelationIdMiddleware, CORRELATION_ID_HEADER } from './correlation-id.middleware';
+import { getCorrelationId, runWithCorrelationId } from '../logger/correlation-context';
 import { Request, Response } from 'express';
 
 describe('CorrelationIdMiddleware', () => {
@@ -41,10 +35,7 @@ describe('CorrelationIdMiddleware', () => {
     middleware.use(mockReq as Request, mockRes as Response, nextFn);
 
     expect((mockReq as any).correlationId).toBe(existingId);
-    expect(mockRes.setHeader).toHaveBeenCalledWith(
-      CORRELATION_ID_HEADER,
-      existingId,
-    );
+    expect(mockRes.setHeader).toHaveBeenCalledWith(CORRELATION_ID_HEADER, existingId);
   });
 
   it('falls back to x-request-id header', () => {

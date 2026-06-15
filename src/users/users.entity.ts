@@ -78,11 +78,7 @@ export class Users {
   verificationStatus: VerificationStatus;
 
   @ApiProperty({ enum: VerificationLevel })
-  @Column({
-    type: 'enum',
-    enum: VerificationLevel,
-    default: VerificationLevel.BASIC,
-  })
+  @Column({ type: 'enum', enum: VerificationLevel, default: VerificationLevel.BASIC })
   verificationLevel: VerificationLevel;
 
   @Column({ default: false })
@@ -95,11 +91,7 @@ export class Users {
   trustScore: number;
 
   @ApiProperty({ enum: SubscriptionTier })
-  @Column({
-    type: 'enum',
-    enum: SubscriptionTier,
-    default: SubscriptionTier.FREE,
-  })
+  @Column({ type: 'enum', enum: SubscriptionTier, default: SubscriptionTier.FREE })
   subscriptionTier: SubscriptionTier;
 
   @ApiProperty({ enum: SubscriptionStatus })

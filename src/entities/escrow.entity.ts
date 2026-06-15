@@ -20,7 +20,7 @@ export class Escrow {
 
   @Column({ type: 'varchar', length: 66, nullable: true })
   @Index()
-  transactionHash?: string | null; // ✅ corrected typing
+  transactionHash?: string | null;  // ✅ corrected typing
 
   @Column({ default: false })
   released: boolean;

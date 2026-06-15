@@ -15,7 +15,11 @@ describe('ProductsService price history & events', () => {
       create: jest.fn().mockImplementation((dto) => dto),
       save: jest.fn().mockImplementation((dto) => Promise.resolve(dto)),
     };
-    products = new ProductsService(pricing, events, priceHistoryRepo);
+    products = new ProductsService(
+      pricing,
+      events,
+      priceHistoryRepo,
+    );
   });
 
   it('create stores decimal and minor strings and includes rate snapshot in history', async () => {

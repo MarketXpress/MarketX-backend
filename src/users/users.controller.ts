@@ -32,11 +32,7 @@ export class UsersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({
-    status: 201,
-    description: 'User created successfully',
-    type: Users,
-  })
+  @ApiResponse({ status: 201, description: 'User created successfully', type: Users })
   @ApiResponse({ status: 400, description: 'Bad request' })
   create(@Body(ValidationPipe) createUserDto: CreateUserDto): Promise<Users> {
     return this.usersService.create(createUserDto);
@@ -68,11 +64,7 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update authenticated user profile' })
   @ApiBody({ type: UpdateProfileDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Profile updated successfully',
-    type: Users,
-  })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully', type: Users })
   async updateProfile(
     @Request() req: any,
     @Body(ValidationPipe) updateProfileDto: UpdateProfileDto,

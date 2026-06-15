@@ -10,6 +10,9 @@ export function getCorrelationId(): string | undefined {
   return correlationStorage.getStore()?.correlationId;
 }
 
-export function runWithCorrelationId<T>(correlationId: string, fn: () => T): T {
+export function runWithCorrelationId<T>(
+  correlationId: string,
+  fn: () => T,
+): T {
   return correlationStorage.run({ correlationId }, fn);
 }

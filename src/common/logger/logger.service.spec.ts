@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LoggerService } from './logger.service';
+import { runWithCorrelationId } from './correlation-context';
 
 describe('LoggerService', () => {
   let service: LoggerService;

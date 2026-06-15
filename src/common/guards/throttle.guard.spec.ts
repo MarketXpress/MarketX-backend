@@ -4,11 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottleGuard } from './throttle.guard';
 import { RATE_LIMIT_CONFIG } from '../config/rate-limit.config';
 
-const makeContext = (
-  ip: string,
-  path: string,
-  userId?: string,
-): ExecutionContext => {
+const makeContext = (ip: string, path: string, userId?: string): ExecutionContext => {
   const user = userId ? { id: userId } : undefined;
   return {
     switchToHttp: () => ({
