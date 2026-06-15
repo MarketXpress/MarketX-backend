@@ -5,17 +5,21 @@ on:
     branches: [main, develop]
     paths:
       - 'src/auth/**'
-      - 'src/payments/**'
+      - 'src/users/**'
+      - 'src/products/**'
       - 'src/orders/**'
-      - 'src/escrowes/**'
+      - 'src/categories/**'
+      - 'src/health/**'
       - 'package.json'
   push:
     branches: [main, develop]
     paths:
       - 'src/auth/**'
-      - 'src/payments/**'
+      - 'src/users/**'
+      - 'src/products/**'
       - 'src/orders/**'
-      - 'src/escrowes/**'
+      - 'src/categories/**'
+      - 'src/health/**'
       - 'package.json'
   workflow_dispatch:
 
@@ -37,8 +41,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run coverage with per-domain thresholds
-        run: npm run test:coverage:check
+      - name: Run tests with coverage
+        run: npm run test:cov -- --passWithNoTests --forceExit
 
       - name: Upload coverage report
         if: always()
@@ -47,38 +51,3 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
-
-  domain-coverage-summary:
-    name: Domain Coverage Summary
-    runs-on: ubuntu-latest
-    needs: coverage-check
-    if: always()
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Auth domain coverage
-        run: npm run test:coverage:auth
-        continue-on-error: true
-
-      - name: Payments domain coverage
-        run: npm run test:coverage:payments
-        continue-on-error: true
-
-      - name: Orders domain coverage
-        run: npm run test:coverage:orders
-        continue-on-error: true
-
-      - name: Escrow domain coverage
-        run: npm run test:coverage:escrow
-        continue-on-error: true

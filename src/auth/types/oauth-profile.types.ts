@@ -56,7 +56,10 @@ export function isValidOAuthProfile(profile: any): profile is OAuthProfile {
   }
 
   // Validate required fields
-  if (!isString(profile.provider) || !isSupportedOAuthProvider(profile.provider)) {
+  if (
+    !isString(profile.provider) ||
+    !isSupportedOAuthProvider(profile.provider)
+  ) {
     return false;
   }
 
@@ -86,7 +89,9 @@ export function isValidOAuthProfile(profile: any): profile is OAuthProfile {
  * @param profile - The profile object to validate
  * @throws Error with details about validation failure
  */
-export function validateOAuthProfile(profile: any): asserts profile is OAuthProfile {
+export function validateOAuthProfile(
+  profile: any,
+): asserts profile is OAuthProfile {
   if (!isValidOAuthProfile(profile)) {
     throw new Error(
       `Invalid OAuth profile: ${JSON.stringify({

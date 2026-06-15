@@ -40,10 +40,7 @@ export function shouldRewriteLegacyPath(
     return false;
   }
 
-  if (
-    method &&
-    method.toUpperCase() === RequestMethod[RequestMethod.OPTIONS]
-  ) {
+  if (method && method.toUpperCase() === RequestMethod[RequestMethod.OPTIONS]) {
     return false;
   }
 

@@ -6,7 +6,11 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { OrderUpdatedEvent, OrderCompletedEvent, EventNames } from '../common/events';
+import {
+  OrderUpdatedEvent,
+  OrderCompletedEvent,
+  EventNames,
+} from '../common/events';
 import { SupportedCurrency } from '../products/services/pricing.service';
 import { ProductsService } from '../products/products.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
@@ -16,21 +20,32 @@ import { LoggerService } from '../common/logger/logger.service';
 
 @Injectable()
 export class OrdersService {
-  private readonly orderTransitionValidator = new StatusTransitionValidator<OrderStatus>(
-    {
-      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.MANUAL_REVIEW],
-      [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
-      [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
-      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-      [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.REFUNDED],
-      [OrderStatus.COMPLETED]: [OrderStatus.REFUNDED],
-      [OrderStatus.CANCELLED]: [],
-      [OrderStatus.REFUNDED]: [],
-      [OrderStatus.MANUAL_REVIEW]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-    },
-    'Order',
-  );
+  private readonly orderTransitionValidator =
+    new StatusTransitionValidator<OrderStatus>(
+      {
+        [OrderStatus.PENDING]: [
+          OrderStatus.CONFIRMED,
+          OrderStatus.CANCELLED,
+          OrderStatus.MANUAL_REVIEW,
+        ],
+        [OrderStatus.CONFIRMED]: [
+          OrderStatus.PROCESSING,
+          OrderStatus.CANCELLED,
+        ],
+        [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+        [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+        [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+        [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.REFUNDED],
+        [OrderStatus.COMPLETED]: [OrderStatus.REFUNDED],
+        [OrderStatus.CANCELLED]: [],
+        [OrderStatus.REFUNDED]: [],
+        [OrderStatus.MANUAL_REVIEW]: [
+          OrderStatus.CONFIRMED,
+          OrderStatus.CANCELLED,
+        ],
+      },
+      'Order',
+    );
 
   constructor(
     @InjectRepository(Order)
@@ -44,13 +59,19 @@ export class OrdersService {
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     this.logger.info('Creating order', { buyerId: createOrderDto.buyerId });
     return await this.dataSource.transaction(async (manager) => {
-      const paymentCurrency = createOrderDto.paymentCurrency || SupportedCurrency.USD;
+      const paymentCurrency =
+        createOrderDto.paymentCurrency || SupportedCurrency.USD;
 
       const orderItems = createOrderDto.items.map((item) => {
-        const product = this.productsService.findOne(item.productId, paymentCurrency);
+        const product = this.productsService.findOne(
+          item.productId,
+          paymentCurrency,
+        );
 
         if (!product) {
-          throw new NotFoundException(`Product with ID ${item.productId} not found`);
+          throw new NotFoundException(
+            `Product with ID ${item.productId} not found`,
+          );
         }
 
         const price = Number(product.price);
@@ -66,10 +87,15 @@ export class OrdersService {
         };
       });
 
-      const totalAmount = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const totalAmount = orderItems.reduce(
+        (sum, item) => sum + item.subtotal,
+        0,
+      );
 
       if (totalAmount <= 0) {
-        throw new BadRequestException('Order total amount must be greater than zero');
+        throw new BadRequestException(
+          'Order total amount must be greater than zero',
+        );
       }
 
       const order = manager.create(Order, {
@@ -113,7 +139,10 @@ export class OrdersService {
       order.cancelledAt = new Date();
       const cancelledOrder = await manager.save(order);
 
-      this.logger.info('Order cancelled', { orderId: cancelledOrder.id, buyerId: userId });
+      this.logger.info('Order cancelled', {
+        orderId: cancelledOrder.id,
+        buyerId: userId,
+      });
 
       return cancelledOrder;
     });
@@ -121,7 +150,10 @@ export class OrdersService {
 
   async findAll(buyerId?: string): Promise<Order[]> {
     if (buyerId) {
-      return await this.ordersRepository.find({ where: { buyerId }, order: { createdAt: 'DESC' } });
+      return await this.ordersRepository.find({
+        where: { buyerId },
+        order: { createdAt: 'DESC' },
+      });
     }
     return await this.ordersRepository.find({ order: { createdAt: 'DESC' } });
   }
@@ -134,12 +166,21 @@ export class OrdersService {
     return order;
   }
 
-  async updateStatus(id: string, updateOrderStatusDto: UpdateOrderStatusDto): Promise<Order> {
-    this.logger.info('Updating order status', { orderId: id, newStatus: updateOrderStatusDto.status });
+  async updateStatus(
+    id: string,
+    updateOrderStatusDto: UpdateOrderStatusDto,
+  ): Promise<Order> {
+    this.logger.info('Updating order status', {
+      orderId: id,
+      newStatus: updateOrderStatusDto.status,
+    });
     const order = await this.findOne(id);
     const previousStatus = order.status;
 
-    this.orderTransitionValidator.validate(previousStatus, updateOrderStatusDto.status);
+    this.orderTransitionValidator.validate(
+      previousStatus,
+      updateOrderStatusDto.status,
+    );
 
     if (updateOrderStatusDto.status === OrderStatus.PAID) {
       order.paymentStatus = PaymentStatus.PAID;
@@ -149,8 +190,12 @@ export class OrdersService {
     } else {
       const now = new Date();
       switch (updateOrderStatusDto.status) {
-        case OrderStatus.SHIPPED: order.shippedAt = now; break;
-        case OrderStatus.DELIVERED: order.deliveredAt = now; break;
+        case OrderStatus.SHIPPED:
+          order.shippedAt = now;
+          break;
+        case OrderStatus.DELIVERED:
+          order.deliveredAt = now;
+          break;
       }
     }
     order.status = updateOrderStatusDto.status;

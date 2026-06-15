@@ -252,7 +252,7 @@ export class ProductsService {
     });
   }
 
-  async remove(id: string, sellerId: string) {
+  remove(id: string, sellerId: string) {
     const product = this.findOne(id);
 
     if (!product || product.sellerId !== sellerId) {

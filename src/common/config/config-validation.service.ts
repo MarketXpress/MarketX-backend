@@ -20,7 +20,8 @@ export class ConfigValidationService implements OnModuleInit {
       required: false,
       defaultValue: 'development',
       description: 'Node environment (development, production, test)',
-      validate: (value) => ['development', 'production', 'test'].includes(value),
+      validate: (value) =>
+        ['development', 'production', 'test'].includes(value),
     },
     {
       key: 'PORT',
@@ -154,13 +155,14 @@ export class ConfigValidationService implements OnModuleInit {
 
   constructor(private readonly configService: ConfigService) {}
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async onModuleInit() {
     this.logger.log('Validating environment configuration...');
-    await this.validateConfiguration();
+    this.validateConfiguration();
     this.logger.log('Environment configuration validation completed');
   }
 
-  private async validateConfiguration(): Promise<void> {
+  private validateConfiguration(): void {
     const errors: string[] = [];
     const warnings: string[] = [];
 

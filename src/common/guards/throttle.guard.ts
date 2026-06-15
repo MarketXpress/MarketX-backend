@@ -54,7 +54,10 @@ export class ThrottleGuard implements CanActivate {
   private readonly endpointConfigs: Map<string, RateLimitConfig> = new Map(
     ROUTE_TIER_MAP.map(([segment, key]) => [
       segment,
-      { limit: RATE_LIMIT_CONFIG[key].limit, windowMs: RATE_LIMIT_CONFIG[key].windowMs },
+      {
+        limit: RATE_LIMIT_CONFIG[key].limit,
+        windowMs: RATE_LIMIT_CONFIG[key].windowMs,
+      },
     ]),
   );
 
