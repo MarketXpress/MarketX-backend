@@ -21,8 +21,10 @@ describe('ConfigValidationService', () => {
                 DATABASE_USER: 'postgres',
                 DATABASE_PASSWORD: 'password',
                 DATABASE_NAME: 'marketx',
-                JWT_ACCESS_SECRET: 'super-secret-access-key-that-is-long-enough',
-                JWT_REFRESH_SECRET: 'super-secret-refresh-key-that-is-long-enough',
+                JWT_ACCESS_SECRET:
+                  'super-secret-access-key-that-is-long-enough',
+                JWT_REFRESH_SECRET:
+                  'super-secret-refresh-key-that-is-long-enough',
               };
               return mockValues[key];
             }),

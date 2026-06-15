@@ -69,10 +69,12 @@ cp .env.example .env
 Then edit `.env` with your specific configuration. The application will validate required environment variables at startup and provide clear error messages for missing or invalid configurations.
 
 **Required Environment Variables:**
+
 - `DATABASE_HOST`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` - PostgreSQL connection
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` - Authentication secrets (must be at least 32 characters)
 
 **Optional but Recommended:**
+
 - `REDIS_HOST`, `REDIS_PORT` - Redis connection for caching and rate limiting
 - `AMQP_URL` - RabbitMQ for event messaging
 - `STRIPE_API_KEY` - Payment processing
@@ -82,8 +84,10 @@ Then edit `.env` with your specific configuration. The application will validate
 See `.env.example` for a complete list of all available configuration options with descriptions.
 
 # RabbitMQ
+
 AMQP_URL=amqp://guest:guest@localhost:5672
-```
+
+````
 
 ### Local infrastructure (compose profile)
 
@@ -97,7 +101,7 @@ API documentation is generated from NestJS Swagger metadata and published automa
 ```bash
 npm run docs:generate
 npm run docs:render
-```
+````
 
 This creates:
 
@@ -105,7 +109,6 @@ This creates:
 - `docs/api/index.html`
 
 The API docs workflow is defined in `.github/workflows/api-docs.yml` and publishes the rendered docs to GitHub Pages.
-
 
 ### 4. Running the App
 
@@ -139,6 +142,7 @@ $ npm run pr:check
 This command runs the maintained contributor confidence suite: targeted lint checks, targeted TypeScript typechecking, and focused regression tests for the current contribution slice.
 =======
 This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
+
 ## Architecture Decisions
 
 We track major architectural choices in [docs/adr/README.md](docs/adr/README.md). If a change introduces or materially changes module boundaries, async data flow, infrastructure roles, or long-lived domain workflows, update the relevant ADR or add a new one in the same PR.
@@ -153,8 +157,8 @@ We use standardized GitHub issue templates to keep triage fast and consistent. P
 - Tech debt: for shortcuts, brittle patterns, dependency alignment, or missing safeguards that reduce engineering velocity or increase risk over time.
 
 Blank issues are disabled so requests consistently include the details reviewers need to triage, scope, and ship changes safely.
->>>>>>> 19a7b48f152c83b373dd40836b279bc02c65038e
 
+> > > > > > > 19a7b48f152c83b373dd40836b279bc02c65038e
 
 ---
 
@@ -194,6 +198,7 @@ Please read our **[Contributing Guide](CONTRIBUTING.md)** for detailed instructi
 
 **Quick Setup Check:**
 If you encounter any issues during setup, run our environment diagnostics tool:
+
 ```bash
 npm run doctor
 ```

@@ -66,4 +66,4 @@ jobs:
           publish_dir: docs/api
           keep_files: true
           publish_branch: gh-pages
-          commit_message: "Publish API docs from main @${{ github.sha }}"
+          commit_message: 'Publish API docs from main @${{ github.sha }}'

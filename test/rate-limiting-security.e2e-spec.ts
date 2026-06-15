@@ -27,7 +27,7 @@ describe('Rate Limiting Security (E2E)', () => {
 
   describe('ThrottleGuard - Rate Limiting', () => {
     it('should allow requests within the rate limit', async () => {
-      const clientId = 'ip:127.0.0.1';
+      const _clientId = 'ip:127.0.0.1';
 
       // Simulate 3 requests (below typical limit of 5 for auth)
       for (let i = 0; i < 3; i++) {
@@ -41,7 +41,7 @@ describe('Rate Limiting Security (E2E)', () => {
     });
 
     it('should reject requests exceeding the rate limit', async () => {
-      const clientId = 'ip:192.168.1.1';
+      const _clientId = 'ip:192.168.1.1';
       const authLimitConfig = { limit: 5, windowMs: 15 * 60 * 1000 };
 
       // Make requests exceeding the limit
@@ -113,7 +113,7 @@ describe('Rate Limiting Security (E2E)', () => {
     });
 
     it('should handle cleanup of expired records', () => {
-      const initialSize = (throttleGuard as any).clientRequests.size;
+      const _initialSize = (throttleGuard as any).clientRequests.size;
 
       // This would trigger the cleanup interval
       // In a real test, you'd wait for the cleanup interval (5 minutes)

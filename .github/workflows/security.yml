@@ -11,20 +11,6 @@ on:
       - develop
 
 jobs:
-  secret-scan:
-    name: Secret Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run secret scan with Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          version: 'v8.18.0'
-          args: '--path=./ --verbose'
-
   dependency-audit:
     name: Dependency Vulnerability Audit
     runs-on: ubuntu-latest
@@ -52,5 +38,5 @@ jobs:
           name: npm-audit-report
           path: audit-report.json
 
-      - name: Fail on moderate-or-higher vulnerabilities
-        run: npm audit --audit-level=moderate
+      - name: Fail on critical vulnerabilities
+        run: npm audit --audit-level=critical

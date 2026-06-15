@@ -130,7 +130,11 @@ export class User {
   }
 
   toJSON() {
-    const { password, refreshToken, ...result } = this;
+    const {
+      password: _password,
+      refreshToken: _refreshToken,
+      ...result
+    } = this;
     return result;
   }
 }

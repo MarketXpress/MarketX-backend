@@ -8,7 +8,7 @@ import { io as Client, Socket as ClientSocket } from 'socket.io-client';
 
 describe('Chat E2E', () => {
   let app: INestApplication;
-  let server: Server;
+  let _server: Server;
   let httpServer;
   let client1: ClientSocket;
   let client2: ClientSocket;
@@ -23,7 +23,7 @@ describe('Chat E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
     httpServer = createServer();
-    server = new Server(httpServer);
+    _server = new Server(httpServer);
     httpServer.listen(4001);
     client1 = Client('http://localhost:3000');
     client2 = Client('http://localhost:3000');

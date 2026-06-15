@@ -9,7 +9,7 @@ import { AdminGuard } from '../admin.guard';
 
 describe.skip('AdminGuard', () => {
   let guard: AdminGuard;
-  let reflector: Reflector;
+  let _reflector: Reflector;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,7 +25,7 @@ describe.skip('AdminGuard', () => {
     }).compile();
 
     guard = module.get<AdminGuard>(AdminGuard);
-    reflector = module.get<Reflector>(Reflector);
+    _reflector = module.get<Reflector>(Reflector);
   });
 
   const createMockExecutionContext = (user?: any): ExecutionContext => {
