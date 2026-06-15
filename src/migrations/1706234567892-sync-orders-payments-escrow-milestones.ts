@@ -7,9 +7,7 @@ import {
   TableIndex,
 } from 'typeorm';
 
-export class SyncOrdersPaymentsEscrowMilestones1706234567892
-  implements MigrationInterface
-{
+export class SyncOrdersPaymentsEscrowMilestones1706234567892 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     const ordersTable = await queryRunner.getTable('orders');
 

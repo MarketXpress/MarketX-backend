@@ -44,13 +44,18 @@ export class UsersService {
     return await this.userRepository.findOne({ where: { email } });
   }
 
-  async updateProfile(userId: number, updateProfileDto: UpdateProfileDto): Promise<Users> {
+  async updateProfile(
+    userId: number,
+    updateProfileDto: UpdateProfileDto,
+  ): Promise<Users> {
     const user = await this.findOne(userId);
 
     if (updateProfileDto.name !== undefined) user.name = updateProfileDto.name;
     if (updateProfileDto.bio !== undefined) user.bio = updateProfileDto.bio;
-    if (updateProfileDto.avatarUrl !== undefined) user.avatarUrl = updateProfileDto.avatarUrl;
-    if (updateProfileDto.language !== undefined) user.language = updateProfileDto.language.toLowerCase();
+    if (updateProfileDto.avatarUrl !== undefined)
+      user.avatarUrl = updateProfileDto.avatarUrl;
+    if (updateProfileDto.language !== undefined)
+      user.language = updateProfileDto.language.toLowerCase();
 
     return await this.userRepository.save(user);
   }
@@ -67,11 +72,14 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    await this.userRepository.update(id, { status: 'deleted', isActive: false });
+    await this.userRepository.update(id, {
+      status: 'deleted',
+      isActive: false,
+    });
     await this.userRepository.softDelete(id);
   }
 
-  async getUserStats(id: string) {
+  getUserStats(_id: string) {
     return { totalListings: 0, totalSales: 0, rating: 0 };
   }
 
@@ -80,15 +88,25 @@ export class UsersService {
     return user && user.refreshToken === token;
   }
 
-  async updateRefreshToken(userId: number, token: string | null): Promise<void> {
+  async updateRefreshToken(
+    userId: number,
+    token: string | null,
+  ): Promise<void> {
     await this.userRepository.update(userId, { refreshToken: token } as any);
   }
 
-  async update2FA(userId: number, secret: string, enabled: boolean): Promise<void> {
-    await this.userRepository.update(userId, { twoFASecret: secret, twoFAEnabled: enabled } as any);
+  async update2FA(
+    userId: number,
+    secret: string,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.userRepository.update(userId, {
+      twoFASecret: secret,
+      twoFAEnabled: enabled,
+    });
   }
 
   async updatePassword(userId: number, passwordHash: string): Promise<void> {
-    await this.userRepository.update(userId, { password: passwordHash } as any);
+    await this.userRepository.update(userId, { password: passwordHash });
   }
 }

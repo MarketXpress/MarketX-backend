@@ -1,10 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
 
 type CreateCategoryDto = {
@@ -89,7 +85,7 @@ export class CategoriesService {
    * Get all products belonging to a category.
    * Recommended behavior: include products in descendants too.
    */
-  async getProductsByCategory(categoryId: number) {
+  getProductsByCategory(categoryId: number) {
     // Ticket scope says: dummy for now
     return {
       categoryId,

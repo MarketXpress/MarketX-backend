@@ -9,10 +9,7 @@ export class StatusTransitionValidator<T extends string> {
   private validTransitions: Record<T, T[]>;
   private entityName: string;
 
-  constructor(
-    transitions: Record<T, T[]>,
-    entityName: string = 'Entity',
-  ) {
+  constructor(transitions: Record<T, T[]>, entityName: string = 'Entity') {
     this.validTransitions = transitions;
     this.entityName = entityName;
   }

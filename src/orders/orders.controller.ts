@@ -9,7 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
@@ -66,10 +66,7 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
-  async cancelOrder(
-    @Param('id') id: string,
-    @Body('userId') userId: string,
-  ) {
+  async cancelOrder(@Param('id') id: string, @Body('userId') userId: string) {
     if (!userId) {
       throw new Error('User ID is required to cancel an order');
     }

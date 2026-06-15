@@ -14,14 +14,14 @@ export class HealthService {
   }
 
   async checkLiveness() {
-    return await this.health.check([async () => this.applicationLivenessCheck()]);
+    return await this.health.check([() => this.applicationLivenessCheck()]);
   }
 
   async checkReadiness() {
     return await this.health.check([async () => this.dbIndicator.isHealthy()]);
   }
 
-  private async applicationLivenessCheck(): Promise<HealthIndicatorResult> {
+  private applicationLivenessCheck(): HealthIndicatorResult {
     return { application: { status: 'up' } };
   }
 }

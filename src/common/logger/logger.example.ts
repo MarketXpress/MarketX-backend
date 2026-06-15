@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Repository as _Repository } from 'typeorm';
 import { LoggerService } from './logger.service';
 
 /**
@@ -19,7 +19,7 @@ export class ExampleLoggingService {
   /**
    * Example 1: Basic CRUD operation logging
    */
-  async exampleCreateUser(userData: any) {
+  exampleCreateUser(userData: any) {
     try {
       this.logger.info('User creation initiated', {
         email: userData.email,
@@ -51,7 +51,7 @@ export class ExampleLoggingService {
   /**
    * Example 2: Authentication event logging
    */
-  async exampleLogin(email: string, password: string) {
+  exampleLogin(email: string, password: string) {
     try {
       this.logger.info('Login attempt', { email });
 
@@ -83,14 +83,14 @@ export class ExampleLoggingService {
   /**
    * Example 3: Performance monitoring
    */
-  async exampleComplexOperation() {
+  exampleComplexOperation() {
     const startTime = Date.now();
 
     try {
       this.logger.info('Starting complex operation');
 
-      // Simulate expensive operation
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Simulate expensive operation (async in real usage)
+      void new Promise((resolve) => setTimeout(resolve, 1500));
 
       const duration = Date.now() - startTime;
 
@@ -115,7 +115,7 @@ export class ExampleLoggingService {
   /**
    * Example 4: Database operation logging (development only)
    */
-  async exampleDatabaseOperation() {
+  exampleDatabaseOperation() {
     const startTime = Date.now();
 
     try {
@@ -142,7 +142,7 @@ export class ExampleLoggingService {
    * Example 5: Sensitive data handling
    * Note: Passwords and tokens are automatically redacted
    */
-  async exampleSensitiveDataHandling(credentials: {
+  exampleSensitiveDataHandling(credentials: {
     email: string;
     password: string;
     apiKey: string;
@@ -163,7 +163,7 @@ export class ExampleLoggingService {
    * Example 6: Request lifecycle logging
    * Note: This is typically handled by the interceptor automatically
    */
-  async exampleRequestLifecycle() {
+  exampleRequestLifecycle() {
     this.logger.debug('Request processing started');
 
     try {
@@ -213,7 +213,7 @@ export class ExampleLoggingService {
   /**
    * Example 8: Context propagation through operations
    */
-  async exampleContextPropagation(userId: string, orderId: string) {
+  exampleContextPropagation(userId: string, orderId: string) {
     const context = {
       userId,
       orderId,

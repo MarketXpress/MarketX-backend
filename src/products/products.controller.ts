@@ -10,7 +10,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -26,7 +31,11 @@ export class ProductsController {
 
   @Get()
   @ApiOperation({ summary: 'List products with filters & pagination' })
-  @ApiHeader({ name: 'X-Currency', required: false, description: 'Target currency' })
+  @ApiHeader({
+    name: 'X-Currency',
+    required: false,
+    description: 'Target currency',
+  })
   findAll(@Query() filters: FilterProductDto) {
     return this.productsService.findAll(filters);
   }
@@ -52,7 +61,11 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update product' })
-  update(@Param('id') id: string, @Req() req: any, @Body() dto: UpdateProductDto) {
+  update(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() dto: UpdateProductDto,
+  ) {
     return this.productsService.update(id, req.user.id.toString(), dto);
   }
 
@@ -60,7 +73,11 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update product price' })
-  updatePrice(@Param('id') id: string, @Req() req: any, @Body() dto: UpdatePriceDto) {
+  updatePrice(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() dto: UpdatePriceDto,
+  ) {
     return this.productsService.updatePrice(id, req.user.id.toString(), dto);
   }
 
@@ -74,7 +91,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete product' })
-  async remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: any) {
     return this.productsService.remove(id, req.user.id.toString());
   }
 }
