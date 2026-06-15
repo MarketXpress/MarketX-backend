@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -60,9 +57,7 @@ describe('Full Purchase Flow (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
-    );
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
   }, 120_000);
 
@@ -88,11 +83,11 @@ describe('Full Purchase Flow (e2e)', () => {
   // ── Step 2: Browse products ────────────────────────────────────────────────
 
   it('GET /products — returns product catalogue (public)', async () => {
-    const res = await request(app.getHttpServer()).get('/products').expect(200);
+    const res = await request(app.getHttpServer())
+      .get('/products')
+      .expect(200);
 
-    const products: any[] = Array.isArray(res.body)
-      ? res.body
-      : (res.body?.data ?? []);
+    const products: any[] = Array.isArray(res.body) ? res.body : (res.body?.data ?? []);
     expect(Array.isArray(products)).toBe(true);
 
     if (products.length > 0) {

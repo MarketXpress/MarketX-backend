@@ -30,8 +30,8 @@ export class ETagInterceptor implements NestInterceptor {
       map((data) => {
         // Skip if no data or if response already has an ETag or is an error
         if (
-          data === undefined ||
-          data === null ||
+          data === undefined || 
+          data === null || 
           response.getHeader('ETag') ||
           response.statusCode >= 400
         ) {
@@ -63,7 +63,7 @@ export class ETagInterceptor implements NestInterceptor {
 
         // Provide this in the headers explicitly upon return
         response.setHeader('ETag', etag);
-
+        
         // Instruct client to revalidate the cache with the server
         if (!response.getHeader('Cache-Control')) {
           response.setHeader('Cache-Control', 'no-cache');

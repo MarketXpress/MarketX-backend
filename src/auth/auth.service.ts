@@ -11,10 +11,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { generateSecret, generateURI, verify } from 'otplib';
 import * as qrcode from 'qrcode';
 import { UsersService } from '../users/users.service';
-import {
-  OAuthProfile,
-  validateOAuthProfile,
-} from './types/oauth-profile.types';
+import { OAuthProfile, validateOAuthProfile } from './types/oauth-profile.types';
 import { TokenRegistryService } from './token-registry.service';
 import {
   UserPasswordChangedEvent,
@@ -41,7 +38,7 @@ export class AuthService {
         { sub: userId, email },
         { expiresIn: '15m' }, // Short-lived
       ),
-      Promise.resolve(crypto.randomBytes(40).toString('hex')), // Long-lived random string
+      crypto.randomBytes(40).toString('hex'), // Long-lived random string
     ]);
 
     // Store RT in Redis with a TTL (e.g., 7 days)
@@ -51,22 +48,13 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async register(body: {
-    email: string;
-    password: string;
-    firstName?: string;
-    lastName?: string;
-    name?: string;
-  }) {
+  async register(body: { email: string; password: string; firstName?: string; lastName?: string; name?: string }) {
     const hashedPassword = await bcrypt.hash(body.password, 10);
     const user = await this.usersService.create({
       email: body.email,
       password: hashedPassword,
-      name:
-        body.name ??
-        ([body.firstName, body.lastName].filter(Boolean).join(' ') ||
-          body.email),
-    });
+      name: body.name ?? ([body.firstName, body.lastName].filter(Boolean).join(' ') || body.email),
+    } as any);
     return this.getTokens(String(user.id), user.email);
   }
 
@@ -86,10 +74,7 @@ export class AuthService {
    * Refreshes the Access Token and Rotates the Refresh Token
    */
   async refreshTokens(userId: string, email: string, oldRefreshToken: string) {
-    const tokenExists = await this.tokenRegistry.exists(
-      userId,
-      oldRefreshToken,
-    );
+    const tokenExists = await this.tokenRegistry.exists(userId, oldRefreshToken);
 
     if (!tokenExists) {
       /**
@@ -129,7 +114,7 @@ export class AuthService {
     return { qrCodeDataURL, otpauth };
   }
 
-  forgotPassword(email: string): void {
+  async forgotPassword(email: string): Promise<void> {
     const resetUrl = `https://marketx.com/reset-password?token=mock-token-${Date.now()}`;
 
     this.eventEmitter.emit(
@@ -201,10 +186,7 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await this.usersService.updatePassword(
-        parseInt(userId, 10),
-        hashedPassword,
-      );
+      await this.usersService.updatePassword(parseInt(userId, 10), hashedPassword);
 
       // Emit successful audit event
       // Note: We intentionally don't store actual password values, only that a change occurred
@@ -266,10 +248,7 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await this.usersService.updatePassword(
-        parseInt(userId, 10),
-        hashedPassword,
-      );
+      await this.usersService.updatePassword(parseInt(userId, 10), hashedPassword);
 
       // Emit successful audit event
       this.eventEmitter.emit(

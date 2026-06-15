@@ -58,6 +58,8 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware, SecurityMiddleware).forRoutes('*');
+    consumer
+      .apply(CorrelationIdMiddleware, SecurityMiddleware)
+      .forRoutes('*');
   }
 }

@@ -1,3 +1,5 @@
+import { applyDecorators } from '@nestjs/common';
+
 /**
  * Decorator to automatically log method execution time
  *

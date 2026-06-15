@@ -188,9 +188,7 @@ describe('OAuth Profile Types and Validation', () => {
         email: 'user@example.com',
         name: 'John Doe',
       };
-      expect(() => validateOAuthProfile(profile)).toThrow(
-        'Invalid OAuth profile',
-      );
+      expect(() => validateOAuthProfile(profile)).toThrow('Invalid OAuth profile');
     });
 
     it('should throw for missing name', () => {
@@ -199,9 +197,7 @@ describe('OAuth Profile Types and Validation', () => {
         providerId: 'google-123',
         email: 'user@example.com',
       };
-      expect(() => validateOAuthProfile(profile)).toThrow(
-        'Invalid OAuth profile',
-      );
+      expect(() => validateOAuthProfile(profile)).toThrow('Invalid OAuth profile');
     });
 
     it('should throw for empty providerId', () => {
@@ -211,9 +207,7 @@ describe('OAuth Profile Types and Validation', () => {
         email: 'user@example.com',
         name: 'John Doe',
       };
-      expect(() => validateOAuthProfile(profile)).toThrow(
-        'Invalid OAuth profile',
-      );
+      expect(() => validateOAuthProfile(profile)).toThrow('Invalid OAuth profile');
     });
   });
 

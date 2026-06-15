@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/require-await */
 import { Injectable } from '@nestjs/common';
+import { Repository } from 'typeorm';
 import { LoggerService } from './logger.service';
 
 /**

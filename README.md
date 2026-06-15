@@ -1,166 +1,207 @@
 <div align="center">
-  <h1>MarketXpress Backend</h1>
-  <p><strong>Open-source marketplace API built with NestJS and PostgreSQL (Supabase).</strong></p>
-
-  <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="100" alt="Nest Logo" /></a>
-
-  <br /><br />
-
-  ![CI](https://github.com/MarketXpress/MarketX-backend/actions/workflows/ci.yml/badge.svg)
-  ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+  <h1>🛒 MarketX Backend Engine</h1>
+  <p><strong>A high-concurrency, scalable marketplace API built with NestJS, Postgres, and Redis.</strong></p>
+  
+  <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </div>
 
----
+<br />
 
-## About
+## 📖 About MarketX
 
-**MarketXpress** is an open-source marketplace backend. The current codebase provides a clean, working foundation — and the community is actively building features on top of it. If you want to contribute a module, check the [open issues](https://github.com/MarketXpress/MarketX-backend/issues).
+**MarketX** is an ambitious open-source marketplace backend engineered for scale, fraud resistance, and lightning-fast developer experience. Designed initially to power peer-to-peer (P2P) commerce, it provides an expansive suite of tightly coupled e-commerce micro-features.
 
-### Core Modules (live)
+We are currently undertaking a massive open-source contribution wave (via **Drips**) to fortify the architecture, refactor technical debt, and build out enterprise-grade systems like Escrow and AI Fraud Detection.
 
-| Module | Description |
-|---|---|
-| **Auth** | JWT authentication, refresh token rotation, 2FA |
-| **Users** | User profiles and account management |
-| **Products** | Product listings with multi-currency pricing |
-| **Categories** | Product categorization |
-| **Orders** | Order lifecycle management |
-| **Health** | Database and liveness health checks |
+### ✨ Core Features & Domains
 
-### Planned (open for contribution)
-
-Payments, Escrow, Notifications, Search, Reviews, Messaging, Media uploads, and more. See [Issues](https://github.com/MarketXpress/MarketX-backend/issues) for open tasks.
+- **🛍️ Order & Inventory Engine**: Handles concurrent checkout flows, preventing atomic overselling via database locking mechanisms.
+- **🏦 Escrow & Payments**: Securely holds buyer funds in transit and conditionally releases them to sellers upon confirmed delivery. (Currently being wired to Stripe Connect).
+- **🛡️ Fraud Detection**: Analyzes heuristics (IP, velocity, value) to algorithmically score and halt suspicious transactions in real-time.
+- **🧠 Recommendation Engine**: Utilizes browsing history and collaborative filtering to deliver personalized product feeds.
+- **🔄 Refunds & Returns**: Complex workflows allowing buyers to initiate disputes and request refunds securely.
+- **📳 Real-Time Notifications**: Internal dispatcher emitting WebSocket, Email, and SMS alerts for critical lifecycle events.
+- **🐇 Queue & Event Backbone**: Bull-backed workers handle emails, recommendation refreshes, and image processing while RabbitMQ fan-out exchanges broadcast domain events for future microservices.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Framework**: [NestJS](https://nestjs.com/) (Node.js / TypeScript)
-- **Database**: PostgreSQL via [Supabase](https://supabase.com/) + [TypeORM](https://typeorm.io/)
-- **Auth**: Passport.js + JWT
-- **Validation**: class-validator + class-transformer
-- **Testing**: Jest
+- **Database**: PostgreSQL (via [TypeORM](https://typeorm.io/))
+- **Caching & Rate Limiting**: Redis
+- **Testing**: Jest (Unit & E2E) & Supertest
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-### Prerequisites
+Follow these instructions to spin up your local development environment.
 
-- Node.js v20+
-- npm
-- A PostgreSQL database (Supabase free tier works fine)
+### 1. Prerequisites
 
-### 1. Clone & install
+Ensure you have the following installed on your machine:
+
+- **Node.js** (v18+)
+- **npm** or **yarn**
+- **Docker** & **Docker Compose** (for spinning up Postgres and Redis easily)
+
+### 2. Installation
+
+Clone the repository and install the Node dependencies:
 
 ```bash
-git clone https://github.com/MarketXpress/MarketX-backend.git
+git clone https://github.com/Cybermaxi7/MarketX-backend.git
 cd MarketX-backend
 npm install
 ```
 
-### 2. Configure environment
+### 3. Environment Setup
+
+_(Note: As we transition into the open-source phase, we are currently integrating a `docker-compose.yml` to streamline setup)._
+
+For now, assure you have a running **PostgreSQL 15** database and a **Redis** server. Copy the `.env.example` file to `.env` and configure your environment variables:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your values. The minimum required variables:
+Then edit `.env` with your specific configuration. The application will validate required environment variables at startup and provide clear error messages for missing or invalid configurations.
 
-```env
-# Database (Supabase session pooler recommended)
-DATABASE_HOST=your-project.pooler.supabase.com
-DATABASE_PORT=5432
-DATABASE_USER=postgres.your-project-ref
-DATABASE_PASSWORD=your-db-password
-DATABASE_NAME=postgres
+**Required Environment Variables:**
+- `DATABASE_HOST`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` - PostgreSQL connection
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` - Authentication secrets (must be at least 32 characters)
 
-# JWT secrets — use long random strings in production
-JWT_SECRET=change-me-in-production
-JWT_ACCESS_SECRET=change-me-in-production
-JWT_REFRESH_SECRET=change-me-in-production
+**Optional but Recommended:**
+- `REDIS_HOST`, `REDIS_PORT` - Redis connection for caching and rate limiting
+- `AMQP_URL` - RabbitMQ for event messaging
+- `STRIPE_API_KEY` - Payment processing
+- `SENDGRID_API_KEY` - Email sending
+- `AWS_*` variables - File storage and backups
+
+See `.env.example` for a complete list of all available configuration options with descriptions.
+
+# RabbitMQ
+AMQP_URL=amqp://guest:guest@localhost:5672
 ```
 
-### 3. Run
+### Local infrastructure (compose profile)
+
+We provide a minimal Docker Compose profile for local development that starts Postgres, Redis and RabbitMQ. See the full instructions in [docs/local-infra.md](docs/local-infra.md).
+
+
+### API Documentation
+
+API documentation is generated from NestJS Swagger metadata and published automatically when changes land on `main`.
 
 ```bash
-# Development (hot-reload)
-npm run start:dev
-
-# Production
-npm run start:prod
+npm run docs:generate
+npm run docs:render
 ```
 
-The server starts on port `3000` by default. Override with `PORT=3002 npm run start:dev`.
+This creates:
 
-### 4. Verify
+- `docs/api/openapi.json`
+- `docs/api/index.html`
+
+The API docs workflow is defined in `.github/workflows/api-docs.yml` and publishes the rendered docs to GitHub Pages.
+
+
+### 4. Running the App
 
 ```bash
-curl http://localhost:3000/health/live
-# → {"status":"up"}
+# Start the development server (with hot-reload)
+$ npm run start:dev
 
-curl http://localhost:3000/health
-# → {"status":"ok","info":{"database":{"status":"up",...}}}
+# Start in production mode
+$ npm run start:prod
 ```
 
----
+## Security Checks
 
-## API Overview
+Security scans are now part of the default CI process for `main` and `develop` branches, and on pull requests targeting those branches.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/auth/register` | No | Register a new user |
-| POST | `/auth/login` | No | Login, returns JWT pair |
-| POST | `/auth/refresh` | Refresh token | Rotate tokens |
-| GET | `/users` | JWT | List users |
-| GET | `/users/:id` | JWT | Get user by ID |
-| GET | `/products` | JWT | List products |
-| POST | `/products` | JWT | Create product |
-| GET | `/categories` | No | List categories |
-| POST | `/categories` | JWT | Create category |
-| GET | `/orders` | JWT | List orders |
-| POST | `/orders` | JWT | Create order |
-| GET | `/health` | No | Full health check |
-| GET | `/health/live` | No | Liveness probe |
+- Secret scanning is performed with Gitleaks.
+- Dependency vulnerability reporting is performed with `npm audit --audit-level=moderate`.
+- The workflow is defined in `.github/workflows/security.yml`.
 
----
+## Pull Request Quality Checklist
 
-## Running Tests
+We require PRs to follow a quality checklist (tests, migration notes, docs). See [docs/pr-checklist.md](docs/pr-checklist.md) for details and use the repository PR template when opening a PR.
 
-All tests must pass before a PR can be merged.
+Before opening a PR, run the quick confidence suite:
 
 ```bash
-# Run the full test suite
-npm test
+$ npm run pr:check
+```
 
-# Run with coverage report
-npm run test:cov
+<<<<<<< HEAD
+This command runs the maintained contributor confidence suite: targeted lint checks, targeted TypeScript typechecking, and focused regression tests for the current contribution slice.
+=======
+This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
+## Architecture Decisions
 
-# Watch mode (TDD)
-npm run test:watch
+We track major architectural choices in [docs/adr/README.md](docs/adr/README.md). If a change introduces or materially changes module boundaries, async data flow, infrastructure roles, or long-lived domain workflows, update the relevant ADR or add a new one in the same PR.
 
-# Full pre-PR check (lint + typecheck + tests)
-npm run pr:check
+## Issue Reporting
+
+We use standardized GitHub issue templates to keep triage fast and consistent. Please choose the template that matches your request:
+
+- Bug report: for defects, regressions, and unexpected behavior. Include reproduction steps, impact, and a validation plan.
+- Feature request: for new capabilities or meaningful enhancements. Include the problem, expected value, acceptance criteria, and testing/docs expectations.
+- Refactor request: for behavior-preserving structural improvements. Include current pain, goals, non-goals, risks, and regression coverage expectations.
+- Tech debt: for shortcuts, brittle patterns, dependency alignment, or missing safeguards that reduce engineering velocity or increase risk over time.
+
+Blank issues are disabled so requests consistently include the details reviewers need to triage, scope, and ship changes safely.
+>>>>>>> 19a7b48f152c83b373dd40836b279bc02c65038e
+
+
+---
+
+## 🧪 Testing
+
+We heavily value test coverage to ensure marketplace stability.
+
+```bash
+# Run the quick pre-PR confidence suite
+$ npm run pr:check
+
+# Run individual parts of the confidence suite
+$ npm run lint:pr
+$ npm run typecheck:pr
+$ npm run test:pr
+
+# Run the unit test suite
+$ npm run test
+
+# Run the full repository TypeScript typecheck
+$ npm run typecheck
+
+# Watch mode for Active Test-Driven Development
+$ npm run test:watch
+
+# See code coverage report
+$ npm run test:cov
 ```
 
 ---
 
-## Contributing
+## 🤝 Contributing & Open-Source Tasks
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
+Interested in collaborating? We'd love your help!
 
-Browse [open issues](https://github.com/MarketXpress/MarketX-backend/issues) to find something to work on.
+Please read our **[Contributing Guide](CONTRIBUTING.md)** for detailed instructions on how to set up your environment, follow our coding standards, and submit your changes.
+
+**Quick Setup Check:**
+If you encounter any issues during setup, run our environment diagnostics tool:
+```bash
+npm run doctor
+```
+
+To get started, browse our active [GitHub Issues](https://github.com/Cybermaxi7/MarketX-backend/issues). When you find an issue you'd like to tackle, please **read the issue description thoroughly** before beginning your work.
 
 ---
 
-## Security
+## 📜 License & Support
 
-- Secret scanning runs on every push/PR via Gitleaks
-- Dependency audit runs via `npm audit`
-- See `.github/workflows/security.yml`
-
----
-
-## License
-
-MIT
+MarketX is MIT licensed. If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀

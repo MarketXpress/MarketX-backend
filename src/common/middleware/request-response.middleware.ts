@@ -8,12 +8,14 @@ export class RequestResponseMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction): void {
     const startTime = Date.now();
-    const { method, url, ip, headers } = req;
+    const { method, url, query, body, ip, headers } = req;
 
     // Override res.json to capture response
     const originalJson = res.json.bind(res);
+    let responseBody: any;
 
     res.json = function (data: any) {
+      responseBody = data;
       return originalJson(data);
     };
 

@@ -91,22 +91,10 @@ export class Order {
   @Column({ type: 'varchar', length: 3, default: SupportedCurrency.USD })
   currency: SupportedCurrency;
 
-  @Column({
-    name: 'released_amount',
-    type: 'decimal',
-    precision: 12,
-    scale: 2,
-    default: 0,
-  })
+  @Column({ name: 'released_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
   releasedAmount: number;
 
-  @Column({
-    name: 'remaining_amount',
-    type: 'decimal',
-    precision: 12,
-    scale: 2,
-    default: 0,
-  })
+  @Column({ name: 'remaining_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
   remainingAmount: number;
 
   @CreateDateColumn({ name: 'created_at' })
@@ -144,4 +132,5 @@ export class Order {
   @Column({ name: 'seller_id', type: 'uuid', nullable: true })
   @Index()
   sellerId?: string;
+
 }

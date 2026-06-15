@@ -43,8 +43,8 @@ export class CategoriesController {
   @Get(':id/products')
   @ApiOperation({ summary: 'Get products by category (dummy placeholder)' })
   @ApiParam({ name: 'id', type: Number })
-  getProductsByCategory(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.getProductsByCategory(id);
+  async getProductsByCategory(@Param('id', ParseIntPipe) id: number) {
+    await this.categoriesService.getProductsByCategory(id);
     return {
       categoryId: id,
       includeDescendants: true,
