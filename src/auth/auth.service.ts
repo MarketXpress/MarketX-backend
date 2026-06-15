@@ -48,18 +48,26 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
-    // Mock user for demonstration (In production, fetch from DB)
-    const user = {
-      id: 'uuid-123',
-      email: 'test@example.com',
-      password: await bcrypt.hash('password123', 10),
-    };
+  async register(body: { email: string; password: string; firstName?: string; lastName?: string; name?: string }) {
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+    const user = await this.usersService.create({
+      email: body.email,
+      password: hashedPassword,
+      name: body.name ?? ([body.firstName, body.lastName].filter(Boolean).join(' ') || body.email),
+    } as any);
+    return this.getTokens(String(user.id), user.email);
+  }
 
-    if (user && (await bcrypt.compare(password, user.password))) {
-      return this.getTokens(user.id, user.email);
+  async validateUser(email: string, password: string): Promise<any> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || !user.password) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    throw new UnauthorizedException('Invalid credentials');
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    return this.getTokens(String(user.id), user.email);
   }
 
   /**

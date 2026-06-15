@@ -11,9 +11,6 @@ describe('ProductsService price history & events', () => {
   beforeEach(() => {
     pricing = new PricingService();
     events = new EventEmitter2();
-    const mediaService = {
-      deleteProductImages: jest.fn().mockResolvedValue(true),
-    } as any;
     priceHistoryRepo = {
       create: jest.fn().mockImplementation((dto) => dto),
       save: jest.fn().mockImplementation((dto) => Promise.resolve(dto)),
@@ -21,7 +18,6 @@ describe('ProductsService price history & events', () => {
     products = new ProductsService(
       pricing,
       events,
-      mediaService,
       priceHistoryRepo,
     );
   });

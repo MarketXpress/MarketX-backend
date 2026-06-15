@@ -43,37 +43,8 @@ export class SecurityMiddleware implements NestMiddleware {
   }
 
   use(req: Request, res: Response, next: NextFunction): void {
-    try {
-      // 1. Check IP blocking/whitelisting
-      this.checkIPRestrictions(req);
-
-      // 2. Validate request size
-      this.validateRequestSize(req);
-
-      // 3. Apply security headers
-      this.applySecurityHeaders(res);
-
-      // 4. Sanitize request
-      this.sanitizeRequest(req);
-
-      // 5. Log security-relevant information
-      this.logRequestInfo(req);
-
-      next();
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        this.logger.warn(
-          `Security violation: ${error.message} from ${this.getClientIP(req)}`,
-        );
-        res.status(error.getStatus()).json({
-          statusCode: error.getStatus(),
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        next(error);
-      }
-    }
+    this.applySecurityHeaders(res);
+    next();
   }
 
   /**

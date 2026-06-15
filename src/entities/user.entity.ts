@@ -5,18 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
-  OneToMany,
-  ManyToMany,
-  JoinTable,
   Index,
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
-import { Listing } from '../listing/entities/listing.entity';
-import { Transaction } from '../transactions/entities/transaction.entity';
-import { NotificationEntity } from '../notifications/notification.entity';
 
 export enum UserRole {
   BUYER = 'buyer',
@@ -67,19 +61,11 @@ export class User {
   @Column({ nullable: true, unique: true, length: 56 })
   stellarWalletAddress?: string;
 
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.BUYER,
-  })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.BUYER })
   @Index()
   role: UserRole;
 
-  @Column({
-    type: 'enum',
-    enum: UserStatus,
-    default: UserStatus.ACTIVE,
-  })
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
   @Index()
   status: UserStatus;
 
@@ -126,34 +112,6 @@ export class User {
   @DeleteDateColumn()
   deletedAt?: Date;
 
-  // Relationships
-  @OneToMany(() => Listing, (listing) => listing.user)
-  listings: Listing[];
-
-  @OneToMany(() => Transaction, (transaction) => transaction.sender)
-  sentTransactions: Transaction[];
-
-  @OneToMany(() => Transaction, (transaction) => transaction.receiver)
-  receivedTransactions: Transaction[];
-
-  @OneToMany(() => NotificationEntity, (notification) => notification.userId)
-  notifications: NotificationEntity[];
-
-  @ManyToMany(() => Listing, (listing) => listing.favoritedBy)
-  @JoinTable({
-    name: 'user_favorites',
-    joinColumn: {
-      name: 'user_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'listing_id',
-      referencedColumnName: 'id',
-    },
-  })
-  favoriteListings: Listing[];
-
-  // Methods
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {

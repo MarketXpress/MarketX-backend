@@ -7,11 +7,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
-  ManyToMany,
-  OneToMany,
   Index,
 } from 'typeorm';
-import { User } from './user.entity';
 import { Category } from '../categories/entities/category.entity';
 
 export enum ProductStatus {
@@ -34,7 +31,6 @@ export enum ProductCondition {
 @Index(['userId', 'createdAt'])
 @Index(['categoryId', 'createdAt'])
 @Index(['status', 'createdAt'])
-@Index(['price'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -154,18 +150,9 @@ export class Product {
   userId: string;
 
   // Relationships
-  @ManyToOne(() => User, (user) => user.listings, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
   @ManyToOne(() => Category, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'categoryId' })
   category?: Category;
-
-  @ManyToMany(() => User, (user) => user.favoriteListings)
-  favoritedBy: User[];
 
   // Computed properties
   get isAvailable(): boolean {

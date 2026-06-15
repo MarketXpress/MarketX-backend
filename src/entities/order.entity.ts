@@ -2,16 +2,12 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
-  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
-import { User } from './user.entity';
 import { SupportedCurrency } from '../products/services/pricing.service';
-import { PaymentStatus } from '../payments/dto/payment.dto';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -26,9 +22,12 @@ export enum OrderStatus {
   MANUAL_REVIEW = 'manual_review',
 }
 
-export enum EscrowType {
-  STANDARD = 'standard',
-  MILESTONE = 'milestone',
+export enum PaymentStatus {
+  UNPAID = 'unpaid',
+  PAID = 'paid',
+  PARTIALLY_PAID = 'partially_paid',
+  REFUNDED = 'refunded',
+  FAILED = 'failed',
 }
 
 export interface OrderItem {
@@ -63,19 +62,11 @@ export class Order {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   discountAmount: number;
 
-  @Column({
-    type: 'enum',
-    enum: OrderStatus,
-    default: OrderStatus.PENDING,
-  })
+  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   @Index()
   status: OrderStatus;
 
-  @Column({
-    type: 'enum',
-    enum: PaymentStatus,
-    default: PaymentStatus.UNPAID,
-  })
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.UNPAID })
   @Index()
   paymentStatus: PaymentStatus;
 
@@ -97,44 +88,13 @@ export class Order {
   @Column({ nullable: true })
   expectedDeliveryDate?: Date;
 
-  @Column({
-    type: 'varchar',
-    length: 3,
-    default: SupportedCurrency.USD,
-  })
+  @Column({ type: 'varchar', length: 3, default: SupportedCurrency.USD })
   currency: SupportedCurrency;
 
-  @Column({ name: 'escrow_type', type: 'varchar', length: 20, nullable: true })
-  escrowType?: EscrowType;
-
-  @Column({ type: 'jsonb', nullable: true })
-  milestones?: Array<{
-    title: string;
-    description: string;
-    amount: number;
-    percentage: number;
-    type: string;
-    trigger: string;
-    autoRelease: boolean;
-    sortOrder: number;
-  }>;
-
-  @Column({
-    name: 'released_amount',
-    type: 'decimal',
-    precision: 12,
-    scale: 2,
-    default: 0,
-  })
+  @Column({ name: 'released_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
   releasedAmount: number;
 
-  @Column({
-    name: 'remaining_amount',
-    type: 'decimal',
-    precision: 12,
-    scale: 2,
-    default: 0,
-  })
+  @Column({ name: 'remaining_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
   remainingAmount: number;
 
   @CreateDateColumn({ name: 'created_at' })
@@ -173,44 +133,4 @@ export class Order {
   @Index()
   sellerId?: string;
 
-  @ManyToOne(() => User, {
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'buyer_id' })
-  buyer: User;
-
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'seller_id' })
-  seller?: User;
-
-  get orderId(): string {
-    return this.id;
-  }
-
-  get orderDate(): Date {
-    return this.createdAt;
-  }
-
-  get customerName(): string {
-    return this.buyer ? `${this.buyer.firstName} ${this.buyer.lastName}`.trim() : '';
-  }
-
-  get itemCount(): number {
-    return this.items.reduce((sum, item) => sum + item.quantity, 0);
-  }
-
-  get isCompleted(): boolean {
-    return this.status === OrderStatus.COMPLETED;
-  }
-
-  get isCancelled(): boolean {
-    return this.status === OrderStatus.CANCELLED;
-  }
-
-  get displayTotal(): string {
-    return `$${Number(this.totalAmount).toFixed(2)}`;
-  }
 }

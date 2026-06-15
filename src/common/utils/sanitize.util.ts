@@ -1,4 +1,4 @@
-import * as xss from 'xss';
+import { filterXSS as xss } from 'xss';
 
 export function sanitizeInput(input: any): any {
   if (typeof input === 'string') {

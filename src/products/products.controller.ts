@@ -9,8 +9,6 @@ import {
   Query,
   Req,
   UseGuards,
-  UseInterceptors,
-  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
@@ -19,42 +17,22 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
-import { VerifiedSellerGuard } from '../verification/guards/verified-seller.guard';
-import { CurrencyInterceptor } from '../common/interceptors/currency.interceptor';
-import { RateLimitGuard } from '../guards/rate-limit.guard';
-import {
-  RateLimit,
-  UserRateLimit,
-} from '../decorators/rate-limit.decorator';
-import { UserTier } from '../rate-limiting/rate-limit.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Products')
 @Controller('products')
-@UseGuards(RateLimitGuard)
-@UseInterceptors(CurrencyInterceptor)
-@UserRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 30,
-  tierLimits: {
-    [UserTier.FREE]: { maxRequests: 30 },
-    [UserTier.PREMIUM]: { maxRequests: 100 },
-    [UserTier.ENTERPRISE]: { maxRequests: 300 },
-    [UserTier.ADMIN]: { maxRequests: 1000 },
-  },
-})
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
   @ApiOperation({ summary: 'List products with filters & pagination' })
-  @ApiHeader({ name: 'X-Currency', required: false, description: 'Target currency (USD, EUR, GBP, etc.)' })
+  @ApiHeader({ name: 'X-Currency', required: false, description: 'Target currency' })
   findAll(@Query() filters: FilterProductDto) {
     return this.productsService.findAll(filters);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
-  @ApiHeader({ name: 'X-Currency', required: false, description: 'Target currency (USD, EUR, GBP, etc.)' })
   findOne(
     @Param('id') id: string,
     @Query('preferredCurrency') preferredCurrency?: SupportedCurrency,
@@ -64,44 +42,29 @@ export class ProductsController {
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Create product (verified seller only)' })
-  @RateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    maxRequests: 10,
-    tierLimits: {
-      [UserTier.PREMIUM]: { maxRequests: 30 },
-      [UserTier.ENTERPRISE]: { maxRequests: 100 },
-      [UserTier.ADMIN]: { maxRequests: 1000 },
-    },
-    message: 'Too many products created. Please wait before creating more.',
-  })
-  create(@Req() req, @Body() dto: CreateProductDto) {
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create product' })
+  create(@Req() req: any, @Body() dto: CreateProductDto) {
     return this.productsService.create(req.user.id.toString(), dto);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Update product (verified owner only)' })
-  update(@Param('id') id: string, @Req() req, @Body() dto: UpdateProductDto) {
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update product' })
+  update(@Param('id') id: string, @Req() req: any, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, req.user.id.toString(), dto);
   }
 
   @Patch(':id/price')
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Update product price (verified owner only)' })
-  updatePrice(
-    @Param('id') id: string,
-    @Req() req,
-    @Body() dto: UpdatePriceDto,
-  ) {
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update product price' })
+  updatePrice(@Param('id') id: string, @Req() req: any, @Body() dto: UpdatePriceDto) {
     return this.productsService.updatePrice(id, req.user.id.toString(), dto);
   }
 
   @Get(':id/price-history')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get price change history for a product' })
   getPriceHistory(@Param('id') id: string) {
     return this.productsService.getPriceHistory(id);
@@ -109,9 +72,9 @@ export class ProductsController {
 
   @Delete(':id')
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Delete product (verified owner only)' })
-  async remove(@Param('id') id: string, @Req() req) {
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete product' })
+  async remove(@Param('id') id: string, @Req() req: any) {
     return this.productsService.remove(id, req.user.id.toString());
   }
 }

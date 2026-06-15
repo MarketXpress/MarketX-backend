@@ -1,103 +1,35 @@
-import { Logger } from '@nestjs/common';
-import { NestFactory, Reflector } from '@nestjs/core';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { AppValidationPipe } from './common/pipes/validation.pipe';
-import { LoggingInterceptor, ETagInterceptor } from './common/interceptors';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { LoggerService } from './common/logger/logger.service';
-import { LocaleMiddleware } from './middleware/locale.middleware';
 import * as compression from 'compression';
-import {
-  REQUEST_SIZE_LIMITS,
-  CORS_CONFIG,
-} from './common/config/rate-limit.config';
-import { RequestResponseMiddleware } from './common/middleware/request-response.middleware';
 import * as express from 'express';
 import { join } from 'path';
-import { DynamicThrottlerGuard } from './auth/guards/dynamic-throttler.guard';
-import { configureGlobalApiVersioning } from './common/versioning/api-versioning';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
 
-  // Get logger service
-  const loggerService = app.get(LoggerService);
-
-  configureGlobalApiVersioning(app);
-
-  // Enable CORS with security configuration
   app.enableCors({
-    origin: CORS_CONFIG.origin,
-    methods: CORS_CONFIG.methods,
-    allowedHeaders: CORS_CONFIG.allowedHeaders,
-    credentials: CORS_CONFIG.credentials,
-    maxAge: CORS_CONFIG.maxAge,
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:3001').split(','),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   });
 
-  // Apply JSON request size limit
-  app.use(
-    express.json({
-      limit: REQUEST_SIZE_LIMITS.JSON,
-    }) as any,
-  );
-
-  // Apply URL-encoded request size limit
-  app.use(
-    express.urlencoded({
-      limit: REQUEST_SIZE_LIMITS.URLENCODED,
-      extended: true,
-    }) as any,
-  );
-
-  // Enable compression for responses
+  app.use(express.json({ limit: '10mb' }) as any);
+  app.use(express.urlencoded({ limit: '10mb', extended: true }) as any);
   app.use(compression());
-
-  // Serve static files for uploaded images
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
-  // Apply global logging middleware
-  app.use(
-    new RequestResponseMiddleware(loggerService).use.bind(
-      new RequestResponseMiddleware(loggerService),
-    ),
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, transform: true }),
   );
 
-  // Global validation pipe
-  app.useGlobalPipes(new AppValidationPipe());
-
-  // Apply global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter(loggerService));
-
-  // Apply global ETag and logging interceptors
-  app.useGlobalInterceptors(
-    new ETagInterceptor(),
-    new LoggingInterceptor(loggerService),
-  );
-
-  // Apply locale middleware
-  app.use(LocaleMiddleware.prototype.use);
-
-  // Apply global rate limiting guard (dynamic limits via Redis)
-  app.useGlobalGuards(app.get(DynamicThrottlerGuard));
-
-  // Start the application
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
-  logger.log(`Application started on port ${port}`);
+  logger.log(`Application running on port ${port}`);
   logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.log(`CORS origins: ${CORS_CONFIG.origin.join(', ')}`);
-  logger.log(`Max JSON payload: ${REQUEST_SIZE_LIMITS.JSON}`);
-  logger.log(`Max file upload: ${REQUEST_SIZE_LIMITS.FILE}`);
-
-  // Log startup event
-  loggerService.info('Application bootstrap complete', {
-    port,
-    environment: process.env.NODE_ENV || 'development',
-    logLevel: process.env.LOG_LEVEL || 'info',
-  });
 }
 
 bootstrap().catch((error) => {

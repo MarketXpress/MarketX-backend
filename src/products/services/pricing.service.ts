@@ -1,5 +1,4 @@
-import { BadRequestException, Injectable, Optional } from '@nestjs/common';
-import { PriceService } from '../../price/price.service';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 export enum SupportedCurrency {
   XLM = 'XLM',
@@ -39,17 +38,9 @@ export class PricingService {
     [SupportedCurrency.USD]: '1.0000000',
   };
 
-  constructor(@Optional() private readonly priceService?: PriceService) {}
+  constructor() {}
 
   private getLiveRates(): Record<SupportedCurrency, string> {
-    if (this.priceService) {
-      const rates = this.priceService.getRates();
-      return {
-        [SupportedCurrency.XLM]: rates.XLM_USD.toFixed(7),
-        [SupportedCurrency.USDC]: rates.USDC_USD.toFixed(7),
-        [SupportedCurrency.USD]: '1.0000000',
-      };
-    }
     return this.defaultRates;
   }
 

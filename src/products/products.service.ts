@@ -16,7 +16,6 @@ import {
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { PricingService, SupportedCurrency } from './services/pricing.service';
 import { ProductPriceEntity } from './entities/product-price.entity';
-import { MediaService } from '../media/media.service';
 import { ProductPriceUpdatedEvent, EventNames } from '../common/events';
 
 @Injectable()
@@ -26,7 +25,6 @@ export class ProductsService {
   constructor(
     private readonly pricingService: PricingService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly mediaService: MediaService,
     @InjectRepository(ProductPriceEntity)
     private readonly priceHistoryRepo: Repository<ProductPriceEntity>,
   ) {}
@@ -259,14 +257,6 @@ export class ProductsService {
 
     if (!product || product.sellerId !== sellerId) {
       throw new ForbiddenException('Not allowed to delete this product');
-    }
-
-    // Delete all associated images from storage and database
-    try {
-      await this.mediaService.deleteProductImages(id);
-    } catch (error) {
-      // Log error but don't prevent product deletion if image deletion fails
-      console.error(`Failed to delete images for product ${id}:`, error);
     }
 
     this.products = this.products.filter((p) => p.id !== id);
