@@ -4,7 +4,6 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { LoggerService } from '../logger/logger.service';
@@ -67,13 +66,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
 
     // Log based on status code
-    if (status >= 500) {
+    const statusCode = status;
+    if (statusCode >= 500) {
       this.customLogger.error(
         `${status} - ${request.method} ${request.url}`,
         errorLog,
         exception instanceof Error ? exception : new Error(message),
       );
-    } else if (status >= 400) {
+    } else if (statusCode >= 400) {
       this.customLogger.warn(
         `${status} - ${request.method} ${request.url}`,
         errorLog,
@@ -91,7 +91,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       message:
-        process.env.NODE_ENV === 'production' && status === 500
+        process.env.NODE_ENV === 'production' && statusCode === 500
           ? 'Internal Server Error'
           : message,
       ...(process.env.NODE_ENV !== 'production' && {

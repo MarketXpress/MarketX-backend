@@ -80,7 +80,7 @@ export class LoggerService {
             ? JSON.stringify(sanitizedMeta)
             : '';
 
-        return `${timestamp} [${level.toUpperCase()}] ${message}${metaStr ? ' ' + metaStr : ''}`;
+        return `${String(timestamp)} [${String(level).toUpperCase()}] ${String(message)}${metaStr ? ' ' + metaStr : ''}`;
       }),
     );
 

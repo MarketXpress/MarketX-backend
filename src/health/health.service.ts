@@ -10,18 +10,18 @@ export class HealthService {
   ) {}
 
   async checkHealth() {
-    return await this.health.check([async () => this.dbIndicator.isHealthy()]);
+    return this.health.check([() => this.dbIndicator.isHealthy()]);
   }
 
   async checkLiveness() {
-    return await this.health.check([async () => this.applicationLivenessCheck()]);
+    return this.health.check([() => this.applicationLivenessCheck()]);
   }
 
   async checkReadiness() {
-    return await this.health.check([async () => this.dbIndicator.isHealthy()]);
+    return this.health.check([() => this.dbIndicator.isHealthy()]);
   }
 
-  private async applicationLivenessCheck(): Promise<HealthIndicatorResult> {
+  private applicationLivenessCheck(): HealthIndicatorResult {
     return { application: { status: 'up' } };
   }
 }

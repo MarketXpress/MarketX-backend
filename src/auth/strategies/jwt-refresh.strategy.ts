@@ -1,6 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -16,8 +16,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: any) {
-    // The payload contains 'sub' (userId) and 'email' from AuthService.getTokens()
+  validate(payload: any) {
     return { userId: payload.sub, email: payload.email };
   }
 }

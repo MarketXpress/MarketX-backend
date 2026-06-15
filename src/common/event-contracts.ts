@@ -1,6 +1,6 @@
 /**
  * Shared Event Contract Interface
- * 
+ *
  * This file defines the base interface and validation utilities for all domain events.
  * It ensures consistent payload shapes across producers and consumers.
  */
@@ -8,22 +8,22 @@
 export interface BaseEventContract {
   /** Unique identifier for the event instance */
   eventId: string;
-  
+
   /** The type/name of the event (e.g., 'order.created', 'payment.failed') */
   eventType: string;
-  
+
   /** ISO 8601 timestamp when the event occurred */
   occurredAt: string;
-  
+
   /** The domain that produced this event (e.g., 'order', 'payment', 'notification') */
   domain: string;
-  
+
   /** Version of the event schema for backward compatibility */
   schemaVersion: string;
-  
+
   /** Correlation ID for tracing related events */
   correlationId?: string;
-  
+
   /** Causation ID for tracking event chain */
   causationId?: string;
 }
@@ -33,24 +33,24 @@ export interface BaseEventContract {
  */
 export function validateEventContract(event: any): event is BaseEventContract {
   if (!event) return false;
-  
-  const hasRequiredFields = 
+
+  const hasRequiredFields =
     typeof event.eventId === 'string' &&
     typeof event.eventType === 'string' &&
     typeof event.occurredAt === 'string' &&
     typeof event.domain === 'string' &&
     typeof event.schemaVersion === 'string';
-  
+
   if (!hasRequiredFields) {
     return false;
   }
-  
+
   // Validate timestamp is valid ISO 8601
   const timestamp = new Date(event.occurredAt);
   if (isNaN(timestamp.getTime())) {
     return false;
   }
-  
+
   return true;
 }
 
@@ -64,7 +64,7 @@ export function createBaseEventContract(
     correlationId?: string;
     causationId?: string;
     occurredAt?: Date;
-  }
+  },
 ): BaseEventContract {
   return {
     eventId: generateEventId(),
@@ -92,7 +92,7 @@ function generateEventId(): string {
 export interface EventEnvelope<T = any> extends BaseEventContract {
   /** The actual event payload/data */
   payload: T;
-  
+
   /** Metadata about the event producer */
   metadata?: {
     producerService?: string;
@@ -113,7 +113,7 @@ export function createEventEnvelope<T>(
     causationId?: string;
     occurredAt?: Date;
     metadata?: Record<string, any>;
-  }
+  },
 ): EventEnvelope<T> {
   return {
     ...createBaseEventContract(domain, eventType, {
@@ -122,11 +122,13 @@ export function createEventEnvelope<T>(
       occurredAt: options?.occurredAt,
     }),
     payload,
-    metadata: options?.metadata ? {
-      producerService: 'marketx-backend',
-      ...options.metadata,
-    } : {
-      producerService: 'marketx-backend',
-    },
+    metadata: options?.metadata
+      ? {
+          producerService: 'marketx-backend',
+          ...options.metadata,
+        }
+      : {
+          producerService: 'marketx-backend',
+        },
   };
 }

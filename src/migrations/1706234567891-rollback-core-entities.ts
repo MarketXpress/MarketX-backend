@@ -39,10 +39,7 @@ export class RollbackCoreEntities1706234567891 implements MigrationInterface {
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    // This would recreate the tables if we roll forward again
-    // But typically we'd use the original create migration for that
-    console.log('Re-applying core entities migration...');
-    // In practice, you would re-run the original migration
+  public async down(_queryRunner: QueryRunner): Promise<void> {
+    // no-op: original create migration handles re-application
   }
 }

@@ -130,6 +130,7 @@ export const SUSPICIOUS_PATTERNS = [
   /(\bor\b|\band\b|union|select|drop|insert|update|delete|exec|script|javascript|onerror|onclick)/i,
   /(<script|javascript:|on\w+\s*=|eval\(|alert\()/i,
   /\.\.\/\.\.\/|\.\.%2f%2f/i, // Path traversal
+  // eslint-disable-next-line no-control-regex
   /\x00|%00/, // Null byte injection
   /;.*drop|;.*delete|;.*exec/i, // SQL injection
 ] as const;

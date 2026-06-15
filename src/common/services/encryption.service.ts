@@ -19,9 +19,11 @@ export class EncryptionService {
   /**
    * Encrypt a buffer
    */
-  async encrypt(
-    data: Buffer,
-  ): Promise<{ encryptedData: Buffer; iv: Buffer; authTag: Buffer }> {
+  encrypt(data: Buffer): {
+    encryptedData: Buffer;
+    iv: Buffer;
+    authTag: Buffer;
+  } {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(this.algorithm, this.key, iv);
 
@@ -38,11 +40,7 @@ export class EncryptionService {
   /**
    * Decrypt a buffer
    */
-  async decrypt(
-    encryptedData: Buffer,
-    iv: Buffer,
-    authTag: Buffer,
-  ): Promise<Buffer> {
+  decrypt(encryptedData: Buffer, iv: Buffer, authTag: Buffer): Buffer {
     const decipher = crypto.createDecipheriv(this.algorithm, this.key, iv);
     decipher.setAuthTag(authTag);
 
@@ -52,10 +50,8 @@ export class EncryptionService {
   /**
    * Encrypt a string (helper)
    */
-  async encryptString(text: string): Promise<string> {
-    const { encryptedData, iv, authTag } = await this.encrypt(
-      Buffer.from(text),
-    );
+  encryptString(text: string): string {
+    const { encryptedData, iv, authTag } = this.encrypt(Buffer.from(text));
     return JSON.stringify({
       data: encryptedData.toString('hex'),
       iv: iv.toString('hex'),
@@ -66,9 +62,9 @@ export class EncryptionService {
   /**
    * Decrypt to a string (helper)
    */
-  async decryptString(encryptedJson: string): Promise<string> {
+  decryptString(encryptedJson: string): string {
     const { data, iv, tag } = JSON.parse(encryptedJson);
-    const decrypted = await this.decrypt(
+    const decrypted = this.decrypt(
       Buffer.from(data, 'hex'),
       Buffer.from(iv, 'hex'),
       Buffer.from(tag, 'hex'),
