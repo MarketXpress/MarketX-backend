@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -31,7 +28,7 @@ describe('Auth Lifecycle (e2e)', () => {
 
   let accessToken: string;
   let refreshToken: string;
-  let _resetToken: string;
+  let resetToken: string;
 
   beforeAll(async () => {
     // Start PostgreSQL container
@@ -55,9 +52,7 @@ describe('Auth Lifecycle (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
-    );
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
   }, 120_000);
 
@@ -149,7 +144,9 @@ describe('Auth Lifecycle (e2e)', () => {
     });
 
     it('should reject profile access without token', async () => {
-      await request(app.getHttpServer()).get('/auth/profile').expect(401);
+      await request(app.getHttpServer())
+        .get('/auth/profile')
+        .expect(401);
     });
 
     it('should reject profile access with invalid token', async () => {
@@ -248,10 +245,7 @@ describe('Auth Lifecycle (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty(
-        'message',
-        'Logged out successfully',
-      );
+      expect(response.body).toHaveProperty('message', 'Logged out successfully');
     });
 
     it('should reject refresh with invalidated refresh token', async () => {

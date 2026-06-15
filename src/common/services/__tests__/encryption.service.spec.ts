@@ -25,23 +25,23 @@ describe('EncryptionService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should encrypt and decrypt a buffer', () => {
+  it('should encrypt and decrypt a buffer', async () => {
     const data = Buffer.from('Sensitive Information');
-    const { encryptedData, iv, authTag } = service.encrypt(data);
+    const { encryptedData, iv, authTag } = await service.encrypt(data);
 
     expect(encryptedData).toBeDefined();
     expect(encryptedData).not.toEqual(data);
     expect(iv).toBeDefined();
     expect(authTag).toBeDefined();
 
-    const decrypted = service.decrypt(encryptedData, iv, authTag);
+    const decrypted = await service.decrypt(encryptedData, iv, authTag);
     expect(decrypted).toEqual(data);
     expect(decrypted.toString()).toEqual('Sensitive Information');
   });
 
-  it('should encrypt and decrypt a string', () => {
+  it('should encrypt and decrypt a string', async () => {
     const text = 'Hello, World!';
-    const encryptedJson = service.encryptString(text);
+    const encryptedJson = await service.encryptString(text);
 
     expect(typeof encryptedJson).toBe('string');
     const parsed = JSON.parse(encryptedJson);
@@ -49,7 +49,7 @@ describe('EncryptionService', () => {
     expect(parsed.iv).toBeDefined();
     expect(parsed.tag).toBeDefined();
 
-    const decrypted = service.decryptString(encryptedJson);
+    const decrypted = await service.decryptString(encryptedJson);
     expect(decrypted).toEqual(text);
   });
 });

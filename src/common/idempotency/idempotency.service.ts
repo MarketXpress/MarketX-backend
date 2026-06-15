@@ -29,11 +29,7 @@ export class IdempotencyService {
 
     try {
       const result = await operation();
-      await this.cache.set(
-        cacheKey,
-        new Date().toISOString(),
-        ttlSeconds * 1000,
-      );
+      await this.cache.set(cacheKey, new Date().toISOString(), ttlSeconds * 1000);
       return { executed: true, result };
     } catch (error) {
       this.logger.warn(`Idempotent operation failed for key ${cacheKey}`);

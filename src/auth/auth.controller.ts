@@ -16,15 +16,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(
-    @Body()
-    body: {
-      email: string;
-      password: string;
-      firstName: string;
-      lastName: string;
-    },
-  ) {
+  async register(@Body() body: { email: string; password: string; firstName: string; lastName: string }) {
     return this.authService.register(body);
   }
 

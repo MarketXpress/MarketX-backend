@@ -25,7 +25,7 @@ export class StandardizePricesToUSD1700000000000 implements MigrationInterface {
     await queryRunner.query(`
       COMMENT ON TABLE product_prices IS NULL;
     `);
-
+    
     await queryRunner.query(`
       COMMENT ON COLUMN product_prices."basePrice" IS NULL;
     `);
