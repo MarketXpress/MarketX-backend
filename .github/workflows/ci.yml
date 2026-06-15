@@ -36,3 +36,11 @@ jobs:
 
       - name: Run tests
         run: npm test -- --passWithNoTests --forceExit
+        env:
+          NODE_ENV: test
+          DATABASE_USER: test_user
+          DATABASE_PASSWORD: test_password
+          DATABASE_NAME: test_db
+          JWT_SECRET: test-jwt-secret-key-for-ci-testing-only
+          JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
+          JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-ci-testing-only
