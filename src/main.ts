@@ -18,7 +18,10 @@ async function bootstrap() {
     origin: isDev
       ? (origin, callback) => {
           // In dev, allow any localhost / 127.0.0.1 origin plus no-origin requests
-          if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+          if (
+            !origin ||
+            /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+          ) {
             callback(null, true);
           } else {
             callback(new Error(`CORS: origin ${origin} not allowed`));
