@@ -113,20 +113,7 @@ export class SecurityMiddleware implements NestMiddleware {
       res.setHeader(header, value);
     });
 
-    // Add CORS headers if configured
-    if (process.env.CORS_ORIGIN) {
-      res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN);
-      res.setHeader(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      );
-      res.setHeader(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, X-Requested-With',
-      );
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Max-Age', '3600');
-    }
+    // CORS is handled by app.enableCors() in main.ts — do not set headers here.
   }
 
   /**
