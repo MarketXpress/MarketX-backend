@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bull';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -14,6 +15,7 @@ import { OrdersModule } from './orders/orders.module';
 import { HealthModule } from './health/health.module';
 import { CommonModule } from './common/common.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -42,6 +44,17 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
       logging: process.env.DB_LOGGING === 'true',
     }),
 
+    BullModule.forRootAsync({
+      useFactory: () => ({
+        redis: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379', 10),
+          password: process.env.REDIS_PASSWORD || undefined,
+          db: parseInt(process.env.REDIS_DB || '0', 10),
+        },
+      }),
+    }),
+
     LoggerModule,
     CommonModule,
     HealthModule,
@@ -51,6 +64,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     CategoriesModule,
     ProductsModule,
     OrdersModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
