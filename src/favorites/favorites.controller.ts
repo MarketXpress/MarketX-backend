@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Param, ParseUUIDPipe, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { FavoritesService } from './favorites.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'; // Adjust according to your real guard path
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @ApiTags('Favorites')
 @UseGuards(JwtAuthGuard)
