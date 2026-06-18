@@ -8,10 +8,13 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
+import { OrdersExportService } from './orders-export.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import {
   OrderCreatedEvent,
@@ -24,6 +27,7 @@ import {
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
+    private readonly ordersExportService: OrdersExportService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -50,6 +54,29 @@ export class OrdersController {
   @Get()
   async findAll(@Query('buyerId') buyerId?: string) {
     return await this.ordersService.findAll(buyerId);
+  }
+
+  @Get('export')
+  async exportOrders(
+    @Query('format') format: string,
+    @Query('buyerId') buyerId: string,
+    @Res() res: Response,
+  ) {
+    if (!buyerId) {
+      throw new Error('Buyer ID is required to export orders');
+    }
+    
+    if (format !== 'csv' && format !== 'pdf') {
+      throw new Error('Format must be either csv or pdf');
+    }
+
+    const orders = await this.ordersService.findAll(buyerId);
+
+    if (format === 'csv') {
+      return this.ordersExportService.exportAsCsv(orders, res);
+    } else {
+      return this.ordersExportService.exportAsPdf(orders, res);
+    }
   }
 
   @Get(':id')
