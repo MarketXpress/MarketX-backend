@@ -5,7 +5,6 @@ import {
   Post,
   Param,
   Body,
-  UseGuards,
   ParseIntPipe,
   Query,
   ParseBoolPipe,
