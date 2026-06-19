@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { Users } from '../users/users.entity';
 import { User } from '../entities/user.entity';
 
 @Entity('user_favorites')
@@ -19,7 +20,8 @@ export class UserFavorite {
   createdAt: Date;
 
   // Optional relations depending on whether your schema loads product details inline
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Users, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
+  user: Users;
   user: User;
 }

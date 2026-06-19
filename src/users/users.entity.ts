@@ -70,6 +70,9 @@ export class Users {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  isBanned: boolean;
+
   @Column({ nullable: true })
   role: string;
 
