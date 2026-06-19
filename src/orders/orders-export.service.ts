@@ -10,13 +10,7 @@ export class OrdersExportService {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=orders.csv');
 
-    const columns = [
-      'Order ID',
-      'Product Name',
-      'Amount',
-      'Status',
-      'Date',
-    ];
+    const columns = ['Order ID', 'Product Name', 'Amount', 'Status', 'Date'];
 
     const stringifier = stringify({ header: true, columns });
     stringifier.pipe(res);
@@ -61,12 +55,14 @@ export class OrdersExportService {
       doc.fontSize(12).text(`Date: ${order.createdAt.toISOString()}`);
       doc.text(`Status: ${order.status.toUpperCase()}`);
       doc.text(`Total Amount: ${order.totalAmount} ${order.currency}`);
-      
+
       doc.moveDown(0.5);
       doc.text('Items:', { underline: true });
       if (order.items && order.items.length > 0) {
         for (const item of order.items) {
-          doc.text(`- ${item.productName} (x${item.quantity}) - ${item.subtotal} ${item.priceCurrency}`);
+          doc.text(
+            `- ${item.productName} (x${item.quantity}) - ${item.subtotal} ${item.priceCurrency}`,
+          );
         }
       } else {
         doc.text('- No Items');
