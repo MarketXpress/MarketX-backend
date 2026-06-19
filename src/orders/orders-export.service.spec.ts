@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersExportService } from './orders-export.service';
-import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
+import { Order, OrderStatus } from './entities/order.entity';
 import { SupportedCurrency } from '../products/services/pricing.service';
 
 describe('OrdersExportService', () => {
@@ -36,8 +36,22 @@ describe('OrdersExportService', () => {
           createdAt: new Date('2026-01-01T00:00:00Z'),
           totalAmount: 100,
           items: [
-            { productName: 'Item A', subtotal: 50, quantity: 1, price: 50, priceCurrency: SupportedCurrency.USD, productId: 'p1' },
-            { productName: 'Item B', subtotal: 50, quantity: 1, price: 50, priceCurrency: SupportedCurrency.USD, productId: 'p2' },
+            {
+              productName: 'Item A',
+              subtotal: 50,
+              quantity: 1,
+              price: 50,
+              priceCurrency: SupportedCurrency.USD,
+              productId: 'p1',
+            },
+            {
+              productName: 'Item B',
+              subtotal: 50,
+              quantity: 1,
+              price: 50,
+              priceCurrency: SupportedCurrency.USD,
+              productId: 'p2',
+            },
           ],
         } as unknown as Order,
         {
@@ -51,7 +65,10 @@ describe('OrdersExportService', () => {
 
       service.exportAsCsv(mockOrders, mockResponse);
 
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv');
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/csv',
+      );
       expect(mockResponse.setHeader).toHaveBeenCalledWith(
         'Content-Disposition',
         'attachment; filename=orders.csv',
@@ -78,14 +95,24 @@ describe('OrdersExportService', () => {
           totalAmount: 100,
           currency: SupportedCurrency.USD,
           items: [
-            { productName: 'Item A', subtotal: 50, quantity: 1, price: 50, priceCurrency: SupportedCurrency.USD, productId: 'p1' },
+            {
+              productName: 'Item A',
+              subtotal: 50,
+              quantity: 1,
+              price: 50,
+              priceCurrency: SupportedCurrency.USD,
+              productId: 'p1',
+            },
           ],
         } as unknown as Order,
       ];
 
       service.exportAsPdf(mockOrders, mockResponse);
 
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/pdf',
+      );
       expect(mockResponse.setHeader).toHaveBeenCalledWith(
         'Content-Disposition',
         'attachment; filename=orders.pdf',

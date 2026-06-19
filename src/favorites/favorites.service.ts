@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserFavorite } from './favorites.entity';
@@ -13,7 +13,10 @@ export class FavoritesService {
   /**
    * Toggles a product favorite state. Alternates between saving or removing the record.
    */
-  async toggle(userId: string, productId: string): Promise<{ favorited: boolean }> {
+  async toggle(
+    userId: string,
+    productId: string,
+  ): Promise<{ favorited: boolean }> {
     const favorite = await this.favoritesRepository.findOne({
       where: { userId, productId },
     });
@@ -42,7 +45,10 @@ export class FavoritesService {
   /**
    * Evaluates if a unique product record is currently favorited by a user.
    */
-  async isFavorite(userId: string, productId: string): Promise<{ isFavorite: boolean }> {
+  async isFavorite(
+    userId: string,
+    productId: string,
+  ): Promise<{ isFavorite: boolean }> {
     const count = await this.favoritesRepository.count({
       where: { userId, productId },
     });

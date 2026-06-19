@@ -65,7 +65,7 @@ export class OrdersController {
     if (!buyerId) {
       throw new Error('Buyer ID is required to export orders');
     }
-    
+
     if (format !== 'csv' && format !== 'pdf') {
       throw new Error('Format must be either csv or pdf');
     }
