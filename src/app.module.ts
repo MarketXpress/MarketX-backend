@@ -17,6 +17,7 @@ import { CommonModule } from './common/common.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
 
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -67,6 +68,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     OrdersModule,
     WebhooksModule,
     NotificationsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],

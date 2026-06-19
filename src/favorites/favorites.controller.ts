@@ -1,7 +1,15 @@
-import { Controller, Post, Get, Param, ParseUUIDPipe, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { FavoritesService } from './favorites.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'; // Adjust according to your real guard path
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Favorites')
 @UseGuards(JwtAuthGuard)
@@ -21,7 +29,10 @@ export class FavoritesController {
   }
 
   @ApiOperation({ summary: 'Get all user favorites' })
-  @ApiResponse({ status: 200, description: 'Array of favorited product UUID strings returned.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of favorited product UUID strings returned.',
+  })
   @Get()
   async findAll(@Request() req): Promise<string[]> {
     return this.favoritesService.findAllForUser(req.user.id);
@@ -29,7 +40,10 @@ export class FavoritesController {
 
   @ApiOperation({ summary: 'Check if a specific product is favorited' })
   @ApiParam({ name: 'productId', type: 'string', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Evaluation state wrapper returned.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evaluation state wrapper returned.',
+  })
   @Get(':productId')
   async isFavorite(
     @Param('productId', ParseUUIDPipe) productId: string,

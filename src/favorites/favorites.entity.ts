@@ -1,5 +1,11 @@
-import { Entity, PrimaryColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from '../users/entities/user.entity';
+import {
+  Entity,
+  PrimaryColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Users } from '../users/users.entity';
 
 @Entity('user_favorites')
 export class UserFavorite {
@@ -13,7 +19,7 @@ export class UserFavorite {
   createdAt: Date;
 
   // Optional relations depending on whether your schema loads product details inline
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Users, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: Users;
 }
