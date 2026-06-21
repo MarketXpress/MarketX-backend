@@ -174,7 +174,8 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(@scure|@noble|otplib)/)"
+      "node_modules/(?!(.pnpm|@scure|@noble|otplib)/)",
+      "node_modules/@otplib/node_modules/(?!(.pnpm|@scure|@noble)/)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
