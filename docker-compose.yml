@@ -1,161 +1,20 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  # ── NestJS API ────────────────────────────────────────────
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-    container_name: marketx_api
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
+  db:
+    image: postgres:16
+    container_name: marketx-postgres
+    restart: always
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3000
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-marketx}
-      DATABASE_USER: ${DATABASE_USER:-marketx_user}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-secret}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      AMQP_URL: amqp://guest:guest@rabbitmq:5672
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - marketx_net
-
-  # ── PostgreSQL 15 ─────────────────────────────────────────
-  postgres:
-    image: postgres:15-alpine
-    container_name: marketx_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME:-marketx}
-      POSTGRES_USER: ${DATABASE_USER:-marketx_user}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secret}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketx_db
     ports:
-      - '5432:5432'
-    healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'pg_isready -U ${DATABASE_USER:-marketx_user} -d ${DATABASE_NAME:-marketx}',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - marketx_net
-    profiles:
-      - local-dev
+      - "5432:5432"
 
-  # ── Redis ─────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: marketx_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
+  cache:
+    image: redis:7
+    container_name: marketx-redis
+    restart: always
     ports:
-      - '6379:6379'
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - marketx_net
-    profiles:
-      - local-dev
-
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: marketx_rabbitmq
-    restart: unless-stopped
-    ports:
-      - '5672:5672'
-      - '15672:15672'
-    healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - marketx_net
-    profiles:
-      - local-dev
-
-  # ── OWASP ZAP Security Scanner ──────────────────────────────────
-  zap:
-    image: owasp/zap2docker-stable:latest
-    container_name: marketx_zap_scanner
-    restart: "no"
-    command: >
-      zap-baseline.sh 
-      -t http://api:3000/ 
-      -J zap_report.json 
-      -config api.key=zap_api_key_change_in_production 
-      -config scanner.attackOnStart=true
-      -config ascan.attackStrength=INSANE
-      -config ascan.alertThreshold=LOW
-      -config spider.maxDuration=10
-      -config ascan.maxDuration=60
-    volumes:
-      - ./security/zap/payloads:/zap/payloads:ro
-      - ./security/zap/reports:/zap/wrk:rw
-    environment:
-      ZAP_API_KEY: zap_api_key_change_in_production
-      JAVA_OPTS: -Xmx2048m
-    depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - marketx_net
-    profiles:
-      - security-test
-
-  # ── OWASP ZAP Full Scan ─────────────────────────────────────────
-  zap-full:
-    image: owasp/zap2docker-stable:latest
-    container_name: marketx_zap_full_scanner
-    restart: "no"
-    command: >
-      zap-full-scan.py 
-      -t http://api:3000/ 
-      -J zap_full_report.json 
-      -html zap_full_report.html 
-      -l INFORMATION 
-      -T 60
-    volumes:
-      - ./security/zap/payloads:/zap/payloads:ro
-      - ./security/zap/reports:/zap/wrk:rw
-    depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - marketx_net
-    profiles:
-      - security-test
-
-# ── Persistent Volumes ────────────────────────────────────────
-volumes:
-  postgres_data:
-  redis_data:
-
-# ── Network ───────────────────────────────────────────────────
-networks:
-  marketx_net:
-    driver: bridge
+      - "6379:6379"
