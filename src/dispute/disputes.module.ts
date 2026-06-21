@@ -3,12 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DisputesService } from './disputes.service';
 import { DisputesController } from './disputes.controller';
 import { Dispute } from './disputes.entity';
-import { OrdersModule } from '../orders/orders.module'; // Import module to leverage inner service calls safely
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Dispute]),
-    OrdersModule, // Wired up cleanly to utilize ordersService state management definitions
+    OrdersModule,
   ],
   providers: [DisputesService],
   controllers: [DisputesController],
