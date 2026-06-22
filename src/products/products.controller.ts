@@ -9,6 +9,8 @@ import {
   Query,
   Req,
   UseGuards,
+  Inject,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,6 +18,12 @@ import {
   ApiOperation,
   ApiHeader,
 } from '@nestjs/swagger';
+import {
+  CacheInterceptor,
+  CacheTTL,
+  CACHE_MANAGER,
+} from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -27,9 +35,14 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60)
   @ApiOperation({ summary: 'List products with filters & pagination' })
   @ApiHeader({
     name: 'X-Currency',
@@ -41,6 +54,8 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30)
   @ApiOperation({ summary: 'Get product by ID' })
   findOne(
     @Param('id') id: string,
@@ -53,32 +68,49 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create product' })
-  create(@Req() req: any, @Body() dto: CreateProductDto) {
-    return this.productsService.create(req.user.id.toString(), dto);
+  async create(@Req() req: any, @Body() dto: CreateProductDto) {
+    const product = await this.productsService.create(
+      req.user.id.toString(),
+      dto,
+    );
+    await this.cacheManager.reset();
+    return product;
   }
 
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update product' })
-  update(
+  async update(
     @Param('id') id: string,
     @Req() req: any,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.productsService.update(id, req.user.id.toString(), dto);
+    const product = await this.productsService.update(
+      id,
+      req.user.id.toString(),
+      dto,
+    );
+    await this.cacheManager.reset();
+    return product;
   }
 
   @Patch(':id/price')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update product price' })
-  updatePrice(
+  async updatePrice(
     @Param('id') id: string,
     @Req() req: any,
     @Body() dto: UpdatePriceDto,
   ) {
-    return this.productsService.updatePrice(id, req.user.id.toString(), dto);
+    const result = await this.productsService.updatePrice(
+      id,
+      req.user.id.toString(),
+      dto,
+    );
+    await this.cacheManager.reset();
+    return result;
   }
 
   @Get(':id/price-history')
@@ -91,7 +123,12 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete product' })
-  remove(@Param('id') id: string, @Req() req: any) {
-    return this.productsService.remove(id, req.user.id.toString());
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const result = await this.productsService.remove(
+      id,
+      req.user.id.toString(),
+    );
+    await this.cacheManager.reset();
+    return result;
   }
 }
