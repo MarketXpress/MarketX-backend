@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bull';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-yet';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +20,7 @@ import { LoggerModule } from './common/logger/logger.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
+import { EscrowModule } from './escrow/escrow.module';
 
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -58,6 +61,21 @@ import { ReviewModule } from './review/review.module';
       }),
     }),
 
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        const store = await redisStore({
+          socket: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379', 10),
+          },
+          password: process.env.REDIS_PASSWORD || undefined,
+          database: parseInt(process.env.REDIS_CACHE_DB || '10', 10),
+        });
+        return { store, ttl: 60 };
+      },
+    }),
+
     LoggerModule,
     CommonModule,
     HealthModule,
@@ -71,6 +89,7 @@ import { ReviewModule } from './review/review.module';
     NotificationsModule,
     AdminModule,
     ReviewModule,
+    EscrowModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminGuard, RolesGuard],
