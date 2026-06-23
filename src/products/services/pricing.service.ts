@@ -4,6 +4,7 @@ export enum SupportedCurrency {
   XLM = 'XLM',
   USDC = 'USDC',
   USD = 'USD',
+  EUR = 'EUR',
 }
 
 type DecimalValue = {
@@ -13,31 +14,6 @@ type DecimalValue = {
 
 @Injectable()
 export class PricingService {
-  private readonly precisionByCurrency: Record<SupportedCurrency, number> = {
-    [SupportedCurrency.XLM]: 7,
-    [SupportedCurrency.USDC]: 2,
-    [SupportedCurrency.USD]: 2,
-  };
-
-  private readonly minPriceByCurrency: Record<SupportedCurrency, string> = {
-    [SupportedCurrency.XLM]: '0.0000001',
-    [SupportedCurrency.USDC]: '0.01',
-    [SupportedCurrency.USD]: '0.01',
-  };
-
-  private readonly maxPriceByCurrency: Record<SupportedCurrency, string> = {
-    [SupportedCurrency.XLM]: '1000000000',
-    [SupportedCurrency.USDC]: '1000000000',
-    [SupportedCurrency.USD]: '1000000000',
-  };
-
-  // Fallback rates used when no live PriceService is available
-  private readonly defaultRates: Record<SupportedCurrency, string> = {
-    [SupportedCurrency.XLM]: '0.1200000',
-    [SupportedCurrency.USDC]: '1.0000000',
-    [SupportedCurrency.USD]: '1.0000000',
-  };
-
   constructor() {}
 
   private getLiveRates(): Record<SupportedCurrency, string> {
@@ -190,6 +166,31 @@ export class PricingService {
       );
     }
   }
+
+  private readonly precisionByCurrency: Record<SupportedCurrency, number> = {
+    [SupportedCurrency.XLM]: 7,
+    [SupportedCurrency.USDC]: 2,
+    [SupportedCurrency.USD]: 2,
+    [SupportedCurrency.EUR]: 2,
+  };
+  private readonly minPriceByCurrency: Record<SupportedCurrency, string> = {
+    [SupportedCurrency.XLM]: '0.0000001',
+    [SupportedCurrency.USDC]: '0.01',
+    [SupportedCurrency.USD]: '0.01',
+    [SupportedCurrency.EUR]: '0.01',
+  };
+  private readonly maxPriceByCurrency: Record<SupportedCurrency, string> = {
+    [SupportedCurrency.XLM]: '1000000000',
+    [SupportedCurrency.USDC]: '1000000000',
+    [SupportedCurrency.USD]: '1000000000',
+    [SupportedCurrency.EUR]: '1000000000',
+  };
+  private readonly defaultRates: Record<SupportedCurrency, string> = {
+    [SupportedCurrency.XLM]: '0.1200000',
+    [SupportedCurrency.USDC]: '1.0000000',
+    [SupportedCurrency.USD]: '1.0000000',
+    [SupportedCurrency.EUR]: '1.0800000',
+  };
 
   private getScale(value: string): number {
     const decimal = value.split('.')[1];

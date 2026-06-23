@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   ConflictException,
@@ -11,6 +12,8 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { TokenRegistryService } from './token-registry.service';
 import * as bcrypt from 'bcrypt';
+import * as otplib from 'otplib';
+import * as qrcode from 'qrcode';
 
 // Mock otplib to avoid ES module transformation issues
 jest.mock('otplib', () => ({
@@ -18,8 +21,6 @@ jest.mock('otplib', () => ({
   generateURI: jest.fn(),
   verify: jest.fn(),
 }));
-
-const otplib = require('otplib');
 
 // Mock qrcode to avoid ES module transformation issues
 jest.mock('qrcode', () => ({
@@ -31,7 +32,7 @@ describe('AuthService', () => {
   let usersService: UsersService;
   let jwtService: JwtService;
   let tokenRegistry: TokenRegistryService;
-  let eventEmitter: EventEmitter2;
+  let _eventEmitter: EventEmitter2;
 
   const mockUser = {
     id: 1,
@@ -96,7 +97,7 @@ describe('AuthService', () => {
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
     tokenRegistry = module.get<TokenRegistryService>(TokenRegistryService);
-    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
+    _eventEmitter = module.get<EventEmitter2>(EventEmitter2);
 
     // Reset mocks before each test
     jest.clearAllMocks();
@@ -323,7 +324,6 @@ describe('AuthService', () => {
 
       jest.spyOn(otplib, 'generateSecret').mockReturnValue(mockSecret);
       jest.spyOn(otplib, 'generateURI').mockReturnValue(mockOtpauth);
-      const qrcode = require('qrcode');
       jest.spyOn(qrcode, 'toDataURL').mockResolvedValue(mockQrCode);
 
       (usersService.update2FA as jest.Mock).mockResolvedValue(undefined);

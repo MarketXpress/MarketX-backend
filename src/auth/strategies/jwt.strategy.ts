@@ -25,7 +25,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       return { id: payload.sub, userId: payload.sub, email: payload.email };
     }
 
-    const { password, refreshToken, ...safeUser } = user as any;
+    const {
+      password: _password,
+      refreshToken: _refreshToken,
+      ...safeUser
+    } = user as any;
     return {
       ...safeUser,
       id: user.id,

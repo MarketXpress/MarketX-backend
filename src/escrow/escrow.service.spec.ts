@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -74,7 +75,7 @@ describe('EscrowService', () => {
     debug: jest.fn(),
   };
 
-  const mockConfigService: Partial<ConfigService> = {
+  const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: string) => {
       const config: Record<string, string> = {
         STELLAR_HORIZON_URL: 'https://horizon-testnet.stellar.org',

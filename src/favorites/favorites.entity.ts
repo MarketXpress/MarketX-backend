@@ -6,7 +6,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Users } from '../users/users.entity';
-import { User } from '../entities/user.entity';
 
 @Entity('user_favorites')
 export class UserFavorite {

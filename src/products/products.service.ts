@@ -252,14 +252,15 @@ export class ProductsService {
     });
   }
 
-  remove(id: string, sellerId: string) {
-    const product = this.findOne(id);
+  remove(id: string, userId: string) {
+    const product = this.products.find((p) => p.id === id);
 
-    if (!product || product.sellerId !== sellerId) {
+    if (!product || product.sellerId !== userId) {
       throw new ForbiddenException('Not allowed to delete this product');
     }
 
     this.products = this.products.filter((p) => p.id !== id);
+
     return { deleted: true };
   }
 

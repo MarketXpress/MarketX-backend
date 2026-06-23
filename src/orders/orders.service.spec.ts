@@ -33,7 +33,7 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
     ...overrides,
-  } as Order;
+  };
 }
 
 function makeProduct(
@@ -124,7 +124,7 @@ describe('OrdersService', () => {
       const result = await service.create({
         buyerId: 'buyer-uuid',
         items: [{ productId: 'product-uuid', quantity: 2 }],
-      } as any);
+      });
 
       expect(productsService.findOne).toHaveBeenCalledWith(
         'product-uuid',
@@ -155,7 +155,7 @@ describe('OrdersService', () => {
         buyerId: 'buyer-uuid',
         items: [{ productId: 'product-uuid', quantity: 1 }],
         paymentCurrency: SupportedCurrency.EUR,
-      } as any);
+      });
 
       expect(productsService.findOne).toHaveBeenCalledWith(
         'product-uuid',
@@ -197,7 +197,7 @@ describe('OrdersService', () => {
       const order = makeOrder({ status, ...overrides });
       ordersRepo.findOne.mockResolvedValue(order);
       // Return the mutated object so callers can inspect field changes
-      ordersRepo.save.mockImplementation(async (o: Order) => o);
+      ordersRepo.save.mockImplementation((o: Order) => Promise.resolve(o));
       return order;
     }
 
@@ -294,7 +294,7 @@ describe('OrdersService', () => {
     function seedOrder(status: OrderStatus) {
       const order = makeOrder({ status });
       ordersRepo.findOne.mockResolvedValue(order);
-      ordersRepo.save.mockImplementation(async (o: Order) => o);
+      ordersRepo.save.mockImplementation((o: Order) => Promise.resolve(o));
       return order;
     }
 

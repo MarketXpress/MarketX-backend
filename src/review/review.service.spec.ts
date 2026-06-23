@@ -29,7 +29,7 @@ function makeSavedReview(overrides: Partial<Review> = {}): Review {
     body: 'Great product',
     createdAt: new Date(),
     ...overrides,
-  } as Review;
+  };
 }
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────

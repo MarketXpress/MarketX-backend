@@ -23,7 +23,7 @@ function makeCategory(overrides: Partial<Category> = {}): Category {
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
-  } as Category;
+  };
 }
 
 describe('CategoriesService', () => {
