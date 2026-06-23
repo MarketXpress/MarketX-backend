@@ -52,9 +52,7 @@ export class EscrowController {
   })
   @ApiResponse({ status: 404, description: 'Escrow not found.' })
   @ApiResponse({ status: 500, description: 'Stellar network error.' })
-  async release(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Escrow> {
+  async release(@Param('id', ParseUUIDPipe) id: string): Promise<Escrow> {
     return this.escrowService.releaseEscrow(id);
   }
 
@@ -63,9 +61,7 @@ export class EscrowController {
   @ApiParam({ name: 'id', description: 'Escrow UUID', type: String })
   @ApiResponse({ status: 200, description: 'Escrow record.' })
   @ApiResponse({ status: 404, description: 'Escrow not found.' })
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Escrow> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Escrow> {
     return this.escrowService.findOne(id);
   }
 }

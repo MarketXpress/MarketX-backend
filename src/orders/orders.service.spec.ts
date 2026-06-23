@@ -36,7 +36,9 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
   } as Order;
 }
 
-function makeProduct(overrides: Partial<{ price: string; currency: SupportedCurrency }> = {}) {
+function makeProduct(
+  overrides: Partial<{ price: string; currency: SupportedCurrency }> = {},
+) {
   return {
     id: 'product-uuid',
     name: 'Widget',
@@ -66,7 +68,9 @@ function makeManager() {
 
 function makeDataSource(manager: ReturnType<typeof makeManager>) {
   return {
-    transaction: jest.fn().mockImplementation((cb: (m: typeof manager) => unknown) => cb(manager)),
+    transaction: jest
+      .fn()
+      .mockImplementation((cb: (m: typeof manager) => unknown) => cb(manager)),
   };
 }
 
@@ -79,7 +83,12 @@ describe('OrdersService', () => {
   let dataSource: ReturnType<typeof makeDataSource>;
   let productsService: { findOne: jest.Mock };
   let eventEmitter: { emit: jest.Mock };
-  let logger: { info: jest.Mock; error: jest.Mock; warn: jest.Mock; debug: jest.Mock };
+  let logger: {
+    info: jest.Mock;
+    error: jest.Mock;
+    warn: jest.Mock;
+    debug: jest.Mock;
+  };
 
   beforeEach(() => {
     ordersRepo = makeOrdersRepo();
@@ -87,7 +96,12 @@ describe('OrdersService', () => {
     dataSource = makeDataSource(manager);
     productsService = { findOne: jest.fn() };
     eventEmitter = { emit: jest.fn() };
-    logger = { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+    logger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
 
     service = new OrdersService(
       ordersRepo as any,
@@ -130,7 +144,9 @@ describe('OrdersService', () => {
     });
 
     it('forwards the paymentCurrency from the DTO to productsService.findOne', async () => {
-      productsService.findOne.mockReturnValue(makeProduct({ currency: SupportedCurrency.EUR }));
+      productsService.findOne.mockReturnValue(
+        makeProduct({ currency: SupportedCurrency.EUR }),
+      );
       const order = makeOrder({ currency: SupportedCurrency.EUR });
       manager.create.mockReturnValue(order);
       manager.save.mockResolvedValue(order);
@@ -310,7 +326,9 @@ describe('OrdersService', () => {
 
       await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED });
 
-      const emittedNames = eventEmitter.emit.mock.calls.map(([name]: [string]) => name);
+      const emittedNames = eventEmitter.emit.mock.calls.map(
+        ([name]: [string]) => name,
+      );
       expect(emittedNames).toContain(EventNames.ORDER_UPDATED);
       expect(emittedNames).toContain(EventNames.ORDER_COMPLETED);
 
@@ -332,7 +350,9 @@ describe('OrdersService', () => {
 
       await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED });
 
-      const emittedNames = eventEmitter.emit.mock.calls.map(([name]: [string]) => name);
+      const emittedNames = eventEmitter.emit.mock.calls.map(
+        ([name]: [string]) => name,
+      );
       expect(emittedNames).not.toContain(EventNames.ORDER_COMPLETED);
     });
 

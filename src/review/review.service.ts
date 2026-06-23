@@ -98,7 +98,9 @@ export class ReviewsService {
       }
 
       // 3. Duplicate review check
-      const existing = await em.findOne(Review, { where: { userId, productId } });
+      const existing = await em.findOne(Review, {
+        where: { userId, productId },
+      });
       if (existing) {
         throw new ConflictException('You have already reviewed this product');
       }

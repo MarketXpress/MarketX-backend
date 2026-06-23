@@ -77,7 +77,6 @@ export class ProductsController {
     return product;
   }
 
-
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

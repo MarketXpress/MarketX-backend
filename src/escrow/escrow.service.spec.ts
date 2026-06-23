@@ -85,9 +85,11 @@ describe('EscrowService', () => {
   };
 
   const mockManager = {
-    query: jest.fn().mockResolvedValue([
-      { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
-    ]),
+    query: jest
+      .fn()
+      .mockResolvedValue([
+        { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
+      ]),
   };
 
   beforeEach(async () => {

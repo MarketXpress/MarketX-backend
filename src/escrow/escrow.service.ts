@@ -83,9 +83,8 @@ export class EscrowService {
 
     try {
       // Fund the escrow account via Friendbot
-      const fundingTxHash = await this.fundViaFriendbotAndGetHash(
-        escrowPublicKey,
-      );
+      const fundingTxHash =
+        await this.fundViaFriendbotAndGetHash(escrowPublicKey);
 
       this.logger.info('Escrow keypair funded via Friendbot', {
         escrowId: escrow.id,
@@ -235,9 +234,7 @@ export class EscrowService {
   /**
    * Calls Friendbot to fund a given public key and returns the transaction hash.
    */
-  private async fundViaFriendbotAndGetHash(
-    publicKey: string,
-  ): Promise<string> {
+  private async fundViaFriendbotAndGetHash(publicKey: string): Promise<string> {
     const response = await axios.get<{ hash: string }>(this.friendbotUrl, {
       params: { addr: publicKey },
     });
@@ -267,8 +264,7 @@ export class EscrowService {
         [sellerId],
       );
 
-      const address: string | undefined =
-        userRow?.[0]?.stellarWalletAddress;
+      const address: string | undefined = userRow?.[0]?.stellarWalletAddress;
 
       if (address) {
         return address;

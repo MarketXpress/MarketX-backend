@@ -1,4 +1,11 @@
-import { IsInt, IsString, IsOptional, Min, Max, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  IsString,
+  IsOptional,
+  Min,
+  Max,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateReviewDto {
   @IsInt()

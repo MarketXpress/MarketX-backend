@@ -6,10 +6,7 @@ import { Dispute } from './disputes.entity';
 import { OrdersModule } from '../orders/orders.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Dispute]),
-    OrdersModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Dispute]), OrdersModule],
   providers: [DisputesService],
   controllers: [DisputesController],
   exports: [DisputesService],
