@@ -2,13 +2,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ReviewsController } from './review.controller';
 import { ReviewsService } from './review.service';
 
-describe('ReviewController', () => {
+describe('ReviewsController', () => {
   let controller: ReviewsController;
+
+  const mockReviewsService = {
+    create: jest.fn(),
+    findByProduct: jest.fn(),
+  } as jest.Mocked<Pick<ReviewsService, 'create' | 'findByProduct'>>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ReviewsController],
-      providers: [ReviewsService],
+      providers: [
+        {
+          provide: ReviewsService,
+          useValue: mockReviewsService,
+        },
+      ],
     }).compile();
 
     controller = module.get<ReviewsController>(ReviewsController);
