@@ -2,8 +2,8 @@ import { Processor, Process } from '@nestjs/bull';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Job } from 'bull';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Escrow } from '../entities/escrow.entity';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
 import { Transaction, TransactionStatus } from '../entities/transaction.entity';
 import { LoggerService } from '../common/logger/logger.service';
@@ -23,6 +23,7 @@ export class StellarWebhookProcessor {
     private readonly logger: LoggerService,
   ) {}
 
+  @OnEvent(EventNames.PAYMENT_CONFIRMED)
   @Process('process-payment')
   async handleProcessPayment(job: Job<any>) {
     const { transactionHash } = job.data;
@@ -47,19 +48,19 @@ export class StellarWebhookProcessor {
           );
         }
 
-        if (escrow.released) {
+        if (escrow.status !== EscrowStatus.PENDING) {
           this.logger.warn(
-            `Escrow already released for transactionHash: ${transactionHash}`,
+            `Escrow already processed (status: ${escrow.status}) for transactionHash: ${transactionHash}`,
             { escrowId: escrow.id },
           );
           return;
         }
 
-        // 2. Advance escrow state (set released to true)
-        escrow.released = true;
+        // 2. Advance escrow state (set status to FUNDED)
+        escrow.status = EscrowStatus.FUNDED;
         await manager.save(escrow);
         this.logger.info(
-          `Escrow state advanced (released = true) for transactionHash: ${transactionHash}`,
+          `Escrow state advanced (status = FUNDED) for transactionHash: ${transactionHash}`,
           { escrowId: escrow.id },
         );
 
