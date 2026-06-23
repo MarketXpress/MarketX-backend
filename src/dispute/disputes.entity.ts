@@ -22,10 +22,9 @@ export class Dispute {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'order_id' })
+  @Column({ name: 'order_id', type: 'uuid' })
   orderId: string;
 
-  // Aligned to match our production sequential integer user identity column type
   @Column({ name: 'raised_by', type: 'integer' })
   raisedBy: number;
 
