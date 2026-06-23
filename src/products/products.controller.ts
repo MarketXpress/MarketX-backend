@@ -73,9 +73,10 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    await this.cacheManager.reset();
+    await (this.cacheManager as any).reset();
     return product;
   }
+
 
   @Patch(':id')
   @ApiBearerAuth()
@@ -91,7 +92,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    await this.cacheManager.reset();
+    await (this.cacheManager as any).reset();
     return product;
   }
 
@@ -109,7 +110,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    await this.cacheManager.reset();
+    await (this.cacheManager as any).reset();
     return result;
   }
 
@@ -128,7 +129,7 @@ export class ProductsController {
       id,
       req.user.id.toString(),
     );
-    await this.cacheManager.reset();
+    await (this.cacheManager as any).reset();
     return result;
   }
 }

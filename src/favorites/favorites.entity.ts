@@ -23,5 +23,4 @@ export class UserFavorite {
   @ManyToOne(() => Users, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: Users;
-  user: User;
 }
