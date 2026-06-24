@@ -26,6 +26,7 @@ import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     WebhooksModule,
     NotificationsModule,
     AdminModule,
+    ReviewModule,
     EscrowModule,
   ],
   controllers: [AppController],

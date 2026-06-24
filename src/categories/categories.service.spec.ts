@@ -23,7 +23,7 @@ function makeCategory(overrides: Partial<Category> = {}): Category {
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
-  } as Category;
+  };
 }
 
 describe('CategoriesService', () => {
@@ -81,9 +81,9 @@ describe('CategoriesService', () => {
     it('throws BadRequestException when parentId does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
 
-      await expect(service.create({ name: 'Sub', parentId: 99 })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create({ name: 'Sub', parentId: 99 }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException on duplicate name (unique constraint violation)', async () => {
@@ -149,7 +149,9 @@ describe('CategoriesService', () => {
     });
 
     it('throws BadRequestException when the category has active child categories', async () => {
-      repo.findOne.mockResolvedValue(makeCategory({ id: 1, name: 'Electronics' }));
+      repo.findOne.mockResolvedValue(
+        makeCategory({ id: 1, name: 'Electronics' }),
+      );
       repo.count.mockResolvedValue(3);
 
       await expect(service.remove(1)).rejects.toThrow(BadRequestException);

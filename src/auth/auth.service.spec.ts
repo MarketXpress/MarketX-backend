@@ -1,11 +1,19 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { TokenRegistryService } from './token-registry.service';
 import * as bcrypt from 'bcrypt';
+import * as otplib from 'otplib';
+import * as qrcode from 'qrcode';
 
 // Mock otplib to avoid ES module transformation issues
 jest.mock('otplib', () => ({
@@ -13,8 +21,6 @@ jest.mock('otplib', () => ({
   generateURI: jest.fn(),
   verify: jest.fn(),
 }));
-
-const otplib = require('otplib');
 
 // Mock qrcode to avoid ES module transformation issues
 jest.mock('qrcode', () => ({
@@ -26,7 +32,7 @@ describe('AuthService', () => {
   let usersService: UsersService;
   let jwtService: JwtService;
   let tokenRegistry: TokenRegistryService;
-  let eventEmitter: EventEmitter2;
+  let _eventEmitter: EventEmitter2;
 
   const mockUser = {
     id: 1,
@@ -91,7 +97,7 @@ describe('AuthService', () => {
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
     tokenRegistry = module.get<TokenRegistryService>(TokenRegistryService);
-    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
+    _eventEmitter = module.get<EventEmitter2>(EventEmitter2);
 
     // Reset mocks before each test
     jest.clearAllMocks();
@@ -106,9 +112,15 @@ describe('AuthService', () => {
         lastName: 'Doe',
       };
 
-      const bcryptHashSpy = jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword' as never);
-      (usersService.create as jest.Mock).mockResolvedValue(getMockUser('new@example.com'));
-      (jwtService.signAsync as jest.Mock).mockResolvedValue(mockTokens.accessToken);
+      const bcryptHashSpy = jest
+        .spyOn(bcrypt, 'hash')
+        .mockResolvedValue('hashedPassword' as never);
+      (usersService.create as jest.Mock).mockResolvedValue(
+        getMockUser('new@example.com'),
+      );
+      (jwtService.signAsync as jest.Mock).mockResolvedValue(
+        mockTokens.accessToken,
+      );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
       const result = await service.register(registerDto);
@@ -137,7 +149,9 @@ describe('AuthService', () => {
       const conflictError = new ConflictException('Email already exists');
       (usersService.create as jest.Mock).mockRejectedValue(conflictError);
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should use name from firstName and lastName when provided', async () => {
@@ -150,7 +164,9 @@ describe('AuthService', () => {
 
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword' as never);
       (usersService.create as jest.Mock).mockResolvedValue(mockUser);
-      (jwtService.signAsync as jest.Mock).mockResolvedValue(mockTokens.accessToken);
+      (jwtService.signAsync as jest.Mock).mockResolvedValue(
+        mockTokens.accessToken,
+      );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
       await service.register(registerDto);
@@ -170,7 +186,9 @@ describe('AuthService', () => {
 
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword' as never);
       (usersService.create as jest.Mock).mockResolvedValue(mockUser);
-      (jwtService.signAsync as jest.Mock).mockResolvedValue(mockTokens.accessToken);
+      (jwtService.signAsync as jest.Mock).mockResolvedValue(
+        mockTokens.accessToken,
+      );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
       await service.register(registerDto);
@@ -187,44 +205,54 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException when user not found', async () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.validateUser('nonexistent@example.com', 'password')).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.validateUser('nonexistent@example.com', 'password')).rejects.toThrow(
-        'Invalid credentials',
-      );
+      await expect(
+        service.validateUser('nonexistent@example.com', 'password'),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateUser('nonexistent@example.com', 'password'),
+      ).rejects.toThrow('Invalid credentials');
     });
 
     it('should throw UnauthorizedException when password is incorrect', async () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
-      await expect(service.validateUser('test@example.com', 'wrongPassword')).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.validateUser('test@example.com', 'wrongPassword')).rejects.toThrow(
-        'Invalid credentials',
-      );
+      await expect(
+        service.validateUser('test@example.com', 'wrongPassword'),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateUser('test@example.com', 'wrongPassword'),
+      ).rejects.toThrow('Invalid credentials');
     });
 
     it('should throw UnauthorizedException when user has no password', async () => {
       const userWithoutPassword = { ...mockUser, password: null };
-      (usersService.findByEmail as jest.Mock).mockResolvedValue(userWithoutPassword);
-
-      await expect(service.validateUser('test@example.com', 'password')).rejects.toThrow(
-        UnauthorizedException,
+      (usersService.findByEmail as jest.Mock).mockResolvedValue(
+        userWithoutPassword,
       );
+
+      await expect(
+        service.validateUser('test@example.com', 'password'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should return tokens on valid credentials', async () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      (jwtService.signAsync as jest.Mock).mockResolvedValue(mockTokens.accessToken);
+      (jwtService.signAsync as jest.Mock).mockResolvedValue(
+        mockTokens.accessToken,
+      );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.validateUser('test@example.com', 'correctPassword');
+      const result = await service.validateUser(
+        'test@example.com',
+        'correctPassword',
+      );
 
-      expect(bcrypt.compare).toHaveBeenCalledWith('correctPassword', 'hashedPassword');
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'correctPassword',
+        'hashedPassword',
+      );
       expect(jwtService.signAsync).toHaveBeenCalledWith(
         { sub: '1', email: 'test@example.com' },
         { expiresIn: '15m' },
@@ -251,10 +279,16 @@ describe('AuthService', () => {
     it('should invalidate old token and return new tokens on valid refresh', async () => {
       (tokenRegistry.exists as jest.Mock).mockResolvedValue(true);
       (tokenRegistry.invalidate as jest.Mock).mockResolvedValue(undefined);
-      (jwtService.signAsync as jest.Mock).mockResolvedValue(mockTokens.accessToken);
+      (jwtService.signAsync as jest.Mock).mockResolvedValue(
+        mockTokens.accessToken,
+      );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.refreshTokens('1', 'test@example.com', 'valid-token');
+      const result = await service.refreshTokens(
+        '1',
+        'test@example.com',
+        'valid-token',
+      );
 
       expect(tokenRegistry.exists).toHaveBeenCalledWith('1', 'valid-token');
       expect(tokenRegistry.invalidate).toHaveBeenCalledWith('1', 'valid-token');
@@ -269,7 +303,9 @@ describe('AuthService', () => {
 
     it('should revoke all user tokens when reuse is detected', async () => {
       (tokenRegistry.exists as jest.Mock).mockResolvedValue(false);
-      (tokenRegistry.invalidateAllForUser as jest.Mock).mockResolvedValue(undefined);
+      (tokenRegistry.invalidateAllForUser as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
       await expect(
         service.refreshTokens('1', 'test@example.com', 'reused-token'),
@@ -282,12 +318,12 @@ describe('AuthService', () => {
   describe('enable2FA', () => {
     it('should generate TOTP secret and return QR code', async () => {
       const mockSecret = 'JBSWY3DPEHPK3PXP';
-      const mockOtpauth = 'otpauth://totp/MarketX:1?secret=JBSWY3DPEHPK3PXP&issuer=MarketX';
+      const mockOtpauth =
+        'otpauth://totp/MarketX:1?secret=JBSWY3DPEHPK3PXP&issuer=MarketX';
       const mockQrCode = 'data:image/png;base64,mockqr';
 
       jest.spyOn(otplib, 'generateSecret').mockReturnValue(mockSecret);
       jest.spyOn(otplib, 'generateURI').mockReturnValue(mockOtpauth);
-      const qrcode = require('qrcode');
       jest.spyOn(qrcode, 'toDataURL').mockResolvedValue(mockQrCode);
 
       (usersService.update2FA as jest.Mock).mockResolvedValue(undefined);
@@ -303,30 +339,52 @@ describe('AuthService', () => {
 
   describe('verify2FA', () => {
     it('should throw BadRequestException when 2FA is not enabled for user', async () => {
-      const userWithout2FA = { ...mockUser, twoFAEnabled: false, twoFASecret: null };
+      const userWithout2FA = {
+        ...mockUser,
+        twoFAEnabled: false,
+        twoFASecret: null,
+      };
       (usersService.findOne as jest.Mock).mockResolvedValue(userWithout2FA);
 
-      await expect(service.verify2FA('1', '123456')).rejects.toThrow(BadRequestException);
-      await expect(service.verify2FA('1', '123456')).rejects.toThrow('2FA not enabled for this user');
+      await expect(service.verify2FA('1', '123456')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.verify2FA('1', '123456')).rejects.toThrow(
+        '2FA not enabled for this user',
+      );
     });
 
     it('should throw BadRequestException when user not found', async () => {
       (usersService.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.verify2FA('1', '123456')).rejects.toThrow(BadRequestException);
+      await expect(service.verify2FA('1', '123456')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when TOTP code is invalid', async () => {
-      const userWith2FA = { ...mockUser, twoFAEnabled: true, twoFASecret: 'JBSWY3DPEHPK3PXP' };
+      const userWith2FA = {
+        ...mockUser,
+        twoFAEnabled: true,
+        twoFASecret: 'JBSWY3DPEHPK3PXP',
+      };
       (usersService.findOne as jest.Mock).mockResolvedValue(userWith2FA);
       jest.spyOn(otplib, 'verify').mockResolvedValue({ valid: false } as never);
 
-      await expect(service.verify2FA('1', '000000')).rejects.toThrow(BadRequestException);
-      await expect(service.verify2FA('1', '000000')).rejects.toThrow('Invalid 2FA code');
+      await expect(service.verify2FA('1', '000000')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.verify2FA('1', '000000')).rejects.toThrow(
+        'Invalid 2FA code',
+      );
     });
 
     it('should return true when TOTP code is valid', async () => {
-      const userWith2FA = { ...mockUser, twoFAEnabled: true, twoFASecret: 'JBSWY3DPEHPK3PXP' };
+      const userWith2FA = {
+        ...mockUser,
+        twoFAEnabled: true,
+        twoFASecret: 'JBSWY3DPEHPK3PXP',
+      };
       (usersService.findOne as jest.Mock).mockResolvedValue(userWith2FA);
       jest.spyOn(otplib, 'verify').mockResolvedValue({ valid: true, delta: 0 });
 
@@ -342,7 +400,9 @@ describe('AuthService', () => {
 
   describe('revokeAllUserTokens', () => {
     it('should invalidate all tokens for a user', async () => {
-      (tokenRegistry.invalidateAllForUser as jest.Mock).mockResolvedValue(undefined);
+      (tokenRegistry.invalidateAllForUser as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
       await service.revokeAllUserTokens('1');
 
@@ -352,7 +412,9 @@ describe('AuthService', () => {
 
   describe('getTokens', () => {
     it('should generate access and refresh tokens', async () => {
-      (jwtService.signAsync as jest.Mock).mockResolvedValue(mockTokens.accessToken);
+      (jwtService.signAsync as jest.Mock).mockResolvedValue(
+        mockTokens.accessToken,
+      );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
       const result = await service.getTokens('1', 'test@example.com');

@@ -73,7 +73,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    await this.cacheManager.reset();
+    (this.cacheManager as any).reset();
     return product;
   }
 
@@ -91,7 +91,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    await this.cacheManager.reset();
+    (this.cacheManager as any).reset();
     return product;
   }
 
@@ -109,7 +109,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    await this.cacheManager.reset();
+    (this.cacheManager as any).reset();
     return result;
   }
 
@@ -123,12 +123,9 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete product' })
-  async remove(@Param('id') id: string, @Req() req: any) {
-    const result = await this.productsService.remove(
-      id,
-      req.user.id.toString(),
-    );
-    await this.cacheManager.reset();
+  remove(@Param('id') id: string, @Req() req: any) {
+    const result = this.productsService.remove(id, req.user.id.toString());
+    (this.cacheManager as any).reset();
     return result;
   }
 }

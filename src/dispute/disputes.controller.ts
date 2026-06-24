@@ -64,7 +64,10 @@ export class DisputesController {
       type: 'object',
       required: ['resolution', 'action'],
       properties: {
-        resolution: { type: 'string', example: 'Item returned tracking confirmed. Refunding buyer.' },
+        resolution: {
+          type: 'string',
+          example: 'Item returned tracking confirmed. Refunding buyer.',
+        },
         action: {
           type: 'string',
           enum: ['REFUND_TO_BUYER', 'RELEASE_TO_SELLER'],
@@ -83,7 +86,9 @@ export class DisputesController {
       throw new BadRequestException('Resolution explanatory text is required.');
     }
     if (!action) {
-      throw new BadRequestException('An explicit resolution target action step is required.');
+      throw new BadRequestException(
+        'An explicit resolution target action step is required.',
+      );
     }
 
     return await this.disputesService.resolveDispute(

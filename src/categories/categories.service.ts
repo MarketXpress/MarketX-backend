@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
@@ -97,7 +101,9 @@ export class CategoriesService {
       throw new NotFoundException(`Category ${id} not found`);
     }
 
-    const childCount = await this.categoryRepo.count({ where: { parentId: id } });
+    const childCount = await this.categoryRepo.count({
+      where: { parentId: id },
+    });
     if (childCount > 0) {
       throw new BadRequestException(
         `Cannot delete category "${category.name}": it has ${childCount} active sub-categor${childCount === 1 ? 'y' : 'ies'}.`,

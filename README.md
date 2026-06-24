@@ -12,13 +12,16 @@
 **MarketX** is an ambitious open-source marketplace backend engineered for scale, fraud resistance, and lightning-fast developer experience. Designed initially to power peer-to-peer (P2P) commerce, it provides an expansive suite of tightly coupled e-commerce micro-features.
 
 We are currently undertaking a massive open-source contribution wave (via **Drips**) to fortify the architecture, refactor technical debt, and build out enterprise-grade systems like Escrow and AI Fraud Detection.
+
 ### 🚀 Local Development with Docker
+
 To spin up the required PostgreSQL and Redis services quickly:
 
 1. **Copy the environment template:**
    `cp .env.example .env`
 2. **Start the containers:**
    `docker compose up -d`
+
 ### ✨ Core Features & Domains
 
 - **🛍️ Order & Inventory Engine**: Handles concurrent checkout flows, preventing atomic overselling via database locking mechanisms.
