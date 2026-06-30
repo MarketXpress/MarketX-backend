@@ -11,6 +11,7 @@ import {
   HttpStatus,
   Inject,
   Res,
+  ConflictException,
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
@@ -70,14 +71,16 @@ export class OrdersController {
     //   1) another request with this key is currently in-flight
     //   2) the key was already processed (timestamp present in cache)
     // In both, fall back to the cached response if available; otherwise
-    // re-run so the caller still gets a deterministic answer rather than
-    // a silent empty result.
+    // fail fast so the same key cannot create a duplicate order.
     if (!executed) {
       const replayed = await this.cache.get<Order>(responseCacheKey);
       if (replayed) {
         return replayed;
       }
-      return await this.processOrderCreation(createOrderDto);
+
+      throw new ConflictException(
+        'An order request with this Idempotency-Key is already in progress. Please retry shortly.',
+      );
     }
 
     return result!;

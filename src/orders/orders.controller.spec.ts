@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { ConflictException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
@@ -155,6 +156,20 @@ describe('OrdersController', () => {
       expect(result).toBe(order);
       expect(ordersService.create).not.toHaveBeenCalled();
       expect(idempotencyService.executeOnce).not.toHaveBeenCalled();
+    });
+
+    it('does not create a duplicate order when the Idempotency-Key is in-flight and the response is not cached yet', async () => {
+      cache.get.mockResolvedValue(undefined);
+      idempotencyService.executeOnce.mockResolvedValue({ executed: false });
+
+      await expect(controller.create(sampleDto, 'idem-in-flight')).rejects.toThrow(
+        ConflictException,
+      );
+
+      expect(ordersService.create).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(cache.get).toHaveBeenCalledTimes(2);
+      expect(idempotencyService.executeOnce).toHaveBeenCalledTimes(1);
     });
 
     it('creates separate orders when different Idempotency-Keys are used', async () => {
