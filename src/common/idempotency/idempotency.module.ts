@@ -6,6 +6,6 @@ import { IdempotencyService } from './idempotency.service';
 @Module({
   imports: [CacheModule.register()],
   providers: [IdempotencyService],
-  exports: [IdempotencyService],
+  exports: [IdempotencyService, CacheModule],
 })
 export class IdempotencyModule {}
