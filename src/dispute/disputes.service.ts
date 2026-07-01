@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Dispute, DisputeStatus, ResolutionAction } from './disputes.entity';
-import { OrdersService } from '../orders/orders.service'; // Assuming standard service access paths
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class DisputesService {
@@ -31,13 +31,13 @@ export class DisputesService {
 
     // Force validation conditions over the core active order state machine flags
     const acceptableStates = ['SHIPPED', 'DELIVERED'];
-    if (!acceptableStates.includes(order.status)) {
+    if (!acceptableStates.includes(order.status?.toUpperCase())) {
       throw new BadRequestException(
         `Disputes can only be raised when order lifecycle status is SHIPPED or DELIVERED. Current: ${order.status}`,
       );
     }
 
-    // Check if a dispute already exists for this order
+    // Verify if an active dispute already tracks this order context
     const existingDispute = await this.disputesRepository.findOne({
       where: { orderId },
     });

@@ -8,11 +8,12 @@ import {
   UseGuards,
   Request,
   ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { DisputesService } from './disputes.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AdminGuard } from '../guards/admin.guard'; // Matches project guard references
+import { AdminGuard } from '../guards/admin.guard';
 import { ResolutionAction } from './disputes.entity';
 
 @ApiTags('Dispute Resolution')
@@ -38,11 +39,11 @@ export class DisputesController {
     @Request() req,
   ) {
     if (!reason || reason.trim().length === 0) {
-      throw new Error(
+      throw new BadRequestException(
         'A valid material reason text is required to file a dispute record.',
       );
     }
-    // Parses user identity key cleanly to an integer number format
+
     return await this.disputesService.raiseDispute(
       orderId,
       Number(req.user.id),
@@ -63,7 +64,10 @@ export class DisputesController {
       type: 'object',
       required: ['resolution', 'action'],
       properties: {
-        resolution: { type: 'string' },
+        resolution: {
+          type: 'string',
+          example: 'Item returned tracking confirmed. Refunding buyer.',
+        },
         action: {
           type: 'string',
           enum: ['REFUND_TO_BUYER', 'RELEASE_TO_SELLER'],
@@ -78,11 +82,15 @@ export class DisputesController {
     @Body('resolution') resolution: string,
     @Body('action') action: ResolutionAction,
   ) {
-    if (!resolution || !action) {
-      throw new Error(
-        'Resolution explanatory texts and explicit resolution target action steps are required.',
+    if (!resolution || !resolution.trim()) {
+      throw new BadRequestException('Resolution explanatory text is required.');
+    }
+    if (!action) {
+      throw new BadRequestException(
+        'An explicit resolution target action step is required.',
       );
     }
+
     return await this.disputesService.resolveDispute(
       disputeId,
       resolution,

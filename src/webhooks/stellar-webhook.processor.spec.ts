@@ -3,7 +3,7 @@ import { StellarWebhookProcessor } from './stellar-webhook.processor';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Escrow } from '../entities/escrow.entity';
+import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
 import { Transaction, TransactionStatus } from '../entities/transaction.entity';
 import { LoggerService } from '../common/logger/logger.service';
@@ -81,7 +81,7 @@ describe('StellarWebhookProcessor', () => {
     const mockEscrow = {
       id: 'escrow-123',
       transactionHash: 'tx-hash-123',
-      released: false,
+      status: EscrowStatus.PENDING,
       amount: 100,
     };
 
@@ -119,7 +119,7 @@ describe('StellarWebhookProcessor', () => {
 
     await processor.handleProcessPayment(job);
 
-    expect(mockEscrow.released).toBe(true);
+    expect(mockEscrow.status).toBe(EscrowStatus.FUNDED);
     expect(mockTransaction.status).toBe(TransactionStatus.COMPLETED);
     expect(mockOrder.status).toBe(OrderStatus.PAID);
     expect(mockOrder.paymentStatus).toBe(PaymentStatus.PAID);
@@ -159,7 +159,7 @@ describe('StellarWebhookProcessor', () => {
     const mockEscrow = {
       id: 'escrow-123',
       transactionHash: 'tx-hash-123',
-      released: true,
+      status: EscrowStatus.FUNDED,
       amount: 100,
     };
 
