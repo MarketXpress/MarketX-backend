@@ -162,9 +162,9 @@ describe('OrdersController', () => {
       cache.get.mockResolvedValue(undefined);
       idempotencyService.executeOnce.mockResolvedValue({ executed: false });
 
-      await expect(controller.create(sampleDto, 'idem-in-flight')).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        controller.create(sampleDto, 'idem-in-flight'),
+      ).rejects.toThrow(ConflictException);
 
       expect(ordersService.create).not.toHaveBeenCalled();
       expect(eventEmitter.emit).not.toHaveBeenCalled();
