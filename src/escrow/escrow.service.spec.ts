@@ -10,6 +10,7 @@ import axios from 'axios';
 import { EscrowService } from './escrow.service';
 import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { LoggerService } from '../common/logger/logger.service';
+import { EncryptionService } from '../common/services/encryption.service';
 import { CreateEscrowDto } from './dto/create-escrow.dto';
 
 // ---------------------------------------------------------------------------
@@ -80,6 +81,7 @@ describe('EscrowService', () => {
       const config: Record<string, string> = {
         STELLAR_HORIZON_URL: 'https://horizon-testnet.stellar.org',
         STELLAR_FRIENDBOT_URL: 'https://friendbot.stellar.org',
+        ENCRYPTION_SECRET: 'test-encryption-secret-32-chars!!',
       };
       return config[key] ?? defaultValue;
     }),
@@ -93,6 +95,12 @@ describe('EscrowService', () => {
       ]),
   };
 
+  let encryptionService: EncryptionService;
+  // The encrypted-at-rest form of MOCK_ESCROW_KEYPAIR's secret, computed
+  // fresh each test via the real EncryptionService (round-trips through
+  // actual AES-256-GCM encrypt/decrypt, not a stub).
+  let mockEncryptedSecretKey: string;
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -100,12 +108,14 @@ describe('EscrowService', () => {
       create: jest.fn(),
       save: jest.fn(),
       findOne: jest.fn(),
+      createQueryBuilder: jest.fn(),
       manager: mockManager,
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EscrowService,
+        EncryptionService,
         { provide: getRepositoryToken(Escrow), useValue: repoMock },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: LoggerService, useValue: mockLogger },
@@ -114,6 +124,22 @@ describe('EscrowService', () => {
 
     service = module.get<EscrowService>(EscrowService);
     escrowRepo = module.get(getRepositoryToken(Escrow));
+    encryptionService = module.get<EncryptionService>(EncryptionService);
+
+    mockEncryptedSecretKey = encryptionService.encryptString(
+      MOCK_ESCROW_KEYPAIR.secret(),
+    );
+
+    // Default: signing lookups resolve to a valid encrypted secret. Individual
+    // tests override this via escrowRepo.createQueryBuilder.mockReturnValue(...)
+    // when they need to simulate a missing/corrupt key.
+    (escrowRepo.createQueryBuilder as jest.Mock).mockReturnValue({
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getOne: jest
+        .fn()
+        .mockResolvedValue({ escrowSecretKey: mockEncryptedSecretKey }),
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -154,6 +180,35 @@ describe('EscrowService', () => {
       // Final status should be FUNDED
       expect(result.status).toBe(EscrowStatus.FUNDED);
       expect(result.transactionHash).toBe('friendbot-tx-hash-abc123');
+    });
+
+    it('encrypts the escrow secret key before persisting it, never storing it in plaintext', async () => {
+      const pendingEscrow = buildMockEscrow({
+        status: EscrowStatus.PENDING,
+        transactionHash: null,
+      });
+
+      escrowRepo.create.mockReturnValue(pendingEscrow);
+      escrowRepo.save.mockResolvedValue(pendingEscrow);
+      mockedAxios.get.mockResolvedValue({
+        data: { hash: 'friendbot-tx-hash-abc123' },
+      });
+
+      await service.createEscrow(dto);
+
+      const createArg = escrowRepo.create.mock.calls[0][0] as Escrow;
+      expect(createArg.escrowSecretKey).toBeDefined();
+      // Must not be (or contain) a raw Stellar secret seed.
+      expect(createArg.escrowSecretKey).not.toMatch(/^S[A-Z2-7]{55}$/);
+
+      // But it must decrypt back to a valid secret matching the stored public key.
+      const decrypted = encryptionService.decryptString(
+        createArg.escrowSecretKey as string,
+      );
+      expect(decrypted).toMatch(/^S[A-Z2-7]{55}$/);
+      expect(StellarSdk.Keypair.fromSecret(decrypted).publicKey()).toBe(
+        createArg.escrowPublicKey,
+      );
     });
 
     it('should mark the escrow as FAILED and throw if Friendbot fails', async () => {
@@ -223,6 +278,84 @@ describe('EscrowService', () => {
       expect(result.status).toBe(EscrowStatus.RELEASED);
       expect(result.transactionHash).toBe('release-tx-hash-xyz');
       expect(result.released).toBe(true);
+    });
+
+    it('decrypts the stored secret and signs the release transaction with the escrow keypair', async () => {
+      const fundedEscrow = buildMockEscrow();
+      escrowRepo.findOne.mockResolvedValue(fundedEscrow);
+      escrowRepo.save.mockResolvedValue({
+        ...fundedEscrow,
+        status: EscrowStatus.RELEASED,
+      });
+
+      mockLoadAccount.mockResolvedValue(
+        new StellarSdk.Account(MOCK_ESCROW_KEYPAIR.publicKey(), '100'),
+      );
+      mockSubmitTransaction.mockResolvedValue({ hash: 'release-tx-hash-xyz' });
+      mockManager.query.mockResolvedValue([
+        { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
+      ]);
+
+      await service.releaseEscrow('escrow-uuid-1234');
+
+      const submittedTx = mockSubmitTransaction.mock
+        .calls[0][0] as StellarSdk.Transaction;
+
+      expect(submittedTx.signatures.length).toBe(1);
+      const signature = submittedTx.signatures[0].signature();
+      // The transaction can only verify against the escrow account's public
+      // key if it was actually signed with the correctly decrypted secret.
+      expect(MOCK_ESCROW_KEYPAIR.verify(submittedTx.hash(), signature)).toBe(
+        true,
+      );
+    });
+
+    it('logs access when the escrow secret key is decrypted for signing, without leaking the secret', async () => {
+      const fundedEscrow = buildMockEscrow();
+      escrowRepo.findOne.mockResolvedValue(fundedEscrow);
+      escrowRepo.save.mockResolvedValue({
+        ...fundedEscrow,
+        status: EscrowStatus.RELEASED,
+      });
+
+      mockLoadAccount.mockResolvedValue(
+        new StellarSdk.Account(MOCK_ESCROW_KEYPAIR.publicKey(), '100'),
+      );
+      mockSubmitTransaction.mockResolvedValue({ hash: 'release-tx-hash-xyz' });
+      mockManager.query.mockResolvedValue([
+        { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
+      ]);
+
+      await service.releaseEscrow('escrow-uuid-1234');
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('decrypted for transaction signing'),
+        expect.objectContaining({ escrowId: 'escrow-uuid-1234' }),
+      );
+
+      const loggedSecret = (mockLogger.info as jest.Mock).mock.calls.some(
+        (call: unknown[]) =>
+          call.some(
+            (arg) =>
+              typeof arg === 'string' &&
+              arg.includes(MOCK_ESCROW_KEYPAIR.secret()),
+          ),
+      );
+      expect(loggedSecret).toBe(false);
+    });
+
+    it('should throw InternalServerErrorException when the encrypted secret key is missing', async () => {
+      const fundedEscrow = buildMockEscrow();
+      escrowRepo.findOne.mockResolvedValue(fundedEscrow);
+      (escrowRepo.createQueryBuilder as jest.Mock).mockReturnValue({
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue({ escrowSecretKey: null }),
+      });
+
+      await expect(service.releaseEscrow('escrow-uuid-1234')).rejects.toThrow(
+        'missing keypair data',
+      );
     });
 
     it('should throw BadRequestException when escrow is not FUNDED', async () => {
