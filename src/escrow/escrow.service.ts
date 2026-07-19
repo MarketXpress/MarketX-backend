@@ -12,6 +12,7 @@ import axios from 'axios';
 
 import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { LoggerService } from '../common/logger/logger.service';
+import { EncryptionService } from '../common/services/encryption.service';
 import { CreateEscrowDto } from './dto/create-escrow.dto';
 
 @Injectable()
@@ -25,6 +26,7 @@ export class EscrowService {
     private readonly escrowRepository: Repository<Escrow>,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
+    private readonly encryptionService: EncryptionService,
   ) {
     const horizonUrl = this.configService.get<string>(
       'STELLAR_HORIZON_URL',
@@ -66,17 +68,20 @@ export class EscrowService {
     // Generate a dedicated escrow keypair
     const escrowKeypair = StellarSdk.Keypair.random();
     const escrowPublicKey = escrowKeypair.publicKey();
-    const escrowSecretKey = escrowKeypair.secret();
+    const encryptedSecretKey = this.encryptionService.encryptString(
+      escrowKeypair.secret(),
+    );
 
-    // Persist with PENDING status before hitting the network
+    // Persist with PENDING status before hitting the network. The secret is
+    // envelope-encrypted at rest; it is only ever decrypted in-memory, and
+    // only at the point of signing a release transaction.
     const escrow = this.escrowRepository.create({
       buyerId: dto.buyerId,
       sellerId: dto.sellerId,
       amount: dto.amount,
       status: EscrowStatus.PENDING,
       escrowPublicKey,
-      // TESTNET ONLY: secret stored in plaintext. Encrypt before production use.
-      escrowSecretKey,
+      escrowSecretKey: encryptedSecretKey,
       released: false,
     });
     await this.escrowRepository.save(escrow);
@@ -137,17 +142,18 @@ export class EscrowService {
       );
     }
 
-    if (!escrow.escrowSecretKey || !escrow.escrowPublicKey) {
+    if (!escrow.escrowPublicKey) {
       throw new InternalServerErrorException(
         `Escrow ${escrowId} is missing keypair data and cannot be released.`,
       );
     }
 
-    try {
-      const escrowKeypair = StellarSdk.Keypair.fromSecret(
-        escrow.escrowSecretKey,
-      );
+    // Decrypt the signing key before entering the network try/catch below,
+    // so a missing/corrupt key surfaces its own precise error instead of
+    // being swallowed into the generic "release failed" message.
+    const escrowKeypair = await this.getEscrowSigningKeypair(escrowId);
 
+    try {
       // Load the escrow account from Horizon to get the current sequence number
       const escrowAccount = await this.server.loadAccount(
         escrow.escrowPublicKey,
@@ -230,6 +236,36 @@ export class EscrowService {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  /**
+   * Decrypts the escrow account's Stellar secret key only for the immediate
+   * purpose of signing a transaction. The plaintext secret never leaves this
+   * method's scope, is never logged, and is never attached back to an entity
+   * instance. Access is logged (escrow ID only — never the secret).
+   */
+  private async getEscrowSigningKeypair(
+    escrowId: string,
+  ): Promise<StellarSdk.Keypair> {
+    const record = await this.escrowRepository
+      .createQueryBuilder('escrow')
+      .addSelect('escrow.escrowSecretKey')
+      .where('escrow.id = :id', { id: escrowId })
+      .getOne();
+
+    if (!record?.escrowSecretKey) {
+      throw new InternalServerErrorException(
+        `Escrow ${escrowId} is missing keypair data and cannot be released.`,
+      );
+    }
+
+    this.logger.info('Escrow secret key decrypted for transaction signing', {
+      escrowId,
+    });
+
+    const secret = this.encryptionService.decryptString(record.escrowSecretKey);
+
+    return StellarSdk.Keypair.fromSecret(secret);
+  }
 
   /**
    * Calls Friendbot to fund a given public key and returns the transaction hash.

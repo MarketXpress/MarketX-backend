@@ -49,10 +49,12 @@ export class Escrow {
   escrowPublicKey?: string | null;
 
   /**
-   * Stellar secret key of the generated escrow keypair.
-   * TESTNET ONLY — encrypt this field before using in production.
+   * Envelope-encrypted Stellar secret key of the generated escrow keypair
+   * (JSON blob from EncryptionService: ciphertext + iv + auth tag, not a
+   * raw Stellar seed). `select: false` so ordinary queries never pull it
+   * back — callers must opt in explicitly, and only to sign a transaction.
    */
-  @Column({ type: 'varchar', length: 56, nullable: true })
+  @Column({ type: 'text', nullable: true, select: false })
   escrowSecretKey?: string | null;
 
   /** Hash of the funding transaction (createEscrow) or release transaction (releaseEscrow). */
