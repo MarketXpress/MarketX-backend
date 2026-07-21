@@ -26,9 +26,10 @@ export class StellarWebhookProcessor {
   @OnEvent(EventNames.PAYMENT_CONFIRMED)
   @Process('process-payment')
   async handleProcessPayment(job: Job<any>) {
-    const { transactionHash } = job.data;
+    const { eventId, transactionHash } = job.data;
     this.logger.info('Started processing Stellar payment event', {
       jobId: job.id,
+      eventId,
       transactionHash,
     });
 
@@ -140,6 +141,7 @@ export class StellarWebhookProcessor {
 
       this.logger.info(
         `Successfully processed Stellar payment event for transactionHash: ${transactionHash}`,
+        { eventId },
       );
     } catch (error) {
       this.logger.error(
