@@ -11,19 +11,11 @@ describe('ProductsService price history & events', () => {
   beforeEach(() => {
     pricing = new PricingService();
     events = new EventEmitter2();
-    const mediaService = {
-      deleteProductImages: jest.fn().mockResolvedValue(true),
-    } as any;
     priceHistoryRepo = {
       create: jest.fn().mockImplementation((dto) => dto),
       save: jest.fn().mockImplementation((dto) => Promise.resolve(dto)),
     };
-    products = new ProductsService(
-      pricing,
-      events,
-      mediaService,
-      priceHistoryRepo,
-    );
+    products = new ProductsService(pricing, events, priceHistoryRepo);
   });
 
   it('create stores decimal and minor strings and includes rate snapshot in history', async () => {

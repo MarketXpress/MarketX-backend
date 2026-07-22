@@ -1,0 +1,109 @@
+name: Bug report
+description: Report a defect with clear reproduction details, impact, and validation expectations.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        Please share enough detail for the team to reproduce the issue, assess impact, and add a regression fix with confidence.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem summary
+      description: What is broken, and why does it matter?
+      placeholder: A concise description of the defect and the affected workflow.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How serious is the issue?
+      options:
+        - Sev 1 - blocks production or core developer workflows
+        - Sev 2 - major functionality is degraded
+        - Sev 3 - moderate issue with a workaround
+        - Sev 4 - minor issue or polish gap
+    validations:
+      required: true
+
+  - type: input
+    id: area
+    attributes:
+      label: Affected area or module
+      description: Which service, module, endpoint, workflow, or document is involved?
+      placeholder: e.g. orders module, auth guards, payment webhook, README setup steps
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: Current behavior
+      description: What happens today?
+      placeholder: Describe the actual behavior, error, or failure mode.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+      placeholder: Describe the correct behavior or desired outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Provide the shortest reliable path to reproduce the issue.
+      placeholder: |
+        1. Start the app with ...
+        2. Call POST /...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Who or what is affected?
+      placeholder: User impact, operational risk, release risk, contributor friction, or business impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots, or additional context
+      description: Paste errors, traces, request/response samples, screenshots, or links that help triage.
+      placeholder: Add any supporting context that helps narrow the problem.
+      render: shell
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: Validation and regression coverage
+      description: How should we verify the fix and guard against regressions?
+      placeholder: Tests to add or update, manual verification steps, monitoring checks, and any impacted docs.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I included reproduction details and impact information.
+          required: true
+        - label: I identified the affected area or module as clearly as I could.
+          required: true

@@ -6,18 +6,15 @@ import { ProductsService } from './products.service';
 import { PricingService } from './services/pricing.service';
 import { ProductImagesController } from './product-images.controller';
 import { ProductPriceEntity } from './entities/product-price.entity';
-import { MediaModule } from '../media/media.module';
-import { PriceModule } from '../price/price.module';
+import { Product } from '../entities/product.entity';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
-    MediaModule,
-    PriceModule,
-    TypeOrmModule.forFeature([ProductPriceEntity]),
+    TypeOrmModule.forFeature([Product, ProductPriceEntity]),
   ],
   controllers: [ProductsController, ProductImagesController],
   providers: [ProductsService, PricingService],
-  exports: [ProductsService, PricingService],
+  exports: [ProductsService, PricingService, TypeOrmModule],
 })
 export class ProductsModule {}

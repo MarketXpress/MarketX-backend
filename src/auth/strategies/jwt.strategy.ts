@@ -1,6 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
 
@@ -18,23 +18,25 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any) {
-    // The payload contains 'sub' (userId) and 'email' from AuthService.getTokens().
-    // Controllers across the app read req.user.id/req.user.role for identity and
-    // authorization decisions (ownership checks, AdminGuard, RolesGuard), so both
-    // must be populated here rather than just the raw JWT claims.
-    let role: string | undefined;
-    try {
-      const user = await this.usersService.findOne(Number(payload.sub));
-      role = user.role;
-    } catch {
-      throw new UnauthorizedException('Invalid or missing JWT token');
+    // Hydrate the user so downstream guards/controllers have role and id data.
+    const user = await this.usersService.findByEmail(payload.email);
+
+    if (!user) {
+      return { id: payload.sub, userId: payload.sub, email: payload.email };
     }
 
+    const {
+      password: _password,
+      refreshToken: _refreshToken,
+      ...safeUser
+    } = user as any;
     return {
-      id: payload.sub,
-      userId: payload.sub,
-      email: payload.email,
-      role,
+      ...safeUser,
+      id: user.id,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      isBanned: user.isBanned,
     };
   }
 }

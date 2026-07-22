@@ -1,0 +1,90 @@
+name: Feature request
+description: Propose a feature with problem framing, scope, acceptance criteria, and rollout considerations.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for net-new capabilities, meaningful enhancements, or UX improvements.
+
+        Strong requests start with the problem, not just the solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user, product, or developer problem are we solving?
+      placeholder: Describe the pain point, gap, or opportunity.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+      description: What change do you want to see?
+      placeholder: Describe the desired feature, workflow, or API behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: value
+    attributes:
+      label: Expected value
+      description: Why is this worth doing now?
+      placeholder: Explain the benefit for users, maintainers, operations, or release confidence.
+    validations:
+      required: true
+
+  - type: input
+    id: affected_area
+    attributes:
+      label: Affected area or module
+      description: Which service, module, endpoint, workflow, or document is likely to change?
+      placeholder: e.g. recommendations, checkout flow, notification jobs, README, local infra docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and acceptance criteria
+      description: What is in scope, out of scope, and how do we know this is done?
+      placeholder: Define expected behavior, constraints, and concrete acceptance criteria.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies, sequencing, or affected integrations
+      description: Note related modules, migrations, external services, contracts, or other issues/PRs.
+      placeholder: Mention anything this work depends on or may impact.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other options did you evaluate?
+      placeholder: List alternatives, tradeoffs, or reasons for rejecting them.
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How should this be tested and documented?
+      placeholder: Unit/integration/e2e coverage, manual checks, docs updates, migrations, rollout notes.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I described the problem and expected value, not only the implementation idea.
+          required: true
+        - label: I included scope, acceptance criteria, and validation expectations.
+          required: true

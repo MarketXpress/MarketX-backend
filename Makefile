@@ -1,35 +1,62 @@
-# Makefile - Rust coverage targets (cargo-tarpaulin)
-# Requires: cargo, cargo-tarpaulin, jq or Python3 (for coverage parsing)
+# Makefile - MarketX Backend Engine
+# Helper targets for local development and CI
 
-COVERAGE_THRESHOLD ?= 95
+.PHONY: help install start test lint typecheck coverage pr-check doctor local-infra local-infra-down
 
-.PHONY: coverage coverage-check ci
+help:
+	@echo "Available commands:"
+	@echo "  install          Install dependencies"
+	@echo "  start            Start the development server"
+	@echo "  test             Run all tests"
+	@echo "  lint             Run lint checks"
+	@echo "  typecheck        Run TypeScript typechecks"
+	@echo "  coverage         Run tests with coverage"
+	@echo "  pr-check         Run the pre-PR confidence suite"
+	@echo "  doctor           Run environment diagnostics"
+	@echo "  local-infra      Start local infrastructure (Docker)"
+	@echo "  local-infra-down Stop local infrastructure"
+
+install:
+	npm install
+
+start:
+	npm run start:dev
+
+test:
+	npm run test
+
+lint:
+	npm run lint
+
+typecheck:
+	npm run typecheck
 
 coverage:
-	@command -v cargo >/dev/null 2>&1 || { echo "ERROR: cargo not found"; exit 1; }
-	@command -v cargo-tarpaulin >/dev/null 2>&1 || { echo "ERROR: cargo-tarpaulin not found. Install with 'cargo install cargo-tarpaulin'"; exit 1; }
-	@echo "Running cargo tarpaulin (XML report output) ..."
-	@mkdir -p coverage/tarpaulin
-	@cargo tarpaulin --out Xml --output-dir coverage/tarpaulin --timeout 120
+	npm run test:cov
 
-coverage-check: coverage
-	@echo "Checking tarpaulin coverage threshold ($(COVERAGE_THRESHOLD)%) ..."
-	@coverage_line_rate=$$(grep -m1 -oP 'line-rate="\K[0-9\.]+(?=\")' coverage/tarpaulin/tarpaulin-report.xml 2>/dev/null || true); \
-	if [ -z "$$coverage_line_rate" ]; then \
-	  echo "ERROR: could not parse coverage from coverage/tarpaulin/tarpaulin-report.xml"; \
-	  exit 1; \
-	fi; \
-	coverage_percent=$$(python - <<'PY'
-import sys
-val = float(sys.argv[1]) * 100
-print(f"{val:.2f}")
-PY "$$coverage_line_rate"); \
-	echo "Coverage: $$coverage_percent%"; \
-	if [ $$(printf '%s\n' "$(COVERAGE_THRESHOLD)" "$$coverage_percent" | sort -n | head -n1) != "$(COVERAGE_THRESHOLD)" ] && [ $$(printf '%s\n' "$(COVERAGE_THRESHOLD)" "$$coverage_percent" | sort -n | head -n1) != "$$coverage_percent" ]; then \
-	  echo "ERROR: coverage threshold not met ($$coverage_percent% < $(COVERAGE_THRESHOLD)%)"; \
-	  exit 1; \
-	fi
-	@echo "PASS: coverage threshold met ($$coverage_percent%)"
+pr-check:
+	npm run pr:check
 
-ci: coverage-check
-	@echo "CI coverage gate passed"
+doctor:
+	npm run doctor
+
+local-infra:
+	docker compose --profile local-dev up -d
+
+local-infra-down:
+	docker compose --profile local-dev down
+
+# ── CI / Coverage Gate ──────────────────────────────────────────────────────
+
+ci: lint typecheck test
+	@echo "CI checks passed"
+
+node-coverage-check:
+	npm run test:coverage:check
+
+node-coverage-domain:
+	@echo "Running per-domain coverage reports ..."
+	@echo "\n=== Auth Domain ===" && npm run test:coverage:auth || true
+	@echo "\n=== Payments Domain ===" && npm run test:coverage:payments || true
+	@echo "\n=== Orders Domain ===" && npm run test:coverage:orders || true
+	@echo "\n=== Escrow Domain ===" && npm run test:coverage:escrow || true

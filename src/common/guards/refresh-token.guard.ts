@@ -1,8 +1,4 @@
-import {
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
@@ -11,7 +7,7 @@ export class RefreshTokenGuard extends AuthGuard('jwt-refresh') {
     super();
   }
 
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest(err: any, user: any, _info: any) {
     // You can throw a specific error here if the token is missing or invalid
     if (err || !user) {
       throw (

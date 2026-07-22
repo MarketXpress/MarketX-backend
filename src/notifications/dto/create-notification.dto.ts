@@ -1,26 +1,23 @@
 import {
   IsString,
   IsEnum,
-  IsObject,
   IsOptional,
-  IsUUID,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 import { NotificationType } from '../notification.entity';
 
 export class CreateNotificationDto {
-  @IsUUID()
-  userId: string;
-
-  @IsEnum(NotificationType)
-  type: NotificationType;
-
   @IsString()
+  @MinLength(1)
+  @MaxLength(255)
   title: string;
 
   @IsString()
+  @MinLength(1)
   message: string;
 
-  @IsObject()
+  @IsEnum(NotificationType)
   @IsOptional()
-  metadata?: Record<string, any>;
+  type?: NotificationType = NotificationType.INFO;
 }

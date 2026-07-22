@@ -35,15 +35,20 @@ export class TokenRegistryService {
     const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
 
     if (tokens.length > 0) {
-      const tokenKeys = tokens.map(token => `refresh_token:${userId}:${token}`);
-      await Promise.all(tokenKeys.map(key => this.cacheManager.del(key)));
+      const tokenKeys = tokens.map(
+        (token) => `refresh_token:${userId}:${token}`,
+      );
+      await Promise.all(tokenKeys.map((key) => this.cacheManager.del(key)));
     }
 
     // Clear the user tokens list
     await this.cacheManager.del(userTokensKey);
   }
 
-  private async addTokenToUserList(userId: string, token: string): Promise<void> {
+  private async addTokenToUserList(
+    userId: string,
+    token: string,
+  ): Promise<void> {
     const userTokensKey = `user_refresh_tokens:${userId}`;
     const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
     if (!tokens.includes(token)) {
@@ -52,10 +57,13 @@ export class TokenRegistryService {
     }
   }
 
-  private async removeTokenFromUserList(userId: string, token: string): Promise<void> {
+  private async removeTokenFromUserList(
+    userId: string,
+    token: string,
+  ): Promise<void> {
     const userTokensKey = `user_refresh_tokens:${userId}`;
     const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
-    const filteredTokens = tokens.filter(t => t !== token);
+    const filteredTokens = tokens.filter((t) => t !== token);
     if (filteredTokens.length > 0) {
       await this.cacheManager.set(userTokensKey, filteredTokens, 604800000);
     } else {

@@ -1,0 +1,92 @@
+name: Refactor request
+description: Propose a structural improvement that preserves behavior while improving maintainability, clarity, or safety.
+title: "[Refactor]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for behavior-preserving structural changes.
+
+        A good refactor issue explains the current pain, the intended boundaries, and how we will prove nothing regressed.
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Current pain or maintenance problem
+      description: What makes the current implementation hard to work with?
+      placeholder: Describe the source of complexity, brittleness, duplication, or confusion.
+    validations:
+      required: true
+
+  - type: input
+    id: affected_area
+    attributes:
+      label: Affected area or module
+      description: Which service, module, directory, or workflow should be refactored?
+      placeholder: e.g. auth service, order orchestration, shared DTOs, queue processors
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: Refactor goals
+      description: What should improve after this refactor?
+      placeholder: "Examples: clearer boundaries, reduced duplication, simpler tests, safer extension points."
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals or out-of-scope items
+      description: What should stay unchanged?
+      placeholder: List behaviors, interfaces, or adjacent areas that should not be altered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_approach
+    attributes:
+      label: Proposed approach
+      description: Describe the structural change at a high level.
+      placeholder: Modules to split, abstractions to introduce, contracts to preserve, or files to align.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and compatibility concerns
+      description: What could break if we get this wrong?
+      placeholder: Call out behavior changes to avoid, migration risks, or tricky integration points.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation and regression plan
+      description: How do we prove the refactor is safe?
+      placeholder: Existing tests to preserve, new coverage to add, manual checks, docs that may need updates.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies or sequencing notes
+      description: Mention related issues, prerequisite cleanup, or follow-up slices.
+      placeholder: Link any related work or required ordering.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I described the current pain and the target improvement.
+          required: true
+        - label: I included non-goals so the behavior-preserving boundary is clear.
+          required: true
+        - label: I included a validation plan to catch regressions.
+          required: true

@@ -17,16 +17,19 @@ export class OrderStateSubscriber implements EntitySubscriberInterface<Order> {
     [key in OrderStatus]: OrderStatus[];
   } = {
     [OrderStatus.PENDING]: [
-      OrderStatus.PAID,
+      OrderStatus.CONFIRMED,
       OrderStatus.CANCELLED,
       OrderStatus.MANUAL_REVIEW,
     ],
+    [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+    [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
     [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
     [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-    [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED],
+    [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.REFUNDED],
+    [OrderStatus.COMPLETED]: [OrderStatus.REFUNDED],
     [OrderStatus.CANCELLED]: [],
-    [OrderStatus.COMPLETED]: [],
-    [OrderStatus.MANUAL_REVIEW]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+    [OrderStatus.REFUNDED]: [],
+    [OrderStatus.MANUAL_REVIEW]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
   };
 
   listenTo() {

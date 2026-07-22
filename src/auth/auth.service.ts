@@ -11,7 +11,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { generateSecret, generateURI, verify } from 'otplib';
 import * as qrcode from 'qrcode';
 import { UsersService } from '../users/users.service';
-import { OAuthProfile, validateOAuthProfile } from './types/oauth-profile.types';
+import {
+  OAuthProfile,
+  validateOAuthProfile,
+} from './types/oauth-profile.types';
 import { TokenRegistryService } from './token-registry.service';
 import {
   UserPasswordChangedEvent,
@@ -38,7 +41,7 @@ export class AuthService {
         { sub: userId, email },
         { expiresIn: '15m' }, // Short-lived
       ),
-      crypto.randomBytes(40).toString('hex'), // Long-lived random string
+      Promise.resolve(crypto.randomBytes(40).toString('hex')), // Long-lived random string
     ]);
 
     // Store RT in Redis with a TTL (e.g., 7 days)
@@ -48,25 +51,45 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
-    // Mock user for demonstration (In production, fetch from DB)
-    const user = {
-      id: 'uuid-123',
-      email: 'test@example.com',
-      password: await bcrypt.hash('password123', 10),
-    };
+  async register(body: {
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+  }) {
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+    const user = await this.usersService.create({
+      email: body.email,
+      password: hashedPassword,
+      name:
+        body.name ??
+        ([body.firstName, body.lastName].filter(Boolean).join(' ') ||
+          body.email),
+    });
+    return this.getTokens(String(user.id), user.email);
+  }
 
-    if (user && (await bcrypt.compare(password, user.password))) {
-      return this.getTokens(user.id, user.email);
+  async validateUser(email: string, password: string): Promise<any> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || !user.password) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    throw new UnauthorizedException('Invalid credentials');
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    return this.getTokens(String(user.id), user.email);
   }
 
   /**
    * Refreshes the Access Token and Rotates the Refresh Token
    */
   async refreshTokens(userId: string, email: string, oldRefreshToken: string) {
-    const tokenExists = await this.tokenRegistry.exists(userId, oldRefreshToken);
+    const tokenExists = await this.tokenRegistry.exists(
+      userId,
+      oldRefreshToken,
+    );
 
     if (!tokenExists) {
       /**
@@ -106,7 +129,7 @@ export class AuthService {
     return { qrCodeDataURL, otpauth };
   }
 
-  async forgotPassword(email: string): Promise<void> {
+  forgotPassword(email: string): void {
     const resetUrl = `https://marketx.com/reset-password?token=mock-token-${Date.now()}`;
 
     this.eventEmitter.emit(
@@ -178,7 +201,10 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await this.usersService.updatePassword(parseInt(userId, 10), hashedPassword);
+      await this.usersService.updatePassword(
+        parseInt(userId, 10),
+        hashedPassword,
+      );
 
       // Emit successful audit event
       // Note: We intentionally don't store actual password values, only that a change occurred
@@ -240,7 +266,10 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await this.usersService.updatePassword(parseInt(userId, 10), hashedPassword);
+      await this.usersService.updatePassword(
+        parseInt(userId, 10),
+        hashedPassword,
+      );
 
       // Emit successful audit event
       this.eventEmitter.emit(

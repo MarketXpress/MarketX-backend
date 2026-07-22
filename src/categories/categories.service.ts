@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
 
 type CreateCategoryDto = {
@@ -85,11 +85,39 @@ export class CategoriesService {
     return this.buildTree(categories);
   }
 
+  /** Returns all categories as a flat list, ordered by name. */
+  async findAll(): Promise<Category[]> {
+    return this.categoryRepo.find({ order: { name: 'ASC' } });
+  }
+
+  /**
+   * Delete a category by id.
+   * Throws BadRequestException if the category has active child categories,
+   * since removing a parent with dependents would leave them orphaned.
+   */
+  async remove(id: number): Promise<void> {
+    const category = await this.categoryRepo.findOne({ where: { id } });
+    if (!category) {
+      throw new NotFoundException(`Category ${id} not found`);
+    }
+
+    const childCount = await this.categoryRepo.count({
+      where: { parentId: id },
+    });
+    if (childCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete category "${category.name}": it has ${childCount} active sub-categor${childCount === 1 ? 'y' : 'ies'}.`,
+      );
+    }
+
+    await this.categoryRepo.remove(category);
+  }
+
   /**
    * Get all products belonging to a category.
    * Recommended behavior: include products in descendants too.
    */
-  async getProductsByCategory(categoryId: number) {
+  getProductsByCategory(categoryId: number) {
     // Ticket scope says: dummy for now
     return {
       categoryId,

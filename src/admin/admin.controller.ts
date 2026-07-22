@@ -1,63 +1,50 @@
-// src/admin/admin.controller.ts
-
-import { Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Query,
+  Param,
+  ParseIntPipe,
+  DefaultValuePipe,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../guards/admin.guard';
 import { AdminService } from './admin.service';
-import { AdminStatsDto } from './dtos/admin-stats.dto';
-import { RolesGuard } from '../guards/roles.guard';
-import { Roles } from '../decorators/roles.decorator';
 
+@ApiTags('Admin')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin')
-@UseGuards(RolesGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  /**
-   * GET /admin/users
-   * Fetch all users
-   */
-  @Get('users')
-  @Roles('ADMIN')
-  async getUsers() {
-    return this.adminService.getAllUsers();
-  }
-
-  /**
-   * GET /admin/orders
-   * Fetch all orders
-   */
-  @Get('orders')
-  @Roles('ADMIN')
-  async getOrders() {
-    return this.adminService.getAllOrders();
-  }
-
-  /**
-   * GET /admin/stats
-   * Fetch platform statistics
-   */
   @Get('stats')
-  @Roles('ADMIN')
-  async getStats(): Promise<AdminStatsDto> {
-    return this.adminService.getPlatformStats();
+  @ApiOperation({ summary: 'Get admin dashboard stats' })
+  getStats() {
+    return this.adminService.getStats();
   }
 
-  /**
-   * PATCH /admin/users/:id/suspend
-   * Suspend a user
-   */
-  @Patch('users/:id/suspend')
-  @Roles('ADMIN')
-  async suspendUser(@Param('id') id: string) {
-    return this.adminService.suspendUser(id);
+  @Get('users')
+  @ApiOperation({ summary: 'List users with pagination and role filtering' })
+  getUsers(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('role') role?: string,
+  ) {
+    return this.adminService.getUsers(page, limit, role);
   }
 
-  /**
-   * PATCH /admin/users/:id/activate
-   * Activate a user
-   */
-  @Patch('users/:id/activate')
-  @Roles('ADMIN')
-  async activateUser(@Param('id') id: string) {
-    return this.adminService.activateUser(id);
+  @Patch('users/:id/ban')
+  @ApiOperation({ summary: 'Ban a user' })
+  banUser(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.banUser(id);
+  }
+
+  @Get('fraud-alerts')
+  @ApiOperation({ summary: 'List fraud alerts' })
+  getFraudAlerts() {
+    return this.adminService.getFraudAlerts();
   }
 }

@@ -4,6 +4,11 @@
  * Central configuration for Consumer-Driven Contract Testing
  */
 
+// Ensure `process` is available in environments without Node type defs
+declare const process: {
+  env: { [key: string]: string | undefined };
+};
+
 export const PACT_CONFIG = {
   // Provider details
   provider: {

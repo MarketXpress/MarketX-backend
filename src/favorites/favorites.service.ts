@@ -1,131 +1,57 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Listing } from '../listing/entities/listing.entity';
-import { Users } from '../users/users.entity';
-import { CacheManagerService } from '../cache/cache-manager.service';
+import { UserFavorite } from './favorites.entity';
 
 @Injectable()
 export class FavoritesService {
   constructor(
-    @InjectRepository(Users)
-    private readonly userRepository: Repository<Users>,
-    private readonly cacheManager: CacheManagerService,
-    @InjectRepository(Listing)
-    private readonly listingRepository: Repository<Listing>,
+    @InjectRepository(UserFavorite)
+    private readonly favoritesRepository: Repository<UserFavorite>,
   ) {}
 
-  async favoriteListing(userId: number, listingId: string): Promise<void> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['favoriteListings'],
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const listing = await this.listingRepository.findOne({
-      where: { id: listingId },
-    });
-
-    if (!listing) {
-      throw new NotFoundException('Listing not found');
-    }
-
-    const isAlreadyFavorited = user.favoriteListings.some(
-      (favListing) => favListing.id === listingId,
-    );
-
-    if (isAlreadyFavorited) {
-      throw new ConflictException('Listing is already favorited');
-    }
-
-    user.favoriteListings.push(listing);
-    await this.userRepository.save(user);
-  }
-
-  async unfavoriteListing(userId: number, listingId: string): Promise<void> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['favoriteListings'],
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const index = user.favoriteListings.findIndex(
-      (fav) => fav.id === listingId,
-    );
-
-    if (index === -1) {
-      throw new NotFoundException('Listing not found in favorites');
-    }
-
-    user.favoriteListings.splice(index, 1);
-    await this.userRepository.save(user);
-  }
-
-  async getUserFavorites(userId: number): Promise<Listing[]> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['favoriteListings'],
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return user.favoriteListings;
-  }
-
-  async isListingFavorited(
-    userId: number,
-    listingId: string,
-  ): Promise<boolean> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['favoriteListings'],
-    });
-
-    if (!user) {
-      return false;
-    }
-
-    return user.favoriteListings.some((fav) => fav.id === listingId);
-  }
-
-  async findUserFavorites(
+  /**
+   * Toggles a product favorite state. Alternates between saving or removing the record.
+   */
+  async toggle(
     userId: string,
-    page: number = 1,
-    limit: number = 10,
-  ) {
-    return this.cacheManager.getOrSet(
-      `user:${userId}:favorites:page:${page}:limit:${limit}`,
-      async () => {
-        return [];
-      },
-      {
-        ttl: 1800,
-        tags: ['favorites', `user:${userId}`],
-      },
-    );
+    productId: string,
+  ): Promise<{ favorited: boolean }> {
+    const favorite = await this.favoritesRepository.findOne({
+      where: { userId, productId },
+    });
+
+    if (favorite) {
+      await this.favoritesRepository.remove(favorite);
+      return { favorited: false };
+    }
+
+    const newFavorite = this.favoritesRepository.create({ userId, productId });
+    await this.favoritesRepository.save(newFavorite);
+    return { favorited: true };
   }
 
-  async addToFavorites(userId: string, listingId: string) {
-    await this.cacheManager.invalidatePattern(`user:${userId}:favorites:*`);
-
-    return { message: 'Added to favorites' };
+  /**
+   * Retrieves all product IDs favorited by a user.
+   */
+  async findAllForUser(userId: string): Promise<string[]> {
+    const favorites = await this.favoritesRepository.find({
+      where: { userId },
+      select: ['productId'],
+    });
+    return favorites.map((fav) => fav.productId);
   }
 
-  async removeFromFavorites(userId: string, listingId: string) {
-    await this.cacheManager.invalidatePattern(`user:${userId}:favorites:*`);
-
-    return { message: 'Removed from favorites' };
+  /**
+   * Evaluates if a unique product record is currently favorited by a user.
+   */
+  async isFavorite(
+    userId: string,
+    productId: string,
+  ): Promise<{ isFavorite: boolean }> {
+    const count = await this.favoritesRepository.count({
+      where: { userId, productId },
+    });
+    return { isFavorite: count > 0 };
   }
 }

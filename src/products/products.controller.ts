@@ -9,28 +9,53 @@ import {
   Query,
   Req,
   UseGuards,
+  Inject,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiHeader,
+} from '@nestjs/swagger';
+import {
+  CacheInterceptor,
+  CacheTTL,
+  CACHE_MANAGER,
+} from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
-import { VerifiedSellerGuard } from '../verification/guards/verified-seller.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60)
   @ApiOperation({ summary: 'List products with filters & pagination' })
+  @ApiHeader({
+    name: 'X-Currency',
+    required: false,
+    description: 'Target currency',
+  })
   findAll(@Query() filters: FilterProductDto) {
     return this.productsService.findAll(filters);
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30)
   @ApiOperation({ summary: 'Get product by ID' })
   findOne(
     @Param('id') id: string,
@@ -41,34 +66,54 @@ export class ProductsController {
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Create product (verified seller only)' })
-  create(@Req() req, @Body() dto: CreateProductDto) {
-    return this.productsService.create(req.user.id.toString(), dto);
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create product' })
+  async create(@Req() req: any, @Body() dto: CreateProductDto) {
+    const product = await this.productsService.create(
+      req.user.id.toString(),
+      dto,
+    );
+    (this.cacheManager as any).reset();
+    return product;
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Update product (verified owner only)' })
-  update(@Param('id') id: string, @Req() req, @Body() dto: UpdateProductDto) {
-    return this.productsService.update(id, req.user.id.toString(), dto);
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update product' })
+  async update(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() dto: UpdateProductDto,
+  ) {
+    const product = await this.productsService.update(
+      id,
+      req.user.id.toString(),
+      dto,
+    );
+    (this.cacheManager as any).reset();
+    return product;
   }
 
   @Patch(':id/price')
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Update product price (verified owner only)' })
-  updatePrice(
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update product price' })
+  async updatePrice(
     @Param('id') id: string,
-    @Req() req,
+    @Req() req: any,
     @Body() dto: UpdatePriceDto,
   ) {
-    return this.productsService.updatePrice(id, req.user.id.toString(), dto);
+    const result = await this.productsService.updatePrice(
+      id,
+      req.user.id.toString(),
+      dto,
+    );
+    (this.cacheManager as any).reset();
+    return result;
   }
 
   @Get(':id/price-history')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get price change history for a product' })
   getPriceHistory(@Param('id') id: string) {
     return this.productsService.getPriceHistory(id);
@@ -76,9 +121,11 @@ export class ProductsController {
 
   @Delete(':id')
   @ApiBearerAuth()
-  @UseGuards(VerifiedSellerGuard)
-  @ApiOperation({ summary: 'Delete product (verified owner only)' })
-  async remove(@Param('id') id: string, @Req() req) {
-    return this.productsService.remove(id, req.user.id.toString());
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete product' })
+  remove(@Param('id') id: string, @Req() req: any) {
+    const result = this.productsService.remove(id, req.user.id.toString());
+    (this.cacheManager as any).reset();
+    return result;
   }
 }

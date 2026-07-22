@@ -2,27 +2,24 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
-  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
 } from 'typeorm';
-import { User } from './user.entity';
-import { Product } from './product.entity';
-import { OrderStatus } from '../common/enums/order-status.enum';
-import { PaymentStatus } from '../common/enums/payment-status.enum';
-
+import { SupportedCurrency } from '../products/services/pricing.service';
 
 export enum OrderStatus {
   PENDING = 'pending',
   CONFIRMED = 'confirmed',
   PROCESSING = 'processing',
+  PAID = 'paid',
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
   REFUNDED = 'refunded',
+  MANUAL_REVIEW = 'manual_review',
 }
 
 export enum PaymentStatus {
@@ -35,10 +32,12 @@ export enum PaymentStatus {
 
 export interface OrderItem {
   productId: string;
+  variantId?: string;
   productName: string;
   quantity: number;
   price: number;
   subtotal: number;
+  priceCurrency: SupportedCurrency;
 }
 
 @Entity('orders')
@@ -63,27 +62,19 @@ export class Order {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   discountAmount: number;
 
-  @Column({
-    type: 'enum',
-    enum: OrderStatus,
-    default: OrderStatus.PENDING,
-  })
+  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   @Index()
   status: OrderStatus;
 
-  @Column({
-    type: 'enum',
-    enum: PaymentStatus,
-    default: PaymentStatus.UNPAID,
-  })
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.UNPAID })
   @Index()
   paymentStatus: PaymentStatus;
 
   @Column({ type: 'jsonb' })
   items: OrderItem[];
 
-  @Column({ length: 255 })
-  shippingAddress: string;
+  @Column({ name: 'shipping_address', length: 255, nullable: true })
+  shippingAddress?: string;
 
   @Column({ nullable: true, length: 100 })
   trackingNumber?: string;
@@ -97,6 +88,27 @@ export class Order {
   @Column({ nullable: true })
   expectedDeliveryDate?: Date;
 
+  @Column({ type: 'varchar', length: 3, default: SupportedCurrency.USD })
+  currency: SupportedCurrency;
+
+  @Column({
+    name: 'released_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  releasedAmount: number;
+
+  @Column({
+    name: 'remaining_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  remainingAmount: number;
+
   @CreateDateColumn({ name: 'created_at' })
   @Index()
   createdAt: Date;
@@ -104,73 +116,32 @@ export class Order {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @Column({ nullable: true })
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt?: Date;
+
+  @Column({ name: 'confirmed_at', nullable: true })
   confirmedAt?: Date;
 
-  @Column({ nullable: true })
+  @Column({ name: 'shipped_at', nullable: true })
   shippedAt?: Date;
 
-  @Column({ nullable: true })
+  @Column({ name: 'delivered_at', nullable: true })
   deliveredAt?: Date;
 
-  @Column({ nullable: true })
+  @Column({ name: 'completed_at', nullable: true })
   completedAt?: Date;
 
-  @Column({ nullable: true })
+  @Column({ name: 'cancelled_at', nullable: true })
   cancelledAt?: Date;
 
-  @Column({ nullable: true })
+  @Column({ name: 'refunded_at', nullable: true })
   refundedAt?: Date;
 
-  // Foreign Keys
-  @Column('uuid')
+  @Column('uuid', { name: 'buyer_id' })
   @Index()
   buyerId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'seller_id', type: 'uuid', nullable: true })
   @Index()
   sellerId?: string;
-
-  // Relationships
-  @ManyToOne(() => User, {
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'buyerId' })
-  buyer: User;
-
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'sellerId' })
-  seller?: User;
-
-  // Computed properties for reporting/export
-  get orderId(): string {
-    return this.id;
-  }
-
-  get orderDate(): Date {
-    return this.createdAt;
-  }
-
-  get customerName(): string {
-    return this.buyer?.name ?? '';
-  }
-
-  get itemCount(): number {
-    return this.items.reduce((sum, item) => sum + item.quantity, 0);
-  }
-
-  get isCompleted(): boolean {
-    return this.status === OrderStatus.COMPLETED;
-  }
-
-  get isCancelled(): boolean {
-    return this.status === OrderStatus.CANCELLED;
-  }
-
-  get displayTotal(): string {
-    return `$${Number(this.totalAmount).toFixed(2)}`;
-  }
 }

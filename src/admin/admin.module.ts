@@ -1,51 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HttpModule } from '@nestjs/axios';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MailerModule } from '@nestjs-modules/mailer';
-
 import { AdminController } from './admin.controller';
-import { AdminFraudController } from './admin-fraud.controller';
-import { AdminEscrowController } from './admin-escrow.controller';
-import { AdminTaxExportController } from './admin-tax-export.controller';
-
 import { AdminService } from './admin.service';
-import { AdminWebhookService } from './admin-webhook.service';
-import { AdminTaxExportService } from './admin-tax-export.service';
-
-import { Order } from '../orders/entities/order.entity';
 import { Users } from '../users/users.entity';
-import { FraudAlert } from '../fraud/entities/fraud-alert.entity';
+import { Order } from '../orders/entities/order.entity';
+import { Product } from '../entities/product.entity';
+import { AdminGuard } from '../guards/admin.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([Users, Order, FraudAlert]),
-    HttpModule,
-    MailerModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        transport: {
-          service: 'Sendgrid',
-          auth: {
-            user: 'apikey',
-            pass: configService.get<string>('SENDGRID_API_KEY') || '',
-          },
-        },
-        defaults: {
-          from:
-            configService.get<string>('EMAIL_FROM') || 'noreply@marketx.com',
-        },
-      }),
-      inject: [ConfigService],
-    }),
-  ],
-  controllers: [
-    AdminController,
-    AdminFraudController,
-    // AdminEscrowController,   // uncomment once the escrow module is ready
-    AdminTaxExportController,
-  ],
-  providers: [AdminService, AdminWebhookService, AdminTaxExportService],
-  exports: [AdminService, AdminWebhookService, AdminTaxExportService],
+  imports: [TypeOrmModule.forFeature([Users, Order, Product])],
+  controllers: [AdminController],
+  providers: [AdminService, AdminGuard, JwtAuthGuard],
+  exports: [AdminService],
 })
 export class AdminModule {}

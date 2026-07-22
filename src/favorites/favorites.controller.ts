@@ -1,48 +1,54 @@
 import {
   Controller,
   Post,
-  Delete,
+  Get,
   Param,
+  ParseUUIDPipe,
   UseGuards,
   Request,
-  HttpCode,
-  HttpStatus,
-  Get,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { FavoritesService } from './favorites.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('listings')
-@UseGuards(AuthGuard('jwt'))
+@ApiTags('Favorites')
+@UseGuards(JwtAuthGuard)
+@Controller('favorites')
 export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 
-  @Post(':id/favorite')
-  @HttpCode(HttpStatus.CREATED)
-  async favoriteListing(
-    @Param('id') listingId: string,
-    @Request() req: any,
-  ): Promise<{ message: string }> {
-    const userId = req.user.id;
-    await this.favoritesService.favoriteListing(userId, listingId);
-    return { message: 'Listing added to favorites successfully' };
+  @ApiOperation({ summary: 'Toggle product favorite status' })
+  @ApiParam({ name: 'productId', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'State successfully flipped.' })
+  @Post(':productId')
+  async toggle(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Request() req,
+  ): Promise<{ favorited: boolean }> {
+    return this.favoritesService.toggle(req.user.id, productId);
   }
 
-  @Delete(':id/favorite')
-  @HttpCode(HttpStatus.OK)
-  async unfavoriteListing(
-    @Param('id') listingId: string,
-    @Request() req: any,
-  ): Promise<{ message: string }> {
-    const userId = req.user.id;
-    await this.favoritesService.unfavoriteListing(userId, listingId);
-    return { message: 'Listing removed from favorites successfully' };
+  @ApiOperation({ summary: 'Get all user favorites' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of favorited product UUID strings returned.',
+  })
+  @Get()
+  async findAll(@Request() req): Promise<string[]> {
+    return this.favoritesService.findAllForUser(req.user.id);
   }
 
-  @Get('favorites')
-  async getUserFavorites(@Request() req: any) {
-    const userId = req.user.id;
-    const favorites = await this.favoritesService.getUserFavorites(userId);
-    return { favorites };
+  @ApiOperation({ summary: 'Check if a specific product is favorited' })
+  @ApiParam({ name: 'productId', type: 'string', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evaluation state wrapper returned.',
+  })
+  @Get(':productId')
+  async isFavorite(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Request() req,
+  ): Promise<{ isFavorite: boolean }> {
+    return this.favoritesService.isFavorite(req.user.id, productId);
   }
 }

@@ -5,7 +5,9 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create.dto';
@@ -20,6 +22,8 @@ export class CategoriesController {
    * Returns a nested category tree.
    */
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300)
   @ApiOperation({ summary: 'Get category tree' })
   async getCategoriesTree() {
     return this.categoriesService.getTree();
@@ -43,8 +47,8 @@ export class CategoriesController {
   @Get(':id/products')
   @ApiOperation({ summary: 'Get products by category (dummy placeholder)' })
   @ApiParam({ name: 'id', type: Number })
-  async getProductsByCategory(@Param('id', ParseIntPipe) id: number) {
-    await this.categoriesService.getProductsByCategory(id);
+  getProductsByCategory(@Param('id', ParseIntPipe) id: number) {
+    this.categoriesService.getProductsByCategory(id);
     return {
       categoryId: id,
       includeDescendants: true,

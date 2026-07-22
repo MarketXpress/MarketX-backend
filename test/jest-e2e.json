@@ -6,8 +6,14 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "transformIgnorePatterns": [
+    "node_modules/(?!.*(@scure|@noble|otplib))"
+  ],
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/../src/$1"
   },
-  "testTimeout": 120000
+  "testTimeout": 120000,
+  "runInBand": true,
+  "forceExit": true,
+  "detectOpenHandles": true
 }

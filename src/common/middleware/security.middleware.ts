@@ -43,37 +43,8 @@ export class SecurityMiddleware implements NestMiddleware {
   }
 
   use(req: Request, res: Response, next: NextFunction): void {
-    try {
-      // 1. Check IP blocking/whitelisting
-      this.checkIPRestrictions(req);
-
-      // 2. Validate request size
-      this.validateRequestSize(req);
-
-      // 3. Apply security headers
-      this.applySecurityHeaders(res);
-
-      // 4. Sanitize request
-      this.sanitizeRequest(req);
-
-      // 5. Log security-relevant information
-      this.logRequestInfo(req);
-
-      next();
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        this.logger.warn(
-          `Security violation: ${error.message} from ${this.getClientIP(req)}`,
-        );
-        res.status(error.getStatus()).json({
-          statusCode: error.getStatus(),
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        next(error);
-      }
-    }
+    this.applySecurityHeaders(res);
+    next();
   }
 
   /**
@@ -142,20 +113,7 @@ export class SecurityMiddleware implements NestMiddleware {
       res.setHeader(header, value);
     });
 
-    // Add CORS headers if configured
-    if (process.env.CORS_ORIGIN) {
-      res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN);
-      res.setHeader(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      );
-      res.setHeader(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, X-Requested-With',
-      );
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Max-Age', '3600');
-    }
+    // CORS is handled by app.enableCors() in main.ts — do not set headers here.
   }
 
   /**
@@ -217,6 +175,7 @@ export class SecurityMiddleware implements NestMiddleware {
       /(\bor\b|\band\b|union|select|drop|insert|update|delete|exec|script|javascript|onerror|onclick)/i,
       /(<script|javascript:|on\w+\s*=|eval\(|alert\()/i,
       /\.\.\/\.\.\/|\.\.%2f%2f/i, // Path traversal
+      // eslint-disable-next-line no-control-regex
       /\x00|%00/, // Null byte injection
     ];
 

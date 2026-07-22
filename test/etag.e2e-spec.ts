@@ -22,9 +22,7 @@ describe('ETagInterceptor (e2e)', () => {
   });
 
   it('GET / should return ETag header', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/')
-      .expect(200);
+    const response = await request(app.getHttpServer()).get('/').expect(200);
 
     expect(response.get('ETag')).toBeDefined();
     expect(response.get('ETag')).toMatch(/^".*"$/); // Must be a strong ETag
@@ -32,9 +30,7 @@ describe('ETagInterceptor (e2e)', () => {
 
   it('GET / with If-None-Match should return 304', async () => {
     // First request to get the ETag
-    const firstRes = await request(app.getHttpServer())
-      .get('/')
-      .expect(200);
+    const firstRes = await request(app.getHttpServer()).get('/').expect(200);
 
     const etag = firstRes.get('ETag');
     expect(etag).toBeDefined();
@@ -59,12 +55,12 @@ describe('ETagInterceptor (e2e)', () => {
   it('POST / should NOT return ETag header', async () => {
     // Note: Depends on if there's a POST endpoint at / or if we use another one
     // But since ETagInterceptor only runs on GET, this should be fine.
-    const response = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/categories')
       .send({ name: 'Test' })
       .expect((res) => {
-          // Should not have ETag if interceptor is working correctly for only GET
-          expect(res.get('ETag')).toBeUndefined();
+        // Should not have ETag if interceptor is working correctly for only GET
+        expect(res.get('ETag')).toBeUndefined();
       });
   });
 });

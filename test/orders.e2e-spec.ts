@@ -65,6 +65,45 @@ describe('OrdersController (e2e)', () => {
       });
   });
 
+  it('/POST orders with the same Idempotency-Key returns the cached response and creates only one order', async () => {
+    const idempotencyKey = `idem-${Date.now()}-${Math.random()}`;
+
+    const first = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send(createOrderDto)
+      .expect(201);
+
+    const second = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send(createOrderDto)
+      .expect(201);
+
+    // Same order id => cached response was replayed.
+    expect(second.body.id).toBe(first.body.id);
+  });
+
+  it('/POST orders with different Idempotency-Keys creates separate orders', async () => {
+    const first = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .set('Idempotency-Key', `idem-A-${Date.now()}`)
+      .send(createOrderDto)
+      .expect(201);
+
+    const second = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .set('Idempotency-Key', `idem-B-${Date.now()}`)
+      .send(createOrderDto)
+      .expect(201);
+
+    expect(second.body.id).not.toBe(first.body.id);
+  });
+
   it('/GET orders (findAll) requires authentication', () => {
     return request(app.getHttpServer()).get('/orders').expect(401);
   });
@@ -80,6 +119,30 @@ describe('OrdersController (e2e)', () => {
           expect(order.buyerId).toBe(buyerId);
         }
       });
+  });
+
+  it('/GET orders/export requires authentication', () => {
+    return request(app.getHttpServer())
+      .get('/orders/export')
+      .query({ format: 'csv', buyerId: otherBuyerId })
+      .expect(401);
+  });
+
+  it('/GET orders/export ignores a client-supplied buyerId and only exports the caller\'s own orders (IDOR regression, #466)', async () => {
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send(createOrderDto)
+      .expect(201);
+
+    // Even though a different buyerId is requested, a non-admin caller must
+    // only ever be able to export their own order history.
+    return request(app.getHttpServer())
+      .get('/orders/export')
+      .query({ format: 'csv', buyerId: otherBuyerId })
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .expect(200)
+      .expect('Content-Type', /text\/csv/);
   });
 
   it('/GET orders/:id (findOne) requires authentication', () => {
@@ -133,7 +196,7 @@ describe('OrdersController (e2e)', () => {
         return request(app.getHttpServer())
           .patch(`/orders/${orderId}/status`)
           .set('Authorization', `Bearer ${otherBuyerToken}`)
-          .send({ status: 'paid' })
+          .send({ status: 'confirmed' })
           .expect(403);
       });
   });
@@ -148,7 +211,7 @@ describe('OrdersController (e2e)', () => {
         return request(app.getHttpServer())
           .patch(`/orders/${orderId}/status`)
           .set('Authorization', `Bearer ${buyerToken}`)
-          .send({ status: 'paid' })
+          .send({ status: 'confirmed' })
           .expect(200);
       });
   });

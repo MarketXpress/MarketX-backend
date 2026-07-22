@@ -1,235 +1,89 @@
 import {
   Controller,
   Get,
+  Patch,
   Post,
-  Put,
-  Delete,
-  Body,
   Param,
+  Body,
+  ParseIntPipe,
   Query,
-  UseGuards,
-  Req,
-  HttpStatus,
-  HttpCode,
+  ParseBoolPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
-
 import { NotificationsService } from './notifications.service';
-import { NotificationEntity } from './notification.entity';
-import {
-  CreateNotificationDto,
-  UpdateNotificationDto,
-  NotificationQueryDto,
-  BulkActionDto,
-  TransactionNotificationDto,
-} from './dto/notification.dto';
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import { Notification } from './notification.entity';
 
-// Placeholder for auth guard - implement according to your auth system
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-@ApiTags('Notifications')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  /**
+   * GET /notifications
+   * Retrieve all notifications for the authenticated user
+   * @query isRead - Optional filter to get only read or unread notifications
+   */
+  @Get()
+  async findAll(
+    @Query('isRead', new ParseBoolPipe({ optional: true }))
+    isRead?: boolean,
+  ): Promise<Notification[]> {
+    // In a real implementation, get recipientId from authenticated user context
+    const recipientId = ''; // This should come from request context/JWT
+    return this.notificationsService.findAllForUser(recipientId, isRead);
+  }
+
+  /**
+   * GET /notifications/unread-count
+   * Get the count of unread notifications
+   */
+  @Get('unread-count')
+  async getUnreadCount(): Promise<{ unreadCount: number }> {
+    // In a real implementation, get recipientId from authenticated user context
+    const recipientId = '';
+    const unreadCount =
+      await this.notificationsService.getUnreadCount(recipientId);
+    return { unreadCount };
+  }
+
+  /**
+   * GET /notifications/:id
+   * Retrieve a specific notification by ID
+   */
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<Notification> {
+    return this.notificationsService.findOne(id);
+  }
+
+  /**
+   * POST /notifications
+   * Create a new notification (typically called by internal services)
+   */
   @Post()
-  @ApiOperation({ summary: 'Create a new notification' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Notification created successfully',
-    type: NotificationEntity,
-  })
-  async createNotification(
+  async create(
     @Body() createNotificationDto: CreateNotificationDto,
-  ): Promise<NotificationEntity | NotificationEntity[]> {
-    return this.notificationsService.createNotification(createNotificationDto);
+  ): Promise<Notification> {
+    // In a real implementation, get recipientId from request or body
+    const recipientId = ''; // This should come from authenticated context or request body
+    return this.notificationsService.create(recipientId, createNotificationDto);
   }
 
-  @Post('transaction-received')
-  @ApiOperation({ summary: 'Send transaction received notification' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Transaction notification sent successfully',
-  })
-  async sendTransactionNotification(
-    @Body() transactionDto: TransactionNotificationDto,
-  ): Promise<NotificationEntity | NotificationEntity[]> {
-    return this.notificationsService.sendTransactionReceivedNotification(
-      transactionDto.userId,
-      transactionDto.transactionId,
-      transactionDto.amount,
-      transactionDto.currency,
-    );
+  /**
+   * PATCH /notifications/:id/read
+   * Mark a specific notification as read
+   */
+  @Patch(':id/read')
+  async markRead(@Param('id', ParseIntPipe) id: number): Promise<Notification> {
+    return this.notificationsService.markRead(id);
   }
 
-  @Get('user/:userId')
-  @ApiOperation({ summary: 'Get notifications for a specific user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User notifications retrieved successfully',
-  })
-  async getUserNotifications(
-    @Param('userId') userId: string,
-    @Query() queryDto: NotificationQueryDto,
-  ) {
-    return this.notificationsService.getUserNotifications(userId, queryDto);
-  }
-
-  @Get('user/:userId/stats')
-  @ApiOperation({ summary: 'Get notification statistics for a user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User notification statistics',
-  })
-  async getUserStats(@Param('userId') userId: string) {
-    return this.notificationsService.getUserNotificationStats(userId);
-  }
-
-  @Get(':id/user/:userId')
-  @ApiOperation({ summary: 'Get a specific notification' })
-  @ApiParam({ name: 'id', description: 'Notification ID' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Notification retrieved successfully',
-    type: NotificationEntity,
-  })
-  async getNotification(
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-  ): Promise<NotificationEntity> {
-    return this.notificationsService.getNotificationById(id, userId);
-  }
-
-  @Put(':id/user/:userId')
-  @ApiOperation({ summary: 'Update a notification' })
-  @ApiParam({ name: 'id', description: 'Notification ID' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Notification updated successfully',
-    type: NotificationEntity,
-  })
-  async updateNotification(
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-    @Body() updateDto: UpdateNotificationDto,
-  ): Promise<NotificationEntity> {
-    return this.notificationsService.updateNotification(id, userId, updateDto);
-  }
-
-  @Put(':id/user/:userId/read')
-  @ApiOperation({ summary: 'Mark notification as read' })
-  @ApiParam({ name: 'id', description: 'Notification ID' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Notification marked as read',
-    type: NotificationEntity,
-  })
-  async markAsRead(
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-  ): Promise<NotificationEntity> {
-    return this.notificationsService.markAsRead(id, userId);
-  }
-
-  @Put('user/:userId/mark-all-read')
-  @ApiOperation({ summary: 'Mark all notifications as read for a user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'All notifications marked as read',
-  })
-  @HttpCode(HttpStatus.OK)
-  async markAllAsRead(
-    @Param('userId') userId: string,
-  ): Promise<{ message: string }> {
-    await this.notificationsService.markAllAsRead(userId);
-    return { message: 'All notifications marked as read' };
-  }
-
-  @Put('user/:userId/mark-multiple-read')
-  @ApiOperation({ summary: 'Mark multiple notifications as read' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Selected notifications marked as read',
-  })
-  @HttpCode(HttpStatus.OK)
-  async markMultipleAsRead(
-    @Param('userId') userId: string,
-    @Body() bulkActionDto: BulkActionDto,
-  ): Promise<{ message: string }> {
-    await this.notificationsService.markMultipleAsRead(
-      bulkActionDto.notificationIds,
-      userId,
-    );
-    return {
-      message: `${bulkActionDto.notificationIds.length} notifications marked as read`,
-    };
-  }
-
-  @Delete(':id/user/:userId')
-  @ApiOperation({ summary: 'Delete a notification' })
-  @ApiParam({ name: 'id', description: 'Notification ID' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Notification deleted successfully',
-  })
-  @HttpCode(HttpStatus.OK)
-  async deleteNotification(
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-  ): Promise<{ message: string }> {
-    await this.notificationsService.deleteNotification(id, userId);
-    return { message: 'Notification deleted successfully' };
-  }
-
-  @Delete('user/:userId/bulk')
-  @ApiOperation({ summary: 'Delete multiple notifications' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Notifications deleted successfully',
-  })
-  @HttpCode(HttpStatus.OK)
-  async deleteMultipleNotifications(
-    @Param('userId') userId: string,
-    @Body() bulkActionDto: BulkActionDto,
-  ): Promise<{ message: string }> {
-    await this.notificationsService.deleteMultipleNotifications(
-      bulkActionDto.notificationIds,
-      userId,
-    );
-    return {
-      message: `${bulkActionDto.notificationIds.length} notifications deleted successfully`,
-    };
-  }
-
-  @Post('bulk')
-  @ApiOperation({ summary: 'Create multiple notifications' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Bulk notifications created successfully',
-  })
-  async createBulkNotifications(
-    @Body() notifications: CreateNotificationDto[],
-  ): Promise<NotificationEntity[]> {
-    return this.notificationsService.sendBulkNotifications(notifications);
+  /**
+   * PATCH /notifications/read-all
+   * Mark all notifications for the user as read
+   */
+  @Patch('read-all')
+  async markAllRead(): Promise<{ affected: number }> {
+    // In a real implementation, get recipientId from authenticated user context
+    const recipientId = '';
+    return this.notificationsService.markAllRead(recipientId);
   }
 }

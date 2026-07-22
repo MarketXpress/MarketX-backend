@@ -1,3 +1,5 @@
+import { IsUUID, IsOptional, IsString } from 'class-validator';
+
 export class BaseOrderDto {
   @IsUUID()
   buyerId: string;

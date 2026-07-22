@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
 import * as path from 'path';
 import 'winston-daily-rotate-file';
+import { getCorrelationId } from './correlation-context';
 
 interface SanitizedData {
   [key: string]: any;
@@ -79,7 +80,7 @@ export class LoggerService {
             ? JSON.stringify(sanitizedMeta)
             : '';
 
-        return `${timestamp} [${level.toUpperCase()}] ${message}${metaStr ? ' ' + metaStr : ''}`;
+        return `${String(timestamp)} [${String(level).toUpperCase()}] ${String(message)}${metaStr ? ' ' + metaStr : ''}`;
       }),
     );
 
@@ -135,11 +136,17 @@ export class LoggerService {
     });
   }
 
+  private withCorrelationId(meta: Record<string, any>): Record<string, any> {
+    const correlationId = getCorrelationId();
+    return correlationId ? { correlationId, ...meta } : meta;
+  }
+
   /**
    * Log error level message
    */
   error(message: string, context?: any, error?: Error): void {
     this.logger.error(message, {
+      correlationId: getCorrelationId(),
       context,
       stack: error?.stack,
       errorMessage: error?.message,
@@ -150,21 +157,21 @@ export class LoggerService {
    * Log warning level message
    */
   warn(message: string, context?: any): void {
-    this.logger.warn(message, { context });
+    this.logger.warn(message, { correlationId: getCorrelationId(), context });
   }
 
   /**
    * Log info level message
    */
   info(message: string, context?: any): void {
-    this.logger.info(message, { context });
+    this.logger.info(message, { correlationId: getCorrelationId(), context });
   }
 
   /**
    * Log debug level message
    */
   debug(message: string, context?: any): void {
-    this.logger.debug(message, { context });
+    this.logger.debug(message, { correlationId: getCorrelationId(), context });
   }
 
   /**

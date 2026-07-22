@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# local env files
+.env.local
+
 # files
 http.endpoin.http
 

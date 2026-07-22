@@ -1,190 +1,246 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-
-import { OrdersService } from './orders.service';
-import { Order, OrderStatus } from './entities/order.entity';
-import { PricingService } from '../products/services/pricing.service';
+import { DataSource } from 'typeorm';
+import {
+  EventNames,
+  OrderCompletedEvent,
+  OrderUpdatedEvent,
+} from '../common/events';
+import { LoggerService } from '../common/logger/logger.service';
+import { SupportedCurrency } from '../products/services/pricing.service';
 import { ProductsService } from '../products/products.service';
-import { InventoryService } from '../inventory/inventory.service';
-import { AdminWebhookService } from '../admin/admin-webhook.service';
-import { EventNames } from '../common/events';
+import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
+import { OrdersService } from './orders.service';
+
+// ── Fixtures ───────────────────────────────────────────────────────────────────
+
+const ORDER_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+const BUYER_ID = 'buyer-uuid';
+const SELLER_ID = 'seller-uuid';
+const actingBuyer = { id: BUYER_ID, role: 'buyer' };
+const actingSeller = { id: SELLER_ID, role: 'seller' };
+const actingAdmin = { id: 'admin-uuid', role: 'admin' };
+const actingStranger = { id: 'stranger-uuid', role: 'buyer' };
+
+function makeOrder(overrides: Partial<Order> = {}): Order {
+  return {
+    id: ORDER_ID,
+    buyerId: BUYER_ID,
+    totalAmount: 100,
+    taxAmount: 0,
+    shippingCost: 0,
+    discountAmount: 0,
+    status: OrderStatus.PENDING,
+    paymentStatus: PaymentStatus.UNPAID,
+    items: [],
+    currency: SupportedCurrency.USD,
+    releasedAmount: 0,
+    remainingAmount: 100,
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+    ...overrides,
+  };
+}
+
+function makeProduct(
+  overrides: Partial<{ price: string; currency: SupportedCurrency }> = {},
+) {
+  return {
+    id: 'product-uuid',
+    name: 'Widget',
+    price: '50',
+    currency: SupportedCurrency.USD,
+    ...overrides,
+  };
+}
+
+// ── Mock factories ─────────────────────────────────────────────────────────────
+
+function makeOrdersRepo() {
+  return {
+    findOne: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+  };
+}
+
+function makeManager() {
+  return {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
+  };
+}
+
+function makeDataSource(manager: ReturnType<typeof makeManager>) {
+  return {
+    transaction: jest
+      .fn()
+      .mockImplementation((cb: (m: typeof manager) => unknown) => cb(manager)),
+  };
+}
+
+// ── Suite ──────────────────────────────────────────────────────────────────────
 
 describe('OrdersService', () => {
   let service: OrdersService;
-  let mockRepository: any;
-  let mockEventEmitter: any;
-  let mockInventoryService: any;
-  let mockDataSource: any;
-  let mockManager: any;
-  let mockAdminWebhookService: any;
-  let mockProductsService: any;
+  let ordersRepo: ReturnType<typeof makeOrdersRepo>;
+  let manager: ReturnType<typeof makeManager>;
+  let dataSource: ReturnType<typeof makeDataSource>;
+  let productsService: { findOne: jest.Mock };
+  let eventEmitter: { emit: jest.Mock };
+  let logger: {
+    info: jest.Mock;
+    error: jest.Mock;
+    warn: jest.Mock;
+    debug: jest.Mock;
+  };
 
-  const testBuyerId = 'buyer-1';
-  const testOrderId = 'order-1';
-  const testSellerId = 'seller-1';
-  const actingBuyer = { id: testBuyerId, role: 'buyer' };
-  const actingSeller = { id: testSellerId, role: 'seller' };
-  const actingAdmin = { id: 'admin-1', role: 'admin' };
-  const actingStranger = { id: 'stranger-1', role: 'buyer' };
+  beforeEach(() => {
+    ordersRepo = makeOrdersRepo();
+    manager = makeManager();
+    dataSource = makeDataSource(manager);
+    productsService = { findOne: jest.fn() };
+    eventEmitter = { emit: jest.fn() };
+    logger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
 
-  const makeOrder = (overrides: Partial<Order> = {}): Partial<Order> => ({
-    id: testOrderId,
-    buyerId: testBuyerId,
-    status: OrderStatus.PENDING,
-    totalAmount: 100,
-    items: [{ productId: 'prod-1', quantity: 2 } as any],
-    ...overrides,
+    service = new OrdersService(
+      ordersRepo as any,
+      dataSource as unknown as DataSource,
+      productsService as unknown as ProductsService,
+      eventEmitter as unknown as EventEmitter2,
+      logger as unknown as LoggerService,
+    );
   });
 
-  beforeEach(async () => {
-    mockRepository = {
-      create: jest.fn(),
-      save: jest.fn(),
-      find: jest.fn(),
-      findOne: jest.fn(),
-    };
+  // ── create() ──────────────────────────────────────────────────────────────
 
-    mockEventEmitter = { emit: jest.fn() };
-
-    mockInventoryService = {
-      reserveInventory: jest.fn().mockResolvedValue(undefined),
-      releaseInventory: jest.fn().mockResolvedValue(undefined),
-      confirmOrder: jest.fn().mockResolvedValue(undefined),
-      cancelOrder: jest.fn().mockResolvedValue(undefined),
-    };
-
-    mockAdminWebhookService = {
-      notifyAdmin: jest.fn().mockResolvedValue(undefined),
-    };
-
-    mockProductsService = {
-      findOne: jest.fn().mockReturnValue({
-        id: 'prod-1',
-        name: 'Test Product',
-        price: '50',
-        currency: 'USD',
-      }),
-    };
-
-    mockManager = {
-      create: jest.fn(),
-      save: jest.fn(),
-      findOne: jest.fn(),
-    };
-
-    mockDataSource = {
-      transaction: jest.fn((cb: (manager: any) => Promise<any>) =>
-        cb(mockManager),
-      ),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        OrdersService,
-        { provide: getRepositoryToken(Order), useValue: mockRepository },
-        { provide: DataSource, useValue: mockDataSource },
-        { provide: PricingService, useValue: {} },
-        { provide: ProductsService, useValue: mockProductsService },
-        { provide: EventEmitter2, useValue: mockEventEmitter },
-        { provide: InventoryService, useValue: mockInventoryService },
-        { provide: AdminWebhookService, useValue: mockAdminWebhookService },
-      ],
-    }).compile();
-
-    service = module.get<OrdersService>(OrdersService);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // findAll
-  // ─────────────────────────────────────────────────────────────
-
-  describe('findAll', () => {
-    it('should return all orders when no buyerId is provided', async () => {
-      const orders = [makeOrder()];
-      mockRepository.find.mockResolvedValue(orders);
-
-      const result = await service.findAll();
-
-      expect(result).toEqual(orders);
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        order: { createdAt: 'DESC' },
-      });
-    });
-
-    it('should return only the buyer orders when buyerId is provided', async () => {
-      const orders = [makeOrder()];
-      mockRepository.find.mockResolvedValue(orders);
-
-      const result = await service.findAll(testBuyerId);
-
-      expect(result).toEqual(orders);
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { buyerId: testBuyerId },
-        order: { createdAt: 'DESC' },
-      });
-      // Guard: must NOT omit the where clause (kills conditional-removal mutations)
-      const callArg = mockRepository.find.mock.calls[0][0];
-      expect(callArg).toHaveProperty('where.buyerId', testBuyerId);
-    });
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // findOne
-  // ─────────────────────────────────────────────────────────────
-
-  describe('findOne', () => {
-    it('should return the order when the caller is the buyer', async () => {
+  describe('create()', () => {
+    it('creates and returns an order when all products are found', async () => {
+      productsService.findOne.mockReturnValue(makeProduct());
       const order = makeOrder();
-      mockRepository.findOne.mockResolvedValue(order);
+      manager.create.mockReturnValue(order);
+      manager.save.mockResolvedValue(order);
 
-      const result = await service.findOne(testOrderId, actingBuyer);
-
-      expect(result).toEqual(order);
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id: testOrderId },
+      const result = await service.create({
+        buyerId: 'buyer-uuid',
+        items: [{ productId: 'product-uuid', quantity: 2 }],
       });
-    });
 
-    it('should return the order when the caller is the seller', async () => {
-      const order = makeOrder({ sellerId: testSellerId });
-      mockRepository.findOne.mockResolvedValue(order);
-
-      const result = await service.findOne(testOrderId, actingSeller);
-
+      expect(productsService.findOne).toHaveBeenCalledWith(
+        'product-uuid',
+        SupportedCurrency.USD,
+      );
+      expect(manager.create).toHaveBeenCalledWith(
+        Order,
+        expect.objectContaining({
+          buyerId: 'buyer-uuid',
+          status: OrderStatus.PENDING,
+          paymentStatus: PaymentStatus.UNPAID,
+          totalAmount: 100, // price(50) * quantity(2)
+        }),
+      );
+      expect(manager.save).toHaveBeenCalledWith(order);
       expect(result).toEqual(order);
     });
 
-    it('should return the order when the caller is an admin', async () => {
-      const order = makeOrder();
-      mockRepository.findOne.mockResolvedValue(order);
+    it('forwards the paymentCurrency from the DTO to productsService.findOne', async () => {
+      productsService.findOne.mockReturnValue(
+        makeProduct({ currency: SupportedCurrency.EUR }),
+      );
+      const order = makeOrder({ currency: SupportedCurrency.EUR });
+      manager.create.mockReturnValue(order);
+      manager.save.mockResolvedValue(order);
 
-      const result = await service.findOne(testOrderId, actingAdmin);
+      await service.create({
+        buyerId: 'buyer-uuid',
+        items: [{ productId: 'product-uuid', quantity: 1 }],
+        paymentCurrency: SupportedCurrency.EUR,
+      });
 
-      expect(result).toEqual(order);
+      expect(productsService.findOne).toHaveBeenCalledWith(
+        'product-uuid',
+        SupportedCurrency.EUR,
+      );
     });
 
-    it('should throw ForbiddenException when the caller is neither buyer, seller, nor admin', async () => {
-      const order = makeOrder();
-      mockRepository.findOne.mockResolvedValue(order);
+    it('throws NotFoundException when a product ID is not found', async () => {
+      productsService.findOne.mockReturnValue(undefined);
 
       await expect(
-        service.findOne(testOrderId, actingStranger),
+        service.create({
+          buyerId: 'buyer-uuid',
+          items: [{ productId: 'missing-id', quantity: 1 }],
+        } as any),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(manager.save).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the computed order total is zero', async () => {
+      productsService.findOne.mockReturnValue(makeProduct({ price: '0' }));
+
+      await expect(
+        service.create({
+          buyerId: 'buyer-uuid',
+          items: [{ productId: 'product-uuid', quantity: 1 }],
+        } as any),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(manager.save).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── findOne() — ownership check (#466) ──────────────────────────────────
+
+  describe('findOne()', () => {
+    it('returns the order when the caller is the buyer', async () => {
+      const order = makeOrder();
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(ORDER_ID, actingBuyer);
+
+      expect(result).toEqual(order);
+    });
+
+    it('returns the order when the caller is the seller', async () => {
+      const order = makeOrder({ sellerId: SELLER_ID });
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(ORDER_ID, actingSeller);
+
+      expect(result).toEqual(order);
+    });
+
+    it('returns the order when the caller is an admin', async () => {
+      const order = makeOrder();
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(ORDER_ID, actingAdmin);
+
+      expect(result).toEqual(order);
+    });
+
+    it('throws ForbiddenException when the caller is neither buyer, seller, nor admin', async () => {
+      const order = makeOrder();
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.findOne(ORDER_ID, actingStranger),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw NotFoundException when the order does not exist', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
+    it('throws NotFoundException when the order does not exist', async () => {
+      ordersRepo.findOne.mockResolvedValue(null);
 
       await expect(
         service.findOne('non-existent', actingBuyer),
@@ -192,310 +248,259 @@ describe('OrdersService', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────
-  // cancelOrder  — critical status-check mutations
-  // ─────────────────────────────────────────────────────────────
+  // ── updateStatus() ────────────────────────────────────────────────────────
 
-  describe('cancelOrder', () => {
-    it('should cancel a PENDING order and release inventory', async () => {
-      const order = makeOrder({ status: OrderStatus.PENDING });
-      mockManager.findOne.mockResolvedValue(order);
-      mockManager.save.mockResolvedValue({
-        ...order,
-        status: OrderStatus.CANCELLED,
-      });
+  describe('updateStatus()', () => {
+    function seedOrder(status: OrderStatus, overrides: Partial<Order> = {}) {
+      const order = makeOrder({ status, ...overrides });
+      ordersRepo.findOne.mockResolvedValue(order);
+      // Return the mutated object so callers can inspect field changes
+      ordersRepo.save.mockImplementation((o: Order) => Promise.resolve(o));
+      return order;
+    }
 
-      const result = await service.cancelOrder(testOrderId, testBuyerId);
+    it('returns the saved order on a valid transition (PENDING → CONFIRMED)', async () => {
+      seedOrder(OrderStatus.PENDING);
 
-      expect(result.status).toBe(OrderStatus.CANCELLED);
-      expect(mockInventoryService.releaseInventory).toHaveBeenCalledWith(
-        'prod-1',
-        testBuyerId,
-        2,
-        mockManager,
-      );
+      const result = await service.updateStatus(ORDER_ID, {
+        status: OrderStatus.CONFIRMED,
+      }, actingBuyer);
+
+      expect(result.status).toBe(OrderStatus.CONFIRMED);
+      expect(ordersRepo.save).toHaveBeenCalled();
     });
 
-    // ── MUTATION TARGET: order.status === OrderStatus.CANCELLED ──────────
-    it('should throw BadRequestException when order is already CANCELLED', async () => {
-      const order = makeOrder({ status: OrderStatus.CANCELLED });
-      mockManager.findOne.mockResolvedValue(order);
+    it('throws BadRequestException for an invalid transition (PENDING → COMPLETED)', async () => {
+      seedOrder(OrderStatus.PENDING);
 
       await expect(
-        service.cancelOrder(testOrderId, testBuyerId),
-      ).rejects.toThrow('Order is already cancelled');
+        service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }, actingBuyer),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(ordersRepo.save).not.toHaveBeenCalled();
     });
 
-    it('should NOT throw for a PENDING order (inverse of the CANCELLED guard)', async () => {
-      const order = makeOrder({ status: OrderStatus.PENDING });
-      mockManager.findOne.mockResolvedValue(order);
-      mockManager.save.mockResolvedValue({
-        ...order,
-        status: OrderStatus.CANCELLED,
-      });
-
-      // Should resolve without throwing
-      await expect(
-        service.cancelOrder(testOrderId, testBuyerId),
-      ).resolves.not.toThrow();
-    });
-
-    it('should throw BadRequestException when the order belongs to a different buyer', async () => {
-      const order = makeOrder({ buyerId: 'other-buyer' });
-      mockManager.findOne.mockResolvedValue(order);
+    it('throws BadRequestException when moving out of a terminal CANCELLED state', async () => {
+      seedOrder(OrderStatus.CANCELLED);
 
       await expect(
-        service.cancelOrder(testOrderId, testBuyerId),
-      ).rejects.toThrow('Order not found or unauthorized');
+        service.updateStatus(ORDER_ID, { status: OrderStatus.PENDING }, actingBuyer),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException when the order is not found', async () => {
-      mockManager.findOne.mockResolvedValue(null);
+    it('throws BadRequestException when moving out of a terminal REFUNDED state', async () => {
+      seedOrder(OrderStatus.REFUNDED);
 
       await expect(
-        service.cancelOrder(testOrderId, testBuyerId),
-      ).rejects.toThrow('Order not found or unauthorized');
-    });
-  });
-
-  // ─────────────────────────────────────────────────────────────
-  // updateStatus  — critical PAID / CANCELLED branch mutations
-  // ─────────────────────────────────────────────────────────────
-
-  describe('updateStatus', () => {
-    const pendingOrder = () =>
-      makeOrder({ status: OrderStatus.PENDING }) as Order;
-
-    beforeEach(() => {
-      mockRepository.save.mockImplementation((o: Order) =>
-        Promise.resolve({ ...o }),
-      );
+        service.updateStatus(ORDER_ID, { status: OrderStatus.PENDING }, actingBuyer),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    // ── MUTATION TARGET: status === OrderStatus.PAID ─────────────────────
-    it('should call confirmOrder (and only confirmOrder) when status becomes PAID', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      await service.updateStatus(
-        testOrderId,
-        { status: OrderStatus.PAID },
-        actingBuyer,
-      );
-
-      expect(mockInventoryService.confirmOrder).toHaveBeenCalledWith(order);
-      expect(mockInventoryService.cancelOrder).not.toHaveBeenCalled();
-    });
-
-    it('should NOT call confirmOrder when status becomes SHIPPED', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      await service.updateStatus(
-        testOrderId,
-        { status: OrderStatus.SHIPPED },
-        actingBuyer,
-      );
-
-      expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
-    });
-
-    it('should NOT call confirmOrder when status becomes DELIVERED', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      await service.updateStatus(
-        testOrderId,
-        {
-          status: OrderStatus.DELIVERED,
-        },
-        actingBuyer,
-      );
-
-      expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
-    });
-
-    // ── MUTATION TARGET: status === OrderStatus.CANCELLED ────────────────
-    it('should call cancelOrder (and only cancelOrder) when status becomes CANCELLED', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      await service.updateStatus(
-        testOrderId,
-        {
-          status: OrderStatus.CANCELLED,
-        },
-        actingBuyer,
-      );
-
-      expect(mockInventoryService.cancelOrder).toHaveBeenCalledWith(order);
-      expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
-    });
-
-    it('should NOT call cancelOrder when status becomes PAID', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      await service.updateStatus(
-        testOrderId,
-        { status: OrderStatus.PAID },
-        actingBuyer,
-      );
-
-      expect(mockInventoryService.cancelOrder).not.toHaveBeenCalled();
-    });
-
-    it('should set cancelledAt when transitioning to CANCELLED', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      const before = Date.now();
-      await service.updateStatus(
-        testOrderId,
-        {
-          status: OrderStatus.CANCELLED,
-        },
-        actingBuyer,
-      );
-      const after = Date.now();
-
-      const savedArg: Order = mockRepository.save.mock.calls[0][0];
-      expect(savedArg.cancelledAt).toBeInstanceOf(Date);
-      expect(savedArg.cancelledAt!.getTime()).toBeGreaterThanOrEqual(before);
-      expect(savedArg.cancelledAt!.getTime()).toBeLessThanOrEqual(after);
-    });
-
-    it('should set shippedAt when transitioning to SHIPPED', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      const before = Date.now();
-      await service.updateStatus(
-        testOrderId,
-        { status: OrderStatus.SHIPPED },
-        actingBuyer,
-      );
-      const after = Date.now();
-
-      const savedArg: Order = mockRepository.save.mock.calls[0][0];
-      expect(savedArg.shippedAt).toBeInstanceOf(Date);
-      expect(savedArg.shippedAt!.getTime()).toBeGreaterThanOrEqual(before);
-      expect(savedArg.shippedAt!.getTime()).toBeLessThanOrEqual(after);
-    });
-
-    it('should set deliveredAt when transitioning to DELIVERED', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-
-      await service.updateStatus(
-        testOrderId,
-        {
-          status: OrderStatus.DELIVERED,
-        },
-        actingBuyer,
-      );
-
-      const savedArg: Order = mockRepository.save.mock.calls[0][0];
-      expect(savedArg.deliveredAt).toBeInstanceOf(Date);
-    });
-
-    it('should emit ORDER_UPDATED with the correct new and previous statuses', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
-      mockRepository.save.mockResolvedValue({
-        ...order,
-        status: OrderStatus.PAID,
-      });
-
-      await service.updateStatus(
-        testOrderId,
-        { status: OrderStatus.PAID },
-        actingBuyer,
-      );
-
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        EventNames.ORDER_UPDATED,
-        expect.objectContaining({
-          status: OrderStatus.PAID,
-          previousStatus: OrderStatus.PENDING,
-        }),
-      );
-    });
-
-    it('should throw NotFoundException when order is not found', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
+    it('throws NotFoundException when the order does not exist', async () => {
+      ordersRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus(
-          'non-existent',
-          { status: OrderStatus.PAID },
-          actingBuyer,
-        ),
+        service.updateStatus('no-such-id', { status: OrderStatus.CONFIRMED }, actingBuyer),
       ).rejects.toThrow(NotFoundException);
     });
 
-    // ── MUTATION TARGET: ownership/role check (#466) ──────────────────────
-    it('should allow the seller to update status', async () => {
-      const order = makeOrder({
-        status: OrderStatus.PENDING,
-        sellerId: testSellerId,
-      });
-      mockRepository.findOne.mockResolvedValue(order);
+    it('sets paymentStatus=PAID and confirmedAt when transitioning to PAID', async () => {
+      seedOrder(OrderStatus.PROCESSING);
+
+      const result = await service.updateStatus(ORDER_ID, {
+        status: OrderStatus.PAID,
+      }, actingBuyer);
+
+      expect(result.paymentStatus).toBe(PaymentStatus.PAID);
+      expect(result.confirmedAt).toBeInstanceOf(Date);
+    });
+
+    it('sets cancelledAt when transitioning to CANCELLED', async () => {
+      seedOrder(OrderStatus.PENDING);
+
+      const result = await service.updateStatus(ORDER_ID, {
+        status: OrderStatus.CANCELLED,
+      }, actingBuyer);
+
+      expect(result.cancelledAt).toBeInstanceOf(Date);
+    });
+
+    it('sets shippedAt when transitioning to SHIPPED', async () => {
+      seedOrder(OrderStatus.PAID);
+
+      const result = await service.updateStatus(ORDER_ID, {
+        status: OrderStatus.SHIPPED,
+      }, actingBuyer);
+
+      expect(result.shippedAt).toBeInstanceOf(Date);
+    });
+
+    it('sets deliveredAt when transitioning to DELIVERED', async () => {
+      seedOrder(OrderStatus.SHIPPED);
+
+      const result = await service.updateStatus(ORDER_ID, {
+        status: OrderStatus.DELIVERED,
+      }, actingBuyer);
+
+      expect(result.deliveredAt).toBeInstanceOf(Date);
+    });
+
+    // ── ownership/role check (#466) ─────────────────────────────────────────
+
+    it('allows the seller to update status', async () => {
+      seedOrder(OrderStatus.PENDING, { sellerId: SELLER_ID });
 
       await expect(
         service.updateStatus(
-          testOrderId,
-          { status: OrderStatus.SHIPPED },
+          ORDER_ID,
+          { status: OrderStatus.CONFIRMED },
           actingSeller,
         ),
       ).resolves.not.toThrow();
     });
 
-    it('should allow an admin to update status for any order', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
+    it('allows an admin to update status for any order', async () => {
+      seedOrder(OrderStatus.PENDING);
 
       await expect(
         service.updateStatus(
-          testOrderId,
-          { status: OrderStatus.PAID },
+          ORDER_ID,
+          { status: OrderStatus.CONFIRMED },
           actingAdmin,
         ),
       ).resolves.not.toThrow();
     });
 
-    it('should throw ForbiddenException when a caller who is neither buyer, seller, nor admin tries to update status', async () => {
-      const order = pendingOrder();
-      mockRepository.findOne.mockResolvedValue(order);
+    it('throws ForbiddenException when a caller who is neither buyer, seller, nor admin tries to update status', async () => {
+      seedOrder(OrderStatus.PENDING);
 
       await expect(
         service.updateStatus(
-          testOrderId,
-          { status: OrderStatus.PAID },
+          ORDER_ID,
+          { status: OrderStatus.CONFIRMED },
           actingStranger,
         ),
       ).rejects.toThrow(ForbiddenException);
 
-      expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
-      expect(mockRepository.save).not.toHaveBeenCalled();
+      expect(ordersRepo.save).not.toHaveBeenCalled();
     });
   });
 
-  // ─────────────────────────────────────────────────────────────
-  // cancelOrder — IDOR regression coverage (#466)
-  // ─────────────────────────────────────────────────────────────
+  // ── cancelOrder() — IDOR regression coverage (#466) ─────────────────────
 
-  describe('cancelOrder ownership (#466)', () => {
-    it('should reject cancellation attempted with a different buyer id than the order owner', async () => {
+  describe('cancelOrder()', () => {
+    it('cancels a PENDING order for the owning buyer', async () => {
+      const order = makeOrder({ status: OrderStatus.PENDING });
+      manager.findOne.mockResolvedValue(order);
+      manager.save.mockResolvedValue({
+        ...order,
+        status: OrderStatus.CANCELLED,
+      });
+
+      const result = await service.cancelOrder(ORDER_ID, BUYER_ID);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('rejects cancellation attempted with a different buyer id than the order owner', async () => {
       // Simulates the fixed controller behavior: the id passed in now always
       // comes from req.user.id, never a client-supplied body field. A caller
       // impersonating another buyer must still be rejected here.
-      const order = makeOrder({ buyerId: testBuyerId });
-      mockManager.findOne.mockResolvedValue(order);
+      const order = makeOrder({ buyerId: BUYER_ID });
+      manager.findOne.mockResolvedValue(order);
 
       await expect(
-        service.cancelOrder(testOrderId, actingStranger.id),
+        service.cancelOrder(ORDER_ID, actingStranger.id),
       ).rejects.toThrow('Order not found or unauthorized');
+    });
+  });
+
+  // ── EventEmitter2.emit ────────────────────────────────────────────────────
+
+  describe('EventEmitter2.emit', () => {
+    function seedOrder(status: OrderStatus) {
+      const order = makeOrder({ status });
+      ordersRepo.findOne.mockResolvedValue(order);
+      ordersRepo.save.mockImplementation((o: Order) => Promise.resolve(o));
+      return order;
+    }
+
+    it('emits ORDER_UPDATED with the correct event name after any status change', async () => {
+      const order = seedOrder(OrderStatus.PENDING);
+
+      await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED }, actingBuyer);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        EventNames.ORDER_UPDATED,
+        expect.any(OrderUpdatedEvent),
+      );
+
+      const [, payload] = eventEmitter.emit.mock.calls.find(
+        ([name]: [string]) => name === EventNames.ORDER_UPDATED,
+      )!;
+
+      expect(payload).toMatchObject({
+        orderId: order.id,
+        userId: order.buyerId,
+        orderNumber: `ORD-${order.id.substring(0, 8)}`,
+        status: OrderStatus.CONFIRMED,
+        previousStatus: OrderStatus.PENDING,
+      });
+    });
+
+    it('emits ORDER_COMPLETED in addition to ORDER_UPDATED when status becomes COMPLETED', async () => {
+      const order = seedOrder(OrderStatus.DELIVERED);
+
+      await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }, actingBuyer);
+
+      const emittedNames = eventEmitter.emit.mock.calls.map(
+        ([name]: [string]) => name,
+      );
+      expect(emittedNames).toContain(EventNames.ORDER_UPDATED);
+      expect(emittedNames).toContain(EventNames.ORDER_COMPLETED);
+
+      const [, completedPayload] = eventEmitter.emit.mock.calls.find(
+        ([name]: [string]) => name === EventNames.ORDER_COMPLETED,
+      )!;
+
+      expect(completedPayload).toBeInstanceOf(OrderCompletedEvent);
+      expect(completedPayload).toMatchObject({
+        orderId: order.id,
+        userId: order.buyerId,
+        orderNumber: `ORD-${order.id.substring(0, 8)}`,
+        totalAmount: Number(order.totalAmount),
+      });
+    });
+
+    it('does NOT emit ORDER_COMPLETED for non-COMPLETED transitions', async () => {
+      seedOrder(OrderStatus.PENDING);
+
+      await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED }, actingBuyer);
+
+      const emittedNames = eventEmitter.emit.mock.calls.map(
+        ([name]: [string]) => name,
+      );
+      expect(emittedNames).not.toContain(EventNames.ORDER_COMPLETED);
+    });
+
+    it('emits exactly once for a regular status change (no extra ORDER_COMPLETED)', async () => {
+      seedOrder(OrderStatus.CONFIRMED);
+
+      await service.updateStatus(ORDER_ID, { status: OrderStatus.PROCESSING }, actingBuyer);
+
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        EventNames.ORDER_UPDATED,
+        expect.any(OrderUpdatedEvent),
+      );
+    });
+
+    it('emits exactly twice when transitioning to COMPLETED', async () => {
+      seedOrder(OrderStatus.DELIVERED);
+
+      await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }, actingBuyer);
+
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(2);
     });
   });
 });

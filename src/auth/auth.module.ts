@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
@@ -15,10 +17,17 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
+    CacheModule.register(),
+    ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-
-    // Register JWT without static config; strategies will handle specific secrets/expiry
-    JwtModule.register({}),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '15m' },
+      }),
+    }),
     UsersModule,
   ],
   providers: [

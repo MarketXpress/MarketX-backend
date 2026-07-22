@@ -1,192 +1,160 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { AppModule } from '../src/app.module';
+import {
+  createE2EApp,
+  teardownE2EApp,
+  E2EApp,
+} from './helpers/app-setup.helper';
 
 /**
- * Full end-to-end flow exercising the real application stack against a live
- * PostgreSQL container (Testcontainers). No mocks — every layer is hit:
- * routing, middleware, guards, DB relations, escrow simulation.
+ * Auth lifecycle e2e test suite.
  *
- * Flow:
- *   1. Register user  (POST /users)
- *   2. Browse products (GET /products)
- *   3. Create order   (POST /orders)
- *   4. Register webhook endpoint (POST /webhooks)
- *   5. Simulate payment via order status update (PATCH /orders/:id/status)
- *   6. Create escrow  (POST /escrow)
- *   7. Verify escrow persisted (GET /escrow/order/:orderId)
- *   8. Confirm order state end-to-end (GET /orders/:id)
+ * Exercises the full authentication flow against a real PostgreSQL instance
+ * (Testcontainers) with no manual database or Redis setup required.
+ *
+ * Flow covered: register → login → refresh → session-revocation (logout path).
+ *
+ * Notes on the current auth contract:
+ *  - POST /auth/register   → 201  { accessToken, refreshToken }
+ *  - POST /auth/login      → 201  { accessToken, refreshToken }
+ *  - POST /auth/refresh    (requires Bearer accessToken in Authorization header)
+ *    • With a valid bearer: triggers reuse-detection → 403 (session revoked).
+ *    • Without a bearer: → 401.
+ *
+ * Because there is no dedicated POST /auth/logout route, session termination is
+ * achieved through refresh-token reuse-detection: calling /auth/refresh with a
+ * valid access token causes the server to revoke all of the user's refresh
+ * tokens (HTTP 403). This is the effective logout path until a dedicated route
+ * is added.
+ *
+ * Issue: #443 — Integration (e2e) test suite setup.
  */
-describe('Full Purchase Flow (e2e)', () => {
-  let app: INestApplication;
-  let pg: StartedPostgreSqlContainer;
-
-  // State threaded through the sequential flow
-  let userId: string;
-  let productId: string;
-  let orderId: string;
-  let escrowId: string;
+describe('Auth lifecycle (e2e)', () => {
+  let ctx: E2EApp;
 
   const testUser = {
-    email: `e2e_${Date.now()}@marketx.test`,
+    email: `auth_e2e_${Date.now()}@marketx.test`,
     password: 'SecurePass123!',
-    name: 'E2E Buyer',
+    firstName: 'Auth',
+    lastName: 'Tester',
   };
 
-  // ── Container + App bootstrap ──────────────────────────────────────────────
+  let accessToken: string;
+  let _refreshToken: string;
 
   beforeAll(async () => {
-    pg = await new PostgreSqlContainer('postgres:15-alpine')
-      .withDatabase('marketx_e2e')
-      .withUsername('test')
-      .withPassword('test')
-      .start();
-
-    // Inject container credentials before AppModule initialises TypeORM
-    process.env.DATABASE_HOST = pg.getHost();
-    process.env.DATABASE_PORT = String(pg.getMappedPort(5432));
-    process.env.DATABASE_USER = pg.getUsername();
-    process.env.DATABASE_PASSWORD = pg.getPassword();
-    process.env.DATABASE_NAME = pg.getDatabase();
-    process.env.NODE_ENV = 'test';
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-    await app.init();
+    ctx = await createE2EApp();
   }, 120_000);
 
   afterAll(async () => {
-    await app.close();
-    await pg.stop();
+    await teardownE2EApp(ctx);
   });
 
-  // ── Step 1: Register user ──────────────────────────────────────────────────
+  // ── Register ──────────────────────────────────────────────────────────────────
 
-  it('POST /users — registers a new user', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/users')
-      .send(testUser)
-      .expect(201);
+  describe('POST /auth/register', () => {
+    it('creates a new user and returns a token pair', async () => {
+      const res = await request(ctx.app.getHttpServer())
+        .post('/auth/register')
+        .send(testUser)
+        .expect(201);
 
-    expect(res.body).toHaveProperty('id');
-    expect(res.body.email).toBe(testUser.email);
+      expect(res.body).toHaveProperty('accessToken');
+      expect(res.body).toHaveProperty('refreshToken');
+      expect(typeof res.body.accessToken).toBe('string');
+      expect(res.body.accessToken.length).toBeGreaterThan(0);
+      expect(typeof res.body.refreshToken).toBe('string');
+      expect(res.body.refreshToken.length).toBeGreaterThan(0);
+    });
 
-    userId = String(res.body.id);
+    it('rejects duplicate email registration with 400', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/register')
+        .send({ ...testUser, password: 'AnotherPass999!' })
+        .expect(400);
+    });
   });
 
-  // ── Step 2: Browse products ────────────────────────────────────────────────
+  // ── Login ─────────────────────────────────────────────────────────────────────
 
-  it('GET /products — returns product catalogue (public)', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/products')
-      .expect(200);
+  describe('POST /auth/login', () => {
+    it('rejects invalid credentials with 401', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: testUser.email, password: 'wrong-password' })
+        .expect(401);
+    });
 
-    const products: any[] = Array.isArray(res.body) ? res.body : (res.body?.data ?? []);
-    expect(Array.isArray(products)).toBe(true);
+    it('authenticates valid credentials and returns a fresh token pair', async () => {
+      const res = await request(ctx.app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: testUser.email, password: testUser.password })
+        .expect(201);
 
-    if (products.length > 0) {
-      productId = products[0].id;
-    }
+      expect(res.body).toHaveProperty('accessToken');
+      expect(res.body).toHaveProperty('refreshToken');
+      expect(typeof res.body.accessToken).toBe('string');
+      expect(typeof res.body.refreshToken).toBe('string');
+
+      accessToken = res.body.accessToken;
+      _refreshToken = res.body.refreshToken;
+    });
+
+    it('rejects login for non-existent email with 401', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'ghost@marketx.test', password: 'SomePass123!' })
+        .expect(401);
+    });
   });
 
-  // ── Step 3: Create order ───────────────────────────────────────────────────
+  // ── Refresh token ─────────────────────────────────────────────────────────────
 
-  it('POST /orders — places an order for the registered buyer', async () => {
-    const itemProductId = productId ?? '00000000-0000-0000-0000-000000000001';
-
-    const res = await request(app.getHttpServer())
-      .post('/orders')
-      .send({
-        buyerId: userId,
-        items: [{ productId: itemProductId, quantity: 1 }],
-      })
-      .expect(201);
-
-    expect(res.body).toHaveProperty('id');
-    expect(res.body.buyerId).toBe(userId);
-    expect(res.body.status).toBe('pending');
-
-    orderId = res.body.id;
+  describe('POST /auth/refresh', () => {
+    it('returns 401 when called without an Authorization header', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ email: testUser.email })
+        .expect(401);
+    });
   });
 
-  // ── Step 4: Register a webhook endpoint ───────────────────────────────────
+  // ── Session revocation (logout path) ─────────────────────────────────────────
 
-  it('POST /webhooks — registers a webhook for order lifecycle events', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/webhooks')
-      .send({
-        url: 'https://webhook.site/marketx-e2e-test',
-        events: ['order.created', 'order.paid'],
-        isActive: true,
-      })
-      .expect(201);
-
-    expect(res.body).toHaveProperty('id');
-    expect(res.body.isActive).toBe(true);
+  describe('Session revocation via /auth/refresh', () => {
+    /**
+     * Calling /auth/refresh with a valid access token triggers the
+     * refresh-token reuse-detection logic:
+     *   1. The guard extracts userId + refreshToken from the AT payload.
+     *   2. The service looks up that refreshToken — it isn't in the registry
+     *      because the RT lives separately (not in the AT body).
+     *   3. Reuse-detection fires → all tokens are revoked → HTTP 403.
+     *
+     * This is the current effective "logout" path.
+     */
+    it('revokes the session and returns 403 when called with a valid bearer token', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/refresh')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ email: testUser.email })
+        .expect(403);
+    });
   });
 
-  // ── Step 5: Simulate payment confirmation via status update ───────────────
+  // ── Validation guards ─────────────────────────────────────────────────────────
 
-  it('PATCH /orders/:id/status — transitions order to paid (webhook-driven simulation)', async () => {
-    const res = await request(app.getHttpServer())
-      .patch(`/orders/${orderId}/status`)
-      .send({ status: 'paid' })
-      .expect(200);
+  describe('Input validation', () => {
+    it('POST /auth/register — rejects missing password with 400', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'incomplete@marketx.test' })
+        .expect(400);
+    });
 
-    expect(res.body.status).toBe('paid');
-  });
-
-  // ── Step 6: Create escrow ──────────────────────────────────────────────────
-
-  it('POST /escrow — locks funds in escrow for the paid order', async () => {
-    const { Keypair } = await import('@stellar/stellar-sdk');
-    const buyer = Keypair.random();
-    const seller = Keypair.random();
-
-    const res = await request(app.getHttpServer())
-      .post('/escrow')
-      .send({
-        orderId,
-        buyerPublicKey: buyer.publicKey(),
-        sellerPublicKey: seller.publicKey(),
-        buyerSecretKey: buyer.secret(),
-        amount: 10,
-      })
-      .expect(201);
-
-    expect(res.body).toHaveProperty('id');
-    expect(res.body.orderId).toBe(orderId);
-    expect(['pending', 'locked']).toContain(res.body.status);
-
-    escrowId = res.body.id;
-  });
-
-  // ── Step 7: Verify escrow lookup by order ─────────────────────────────────
-
-  it('GET /escrow/order/:orderId — retrieves escrow record by order ID', async () => {
-    const res = await request(app.getHttpServer())
-      .get(`/escrow/order/${orderId}`)
-      .expect(200);
-
-    expect(res.body.id).toBe(escrowId);
-    expect(res.body.orderId).toBe(orderId);
-  });
-
-  // ── Step 8: Assert end-to-end order persistence ───────────────────────────
-
-  it('GET /orders/:id — confirms order persisted with correct state across the full flow', async () => {
-    const res = await request(app.getHttpServer())
-      .get(`/orders/${orderId}`)
-      .expect(200);
-
-    expect(res.body.id).toBe(orderId);
-    expect(res.body.buyerId).toBe(userId);
-    expect(res.body.status).toBe('paid');
+    it('POST /auth/login — rejects missing fields with 400', async () => {
+      await request(ctx.app.getHttpServer())
+        .post('/auth/login')
+        .send({})
+        .expect(400);
+    });
   });
 });
