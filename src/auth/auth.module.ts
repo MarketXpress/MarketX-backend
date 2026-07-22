@@ -19,6 +19,7 @@ import { UsersModule } from '../users/users.module';
 
     // Register JWT without static config; strategies will handle specific secrets/expiry
     JwtModule.register({}),
+    UsersModule,
   ],
   providers: [
     AuthService,

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,11 @@ import { ProductsService } from '../products/products.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order, OrderStatus } from './entities/order.entity';
 import { AdminWebhookService } from '../admin/admin-webhook.service';
+
+export interface ActingUser {
+  id: string;
+  role?: string;
+}
 
 @Injectable()
 export class OrdersService {
@@ -146,7 +152,7 @@ export class OrdersService {
     });
   }
 
-  async findOne(id: string): Promise<Order> {
+  private async fetchOrderOrFail(id: string): Promise<Order> {
     const order = await this.ordersRepository.findOne({
       where: { id },
     });
@@ -156,11 +162,29 @@ export class OrdersService {
     return order;
   }
 
+  private assertOrderAccess(order: Order, actingUser: ActingUser): void {
+    const isParty =
+      actingUser.id === order.buyerId || actingUser.id === order.sellerId;
+    const isAdmin = actingUser.role === 'admin';
+
+    if (!isParty && !isAdmin) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
+  }
+
+  async findOne(id: string, actingUser: ActingUser): Promise<Order> {
+    const order = await this.fetchOrderOrFail(id);
+    this.assertOrderAccess(order, actingUser);
+    return order;
+  }
+
   async updateStatus(
     id: string,
     updateOrderStatusDto: UpdateOrderStatusDto,
+    actingUser: ActingUser,
   ): Promise<Order> {
-    const order = await this.findOne(id);
+    const order = await this.fetchOrderOrFail(id);
+    this.assertOrderAccess(order, actingUser);
     const previousStatus = order.status;
 
     // Handle inventory based on status change

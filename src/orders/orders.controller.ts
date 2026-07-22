@@ -9,6 +9,8 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +19,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
@@ -32,6 +35,8 @@ import {
 } from '../common/events';
 
 @ApiTags('Orders')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class OrdersController {
   constructor(
@@ -42,8 +47,12 @@ export class OrdersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createOrderDto: CreateOrderDto) {
-    const order = await this.ordersService.create(createOrderDto);
+  async create(@Body() createOrderDto: CreateOrderDto, @Request() req: any) {
+    // The buyer is always the authenticated caller, never a client-supplied value.
+    const order = await this.ordersService.create({
+      ...createOrderDto,
+      buyerId: req.user.id,
+    });
 
     // Emit order.created event for side-effects (email, notifications, analytics)
     this.eventEmitter.emit(
@@ -62,23 +71,28 @@ export class OrdersController {
   }
 
   @Get()
-  async findAll(@Query('buyerId') buyerId?: string) {
-    return await this.ordersService.findAll(buyerId);
+  async findAll(@Request() req: any, @Query('buyerId') buyerId?: string) {
+    // Only admins may look up another buyer's orders; everyone else is
+    // scoped to their own, regardless of what the query string says.
+    const scopedBuyerId = req.user.role === 'admin' ? buyerId : req.user.id;
+    return await this.ordersService.findAll(scopedBuyerId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return await this.ordersService.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req: any) {
+    return await this.ordersService.findOne(id, req.user);
   }
 
   @Patch(':id/status')
   async updateStatus(
     @Param('id') id: string,
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,
+    @Request() req: any,
   ) {
     const order = await this.ordersService.updateStatus(
       id,
       updateOrderStatusDto,
+      req.user,
     );
     // Emit event: OrderStatusChanged
     console.log(
@@ -88,14 +102,8 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
-  async cancelOrder(
-    @Param('id') id: string,
-    @Body('userId') userId: string, // In a real app, this would come from authentication
-  ) {
-    if (!userId) {
-      throw new Error('User ID is required to cancel an order');
-    }
-    const order = await this.ordersService.cancelOrder(id, userId);
+  async cancelOrder(@Param('id') id: string, @Request() req: any) {
+    const order = await this.ordersService.cancelOrder(id, req.user.id);
 
     // Emit order.cancelled event for side-effects (email, notifications, analytics)
     this.eventEmitter.emit(

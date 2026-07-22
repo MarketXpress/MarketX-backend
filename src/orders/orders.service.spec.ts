@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -24,6 +28,11 @@ describe('OrdersService', () => {
 
   const testBuyerId = 'buyer-1';
   const testOrderId = 'order-1';
+  const testSellerId = 'seller-1';
+  const actingBuyer = { id: testBuyerId, role: 'buyer' };
+  const actingSeller = { id: testSellerId, role: 'seller' };
+  const actingAdmin = { id: 'admin-1', role: 'admin' };
+  const actingStranger = { id: 'stranger-1', role: 'buyer' };
 
   const makeOrder = (overrides: Partial<Order> = {}): Partial<Order> => ({
     id: testOrderId,
@@ -135,11 +144,11 @@ describe('OrdersService', () => {
   // ─────────────────────────────────────────────────────────────
 
   describe('findOne', () => {
-    it('should return the order when found', async () => {
+    it('should return the order when the caller is the buyer', async () => {
       const order = makeOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      const result = await service.findOne(testOrderId);
+      const result = await service.findOne(testOrderId, actingBuyer);
 
       expect(result).toEqual(order);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
@@ -147,12 +156,39 @@ describe('OrdersService', () => {
       });
     });
 
+    it('should return the order when the caller is the seller', async () => {
+      const order = makeOrder({ sellerId: testSellerId });
+      mockRepository.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(testOrderId, actingSeller);
+
+      expect(result).toEqual(order);
+    });
+
+    it('should return the order when the caller is an admin', async () => {
+      const order = makeOrder();
+      mockRepository.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(testOrderId, actingAdmin);
+
+      expect(result).toEqual(order);
+    });
+
+    it('should throw ForbiddenException when the caller is neither buyer, seller, nor admin', async () => {
+      const order = makeOrder();
+      mockRepository.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.findOne(testOrderId, actingStranger),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('should throw NotFoundException when the order does not exist', async () => {
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne('non-existent', actingBuyer),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -241,7 +277,11 @@ describe('OrdersService', () => {
       const order = pendingOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      await service.updateStatus(testOrderId, { status: OrderStatus.PAID });
+      await service.updateStatus(
+        testOrderId,
+        { status: OrderStatus.PAID },
+        actingBuyer,
+      );
 
       expect(mockInventoryService.confirmOrder).toHaveBeenCalledWith(order);
       expect(mockInventoryService.cancelOrder).not.toHaveBeenCalled();
@@ -251,7 +291,11 @@ describe('OrdersService', () => {
       const order = pendingOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      await service.updateStatus(testOrderId, { status: OrderStatus.SHIPPED });
+      await service.updateStatus(
+        testOrderId,
+        { status: OrderStatus.SHIPPED },
+        actingBuyer,
+      );
 
       expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
     });
@@ -260,9 +304,13 @@ describe('OrdersService', () => {
       const order = pendingOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      await service.updateStatus(testOrderId, {
-        status: OrderStatus.DELIVERED,
-      });
+      await service.updateStatus(
+        testOrderId,
+        {
+          status: OrderStatus.DELIVERED,
+        },
+        actingBuyer,
+      );
 
       expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
     });
@@ -272,9 +320,13 @@ describe('OrdersService', () => {
       const order = pendingOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      await service.updateStatus(testOrderId, {
-        status: OrderStatus.CANCELLED,
-      });
+      await service.updateStatus(
+        testOrderId,
+        {
+          status: OrderStatus.CANCELLED,
+        },
+        actingBuyer,
+      );
 
       expect(mockInventoryService.cancelOrder).toHaveBeenCalledWith(order);
       expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
@@ -284,7 +336,11 @@ describe('OrdersService', () => {
       const order = pendingOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      await service.updateStatus(testOrderId, { status: OrderStatus.PAID });
+      await service.updateStatus(
+        testOrderId,
+        { status: OrderStatus.PAID },
+        actingBuyer,
+      );
 
       expect(mockInventoryService.cancelOrder).not.toHaveBeenCalled();
     });
@@ -294,9 +350,13 @@ describe('OrdersService', () => {
       mockRepository.findOne.mockResolvedValue(order);
 
       const before = Date.now();
-      await service.updateStatus(testOrderId, {
-        status: OrderStatus.CANCELLED,
-      });
+      await service.updateStatus(
+        testOrderId,
+        {
+          status: OrderStatus.CANCELLED,
+        },
+        actingBuyer,
+      );
       const after = Date.now();
 
       const savedArg: Order = mockRepository.save.mock.calls[0][0];
@@ -310,7 +370,11 @@ describe('OrdersService', () => {
       mockRepository.findOne.mockResolvedValue(order);
 
       const before = Date.now();
-      await service.updateStatus(testOrderId, { status: OrderStatus.SHIPPED });
+      await service.updateStatus(
+        testOrderId,
+        { status: OrderStatus.SHIPPED },
+        actingBuyer,
+      );
       const after = Date.now();
 
       const savedArg: Order = mockRepository.save.mock.calls[0][0];
@@ -323,9 +387,13 @@ describe('OrdersService', () => {
       const order = pendingOrder();
       mockRepository.findOne.mockResolvedValue(order);
 
-      await service.updateStatus(testOrderId, {
-        status: OrderStatus.DELIVERED,
-      });
+      await service.updateStatus(
+        testOrderId,
+        {
+          status: OrderStatus.DELIVERED,
+        },
+        actingBuyer,
+      );
 
       const savedArg: Order = mockRepository.save.mock.calls[0][0];
       expect(savedArg.deliveredAt).toBeInstanceOf(Date);
@@ -339,7 +407,11 @@ describe('OrdersService', () => {
         status: OrderStatus.PAID,
       });
 
-      await service.updateStatus(testOrderId, { status: OrderStatus.PAID });
+      await service.updateStatus(
+        testOrderId,
+        { status: OrderStatus.PAID },
+        actingBuyer,
+      );
 
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         EventNames.ORDER_UPDATED,
@@ -354,9 +426,76 @@ describe('OrdersService', () => {
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('non-existent', { status: OrderStatus.PAID }),
+        service.updateStatus(
+          'non-existent',
+          { status: OrderStatus.PAID },
+          actingBuyer,
+        ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    // ── MUTATION TARGET: ownership/role check (#466) ──────────────────────
+    it('should allow the seller to update status', async () => {
+      const order = makeOrder({
+        status: OrderStatus.PENDING,
+        sellerId: testSellerId,
+      });
+      mockRepository.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.updateStatus(
+          testOrderId,
+          { status: OrderStatus.SHIPPED },
+          actingSeller,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('should allow an admin to update status for any order', async () => {
+      const order = pendingOrder();
+      mockRepository.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.updateStatus(
+          testOrderId,
+          { status: OrderStatus.PAID },
+          actingAdmin,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw ForbiddenException when a caller who is neither buyer, seller, nor admin tries to update status', async () => {
+      const order = pendingOrder();
+      mockRepository.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.updateStatus(
+          testOrderId,
+          { status: OrderStatus.PAID },
+          actingStranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockInventoryService.confirmOrder).not.toHaveBeenCalled();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // cancelOrder — IDOR regression coverage (#466)
+  // ─────────────────────────────────────────────────────────────
+
+  describe('cancelOrder ownership (#466)', () => {
+    it('should reject cancellation attempted with a different buyer id than the order owner', async () => {
+      // Simulates the fixed controller behavior: the id passed in now always
+      // comes from req.user.id, never a client-supplied body field. A caller
+      // impersonating another buyer must still be rejected here.
+      const order = makeOrder({ buyerId: testBuyerId });
+      mockManager.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.cancelOrder(testOrderId, actingStranger.id),
+      ).rejects.toThrow('Order not found or unauthorized');
     });
   });
 });
-
