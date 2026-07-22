@@ -37,6 +37,12 @@ describe('OrdersController', () => {
     items: [{ productId: 'p-1', quantity: 1 }],
   };
 
+  // The buyer id here intentionally matches sampleDto.buyerId so the
+  // controller's server-derived buyerId override is a no-op for these
+  // fixtures and existing toHaveBeenCalledWith(sampleDto) assertions
+  // still hold via deep equality.
+  const req = { user: { id: 'buyer-1', role: 'buyer' } };
+
   beforeEach(async () => {
     cache = {
       get: jest.fn().mockResolvedValue(undefined),
@@ -97,7 +103,7 @@ describe('OrdersController', () => {
       const order = buildOrder('order-1');
       ordersService.create.mockResolvedValue(order);
 
-      const result = await controller.create(sampleDto, undefined);
+      const result = await controller.create(sampleDto, req, undefined);
 
       expect(result).toBe(order);
       expect(ordersService.create).toHaveBeenCalledTimes(1);
@@ -132,8 +138,8 @@ describe('OrdersController', () => {
         )
         .mockResolvedValueOnce({ executed: false });
 
-      const first = await controller.create(sampleDto, 'idem-1');
-      const second = await controller.create(sampleDto, 'idem-1');
+      const first = await controller.create(sampleDto, req, 'idem-1');
+      const second = await controller.create(sampleDto, req, 'idem-1');
 
       expect(first).toBe(order);
       expect(second).toBe(order);
@@ -151,7 +157,7 @@ describe('OrdersController', () => {
       const order = buildOrder('order-99');
       cache.get.mockResolvedValueOnce(order);
 
-      const result = await controller.create(sampleDto, 'idem-cached');
+      const result = await controller.create(sampleDto, req, 'idem-cached');
 
       expect(result).toBe(order);
       expect(ordersService.create).not.toHaveBeenCalled();
@@ -163,7 +169,7 @@ describe('OrdersController', () => {
       idempotencyService.executeOnce.mockResolvedValue({ executed: false });
 
       await expect(
-        controller.create(sampleDto, 'idem-in-flight'),
+        controller.create(sampleDto, req, 'idem-in-flight'),
       ).rejects.toThrow(ConflictException);
 
       expect(ordersService.create).not.toHaveBeenCalled();
@@ -187,8 +193,8 @@ describe('OrdersController', () => {
         },
       );
 
-      const first = await controller.create(sampleDto, 'idem-A');
-      const second = await controller.create(sampleDto, 'idem-B');
+      const first = await controller.create(sampleDto, req, 'idem-A');
+      const second = await controller.create(sampleDto, req, 'idem-B');
 
       expect(first).toBe(order1);
       expect(second).toBe(order2);

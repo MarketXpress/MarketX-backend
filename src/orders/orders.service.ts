@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +18,11 @@ import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
 import { StatusTransitionValidator } from '../common/validators';
 import { LoggerService } from '../common/logger/logger.service';
+
+export interface ActingUser {
+  id: string;
+  role?: string;
+}
 
 @Injectable()
 export class OrdersService {
@@ -158,23 +164,43 @@ export class OrdersService {
     return await this.ordersRepository.find({ order: { createdAt: 'DESC' } });
   }
 
-  async findOne(id: string): Promise<Order> {
-    const order = await this.ordersRepository.findOne({ where: { id } });
+  private async fetchOrderOrFail(id: string): Promise<Order> {
+    const order = await this.ordersRepository.findOne({
+      where: { id },
+    });
     if (!order) {
       throw new NotFoundException(`Order with ID "${id}" not found`);
     }
     return order;
   }
 
+  private assertOrderAccess(order: Order, actingUser: ActingUser): void {
+    const isParty =
+      actingUser.id === order.buyerId || actingUser.id === order.sellerId;
+    const isAdmin = actingUser.role === 'admin';
+
+    if (!isParty && !isAdmin) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
+  }
+
+  async findOne(id: string, actingUser: ActingUser): Promise<Order> {
+    const order = await this.fetchOrderOrFail(id);
+    this.assertOrderAccess(order, actingUser);
+    return order;
+  }
+
   async updateStatus(
     id: string,
     updateOrderStatusDto: UpdateOrderStatusDto,
+    actingUser: ActingUser,
   ): Promise<Order> {
     this.logger.info('Updating order status', {
       orderId: id,
       newStatus: updateOrderStatusDto.status,
     });
-    const order = await this.findOne(id);
+    const order = await this.fetchOrderOrFail(id);
+    this.assertOrderAccess(order, actingUser);
     const previousStatus = order.status;
 
     this.orderTransitionValidator.validate(

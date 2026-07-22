@@ -9,6 +9,8 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Request,
   Inject,
   Res,
   ConflictException,
@@ -16,8 +18,9 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Response } from 'express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrdersService } from './orders.service';
 import { OrdersExportService } from './orders-export.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
@@ -30,6 +33,8 @@ import {
 import { IdempotencyService } from '../common/idempotency/idempotency.service';
 
 @ApiTags('Orders')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class OrdersController {
   constructor(
@@ -44,13 +49,17 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createOrderDto: CreateOrderDto,
+    @Request() req: any,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
+    // The buyer is always the authenticated caller, never a client-supplied value.
+    const dto = { ...createOrderDto, buyerId: req.user.id };
+
     // Behavior when the Idempotency-Key header is missing:
     // proceed normally without idempotency. This matches the service's
     // "opt-in" contract (no key => no de-duplication, no 400).
     if (!idempotencyKey) {
-      return await this.processOrderCreation(createOrderDto);
+      return await this.processOrderCreation(dto);
     }
 
     const responseCacheKey = `idempotency-response:${idempotencyKey}`;
@@ -62,7 +71,7 @@ export class OrdersController {
     const { executed, result } = await this.idempotencyService.executeOnce<
       Awaited<ReturnType<OrdersService['create']>>
     >(idempotencyKey, async () => {
-      const order = await this.processOrderCreation(createOrderDto);
+      const order = await this.processOrderCreation(dto);
       await this.cache.set(responseCacheKey, order, 24 * 60 * 60 * 1000);
       return order;
     });
@@ -107,8 +116,11 @@ export class OrdersController {
   }
 
   @Get()
-  async findAll(@Query('buyerId') buyerId?: string) {
-    return await this.ordersService.findAll(buyerId);
+  async findAll(@Request() req: any, @Query('buyerId') buyerId?: string) {
+    // Only admins may look up another buyer's orders; everyone else is
+    // scoped to their own, regardless of what the query string says.
+    const scopedBuyerId = req.user.role === 'admin' ? buyerId : req.user.id;
+    return await this.ordersService.findAll(scopedBuyerId);
   }
 
   @Get('export')
@@ -116,8 +128,13 @@ export class OrdersController {
     @Query('format') format: string,
     @Query('buyerId') buyerId: string,
     @Res() res: Response,
+    @Request() req: any,
   ) {
-    if (!buyerId) {
+    // Only admins may export another buyer's order history; everyone else
+    // is scoped to their own, regardless of what the query string says.
+    const scopedBuyerId = req.user.role === 'admin' ? buyerId : req.user.id;
+
+    if (!scopedBuyerId) {
       throw new Error('Buyer ID is required to export orders');
     }
 
@@ -125,7 +142,7 @@ export class OrdersController {
       throw new Error('Format must be either csv or pdf');
     }
 
-    const orders = await this.ordersService.findAll(buyerId);
+    const orders = await this.ordersService.findAll(scopedBuyerId);
 
     if (format === 'csv') {
       return this.ordersExportService.exportAsCsv(orders, res);
@@ -135,24 +152,26 @@ export class OrdersController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return await this.ordersService.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req: any) {
+    return await this.ordersService.findOne(id, req.user);
   }
 
   @Patch(':id/status')
   async updateStatus(
     @Param('id') id: string,
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,
+    @Request() req: any,
   ) {
-    return await this.ordersService.updateStatus(id, updateOrderStatusDto);
+    return await this.ordersService.updateStatus(
+      id,
+      updateOrderStatusDto,
+      req.user,
+    );
   }
 
   @Patch(':id/cancel')
-  async cancelOrder(@Param('id') id: string, @Body('userId') userId: string) {
-    if (!userId) {
-      throw new Error('User ID is required to cancel an order');
-    }
-    const order = await this.ordersService.cancelOrder(id, userId);
+  async cancelOrder(@Param('id') id: string, @Request() req: any) {
+    const order = await this.ordersService.cancelOrder(id, req.user.id);
 
     this.eventEmitter.emit(
       EventNames.ORDER_CANCELLED,

@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource } from 'typeorm';
 import {
@@ -15,11 +19,17 @@ import { OrdersService } from './orders.service';
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
 const ORDER_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+const BUYER_ID = 'buyer-uuid';
+const SELLER_ID = 'seller-uuid';
+const actingBuyer = { id: BUYER_ID, role: 'buyer' };
+const actingSeller = { id: SELLER_ID, role: 'seller' };
+const actingAdmin = { id: 'admin-uuid', role: 'admin' };
+const actingStranger = { id: 'stranger-uuid', role: 'buyer' };
 
 function makeOrder(overrides: Partial<Order> = {}): Order {
   return {
     id: ORDER_ID,
-    buyerId: 'buyer-uuid',
+    buyerId: BUYER_ID,
     totalAmount: 100,
     taxAmount: 0,
     shippingCost: 0,
@@ -190,6 +200,54 @@ describe('OrdersService', () => {
     });
   });
 
+  // ── findOne() — ownership check (#466) ──────────────────────────────────
+
+  describe('findOne()', () => {
+    it('returns the order when the caller is the buyer', async () => {
+      const order = makeOrder();
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(ORDER_ID, actingBuyer);
+
+      expect(result).toEqual(order);
+    });
+
+    it('returns the order when the caller is the seller', async () => {
+      const order = makeOrder({ sellerId: SELLER_ID });
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(ORDER_ID, actingSeller);
+
+      expect(result).toEqual(order);
+    });
+
+    it('returns the order when the caller is an admin', async () => {
+      const order = makeOrder();
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      const result = await service.findOne(ORDER_ID, actingAdmin);
+
+      expect(result).toEqual(order);
+    });
+
+    it('throws ForbiddenException when the caller is neither buyer, seller, nor admin', async () => {
+      const order = makeOrder();
+      ordersRepo.findOne.mockResolvedValue(order);
+
+      await expect(service.findOne(ORDER_ID, actingStranger)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('throws NotFoundException when the order does not exist', async () => {
+      ordersRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findOne('non-existent', actingBuyer),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   // ── updateStatus() ────────────────────────────────────────────────────────
 
   describe('updateStatus()', () => {
@@ -204,9 +262,13 @@ describe('OrdersService', () => {
     it('returns the saved order on a valid transition (PENDING → CONFIRMED)', async () => {
       seedOrder(OrderStatus.PENDING);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.CONFIRMED,
-      });
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.CONFIRMED,
+        },
+        actingBuyer,
+      );
 
       expect(result.status).toBe(OrderStatus.CONFIRMED);
       expect(ordersRepo.save).toHaveBeenCalled();
@@ -216,7 +278,11 @@ describe('OrdersService', () => {
       seedOrder(OrderStatus.PENDING);
 
       await expect(
-        service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }),
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.COMPLETED },
+          actingBuyer,
+        ),
       ).rejects.toThrow(BadRequestException);
 
       expect(ordersRepo.save).not.toHaveBeenCalled();
@@ -226,7 +292,11 @@ describe('OrdersService', () => {
       seedOrder(OrderStatus.CANCELLED);
 
       await expect(
-        service.updateStatus(ORDER_ID, { status: OrderStatus.PENDING }),
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.PENDING },
+          actingBuyer,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -234,7 +304,11 @@ describe('OrdersService', () => {
       seedOrder(OrderStatus.REFUNDED);
 
       await expect(
-        service.updateStatus(ORDER_ID, { status: OrderStatus.PENDING }),
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.PENDING },
+          actingBuyer,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -242,16 +316,24 @@ describe('OrdersService', () => {
       ordersRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('no-such-id', { status: OrderStatus.CONFIRMED }),
+        service.updateStatus(
+          'no-such-id',
+          { status: OrderStatus.CONFIRMED },
+          actingBuyer,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('sets paymentStatus=PAID and confirmedAt when transitioning to PAID', async () => {
       seedOrder(OrderStatus.PROCESSING);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.PAID,
-      });
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.PAID,
+        },
+        actingBuyer,
+      );
 
       expect(result.paymentStatus).toBe(PaymentStatus.PAID);
       expect(result.confirmedAt).toBeInstanceOf(Date);
@@ -260,9 +342,13 @@ describe('OrdersService', () => {
     it('sets cancelledAt when transitioning to CANCELLED', async () => {
       seedOrder(OrderStatus.PENDING);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.CANCELLED,
-      });
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.CANCELLED,
+        },
+        actingBuyer,
+      );
 
       expect(result.cancelledAt).toBeInstanceOf(Date);
     });
@@ -270,9 +356,13 @@ describe('OrdersService', () => {
     it('sets shippedAt when transitioning to SHIPPED', async () => {
       seedOrder(OrderStatus.PAID);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.SHIPPED,
-      });
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.SHIPPED,
+        },
+        actingBuyer,
+      );
 
       expect(result.shippedAt).toBeInstanceOf(Date);
     });
@@ -280,11 +370,84 @@ describe('OrdersService', () => {
     it('sets deliveredAt when transitioning to DELIVERED', async () => {
       seedOrder(OrderStatus.SHIPPED);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.DELIVERED,
-      });
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.DELIVERED,
+        },
+        actingBuyer,
+      );
 
       expect(result.deliveredAt).toBeInstanceOf(Date);
+    });
+
+    // ── ownership/role check (#466) ─────────────────────────────────────────
+
+    it('allows the seller to update status', async () => {
+      seedOrder(OrderStatus.PENDING, { sellerId: SELLER_ID });
+
+      await expect(
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.CONFIRMED },
+          actingSeller,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('allows an admin to update status for any order', async () => {
+      seedOrder(OrderStatus.PENDING);
+
+      await expect(
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.CONFIRMED },
+          actingAdmin,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('throws ForbiddenException when a caller who is neither buyer, seller, nor admin tries to update status', async () => {
+      seedOrder(OrderStatus.PENDING);
+
+      await expect(
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.CONFIRMED },
+          actingStranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(ordersRepo.save).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── cancelOrder() — IDOR regression coverage (#466) ─────────────────────
+
+  describe('cancelOrder()', () => {
+    it('cancels a PENDING order for the owning buyer', async () => {
+      const order = makeOrder({ status: OrderStatus.PENDING });
+      manager.findOne.mockResolvedValue(order);
+      manager.save.mockResolvedValue({
+        ...order,
+        status: OrderStatus.CANCELLED,
+      });
+
+      const result = await service.cancelOrder(ORDER_ID, BUYER_ID);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('rejects cancellation attempted with a different buyer id than the order owner', async () => {
+      // Simulates the fixed controller behavior: the id passed in now always
+      // comes from req.user.id, never a client-supplied body field. A caller
+      // impersonating another buyer must still be rejected here.
+      const order = makeOrder({ buyerId: BUYER_ID });
+      manager.findOne.mockResolvedValue(order);
+
+      await expect(
+        service.cancelOrder(ORDER_ID, actingStranger.id),
+      ).rejects.toThrow('Order not found or unauthorized');
     });
   });
 
@@ -301,7 +464,11 @@ describe('OrdersService', () => {
     it('emits ORDER_UPDATED with the correct event name after any status change', async () => {
       const order = seedOrder(OrderStatus.PENDING);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED });
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.CONFIRMED },
+        actingBuyer,
+      );
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         EventNames.ORDER_UPDATED,
@@ -324,7 +491,11 @@ describe('OrdersService', () => {
     it('emits ORDER_COMPLETED in addition to ORDER_UPDATED when status becomes COMPLETED', async () => {
       const order = seedOrder(OrderStatus.DELIVERED);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED });
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.COMPLETED },
+        actingBuyer,
+      );
 
       const emittedNames = eventEmitter.emit.mock.calls.map(
         ([name]: [string]) => name,
@@ -348,7 +519,11 @@ describe('OrdersService', () => {
     it('does NOT emit ORDER_COMPLETED for non-COMPLETED transitions', async () => {
       seedOrder(OrderStatus.PENDING);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED });
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.CONFIRMED },
+        actingBuyer,
+      );
 
       const emittedNames = eventEmitter.emit.mock.calls.map(
         ([name]: [string]) => name,
@@ -359,7 +534,11 @@ describe('OrdersService', () => {
     it('emits exactly once for a regular status change (no extra ORDER_COMPLETED)', async () => {
       seedOrder(OrderStatus.CONFIRMED);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.PROCESSING });
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.PROCESSING },
+        actingBuyer,
+      );
 
       expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
       expect(eventEmitter.emit).toHaveBeenCalledWith(
@@ -371,7 +550,11 @@ describe('OrdersService', () => {
     it('emits exactly twice when transitioning to COMPLETED', async () => {
       seedOrder(OrderStatus.DELIVERED);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED });
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.COMPLETED },
+        actingBuyer,
+      );
 
       expect(eventEmitter.emit).toHaveBeenCalledTimes(2);
     });

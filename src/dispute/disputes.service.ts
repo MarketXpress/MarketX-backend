@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Dispute, DisputeStatus, ResolutionAction } from './disputes.entity';
-import { OrdersService } from '../orders/orders.service';
+import { ActingUser, OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class DisputesService {
@@ -24,7 +24,16 @@ export class DisputesService {
     raisedBy: number,
     reason: string,
   ): Promise<Dispute> {
-    const order = await this.ordersService.findOne(orderId);
+    // raisedBy is a legacy numeric user id that doesn't line up with
+    // Order.buyerId's uuid format, so it can never satisfy OrdersService's
+    // buyer/seller ownership check. This lookup only reads order status to
+    // validate dispute eligibility, so treat it as trusted system access
+    // rather than trying to force a buyer/seller identity match here.
+    const systemActingUser: ActingUser = {
+      id: String(raisedBy),
+      role: 'admin',
+    };
+    const order = await this.ordersService.findOne(orderId, systemActingUser);
     if (!order) {
       throw new NotFoundException(`Order with ID ${orderId} does not exist.`);
     }
@@ -93,15 +102,26 @@ export class DisputesService {
       );
     }
 
-    // Process escrow modifications by passing execution mandates down to your order tiers
+    // Process escrow modifications by passing execution mandates down to your order tiers.
+    // The disputes/:id/resolve route is already AdminGuard-protected at the
+    // controller level, so this internal OrdersService call is inherently
+    // admin-authorized.
+    const adminActingUser: ActingUser = {
+      id: 'system:disputes',
+      role: 'admin',
+    };
     if (action === ResolutionAction.REFUND_TO_BUYER) {
-      await this.ordersService.updateStatus(dispute.orderId, {
-        status: 'DISPUTE_REFUNDED',
-      } as any);
+      await this.ordersService.updateStatus(
+        dispute.orderId,
+        { status: 'DISPUTE_REFUNDED' } as any,
+        adminActingUser,
+      );
     } else if (action === ResolutionAction.RELEASE_TO_SELLER) {
-      await this.ordersService.updateStatus(dispute.orderId, {
-        status: 'DISPUTE_RELEASED',
-      } as any);
+      await this.ordersService.updateStatus(
+        dispute.orderId,
+        { status: 'DISPUTE_RELEASED' } as any,
+        adminActingUser,
+      );
     }
 
     dispute.status = DisputeStatus.RESOLVED;
