@@ -128,7 +128,7 @@ describe('OrdersController (e2e)', () => {
       .expect(401);
   });
 
-  it('/GET orders/export ignores a client-supplied buyerId and only exports the caller\'s own orders (IDOR regression, #466)', async () => {
+  it("/GET orders/export ignores a client-supplied buyerId and only exports the caller's own orders (IDOR regression, #466)", async () => {
     await request(app.getHttpServer())
       .post('/orders')
       .set('Authorization', `Bearer ${buyerToken}`)

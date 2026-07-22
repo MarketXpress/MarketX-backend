@@ -234,9 +234,9 @@ describe('OrdersService', () => {
       const order = makeOrder();
       ordersRepo.findOne.mockResolvedValue(order);
 
-      await expect(
-        service.findOne(ORDER_ID, actingStranger),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.findOne(ORDER_ID, actingStranger)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('throws NotFoundException when the order does not exist', async () => {
@@ -262,9 +262,13 @@ describe('OrdersService', () => {
     it('returns the saved order on a valid transition (PENDING → CONFIRMED)', async () => {
       seedOrder(OrderStatus.PENDING);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.CONFIRMED,
-      }, actingBuyer);
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.CONFIRMED,
+        },
+        actingBuyer,
+      );
 
       expect(result.status).toBe(OrderStatus.CONFIRMED);
       expect(ordersRepo.save).toHaveBeenCalled();
@@ -274,7 +278,11 @@ describe('OrdersService', () => {
       seedOrder(OrderStatus.PENDING);
 
       await expect(
-        service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }, actingBuyer),
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.COMPLETED },
+          actingBuyer,
+        ),
       ).rejects.toThrow(BadRequestException);
 
       expect(ordersRepo.save).not.toHaveBeenCalled();
@@ -284,7 +292,11 @@ describe('OrdersService', () => {
       seedOrder(OrderStatus.CANCELLED);
 
       await expect(
-        service.updateStatus(ORDER_ID, { status: OrderStatus.PENDING }, actingBuyer),
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.PENDING },
+          actingBuyer,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -292,7 +304,11 @@ describe('OrdersService', () => {
       seedOrder(OrderStatus.REFUNDED);
 
       await expect(
-        service.updateStatus(ORDER_ID, { status: OrderStatus.PENDING }, actingBuyer),
+        service.updateStatus(
+          ORDER_ID,
+          { status: OrderStatus.PENDING },
+          actingBuyer,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -300,16 +316,24 @@ describe('OrdersService', () => {
       ordersRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('no-such-id', { status: OrderStatus.CONFIRMED }, actingBuyer),
+        service.updateStatus(
+          'no-such-id',
+          { status: OrderStatus.CONFIRMED },
+          actingBuyer,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('sets paymentStatus=PAID and confirmedAt when transitioning to PAID', async () => {
       seedOrder(OrderStatus.PROCESSING);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.PAID,
-      }, actingBuyer);
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.PAID,
+        },
+        actingBuyer,
+      );
 
       expect(result.paymentStatus).toBe(PaymentStatus.PAID);
       expect(result.confirmedAt).toBeInstanceOf(Date);
@@ -318,9 +342,13 @@ describe('OrdersService', () => {
     it('sets cancelledAt when transitioning to CANCELLED', async () => {
       seedOrder(OrderStatus.PENDING);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.CANCELLED,
-      }, actingBuyer);
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.CANCELLED,
+        },
+        actingBuyer,
+      );
 
       expect(result.cancelledAt).toBeInstanceOf(Date);
     });
@@ -328,9 +356,13 @@ describe('OrdersService', () => {
     it('sets shippedAt when transitioning to SHIPPED', async () => {
       seedOrder(OrderStatus.PAID);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.SHIPPED,
-      }, actingBuyer);
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.SHIPPED,
+        },
+        actingBuyer,
+      );
 
       expect(result.shippedAt).toBeInstanceOf(Date);
     });
@@ -338,9 +370,13 @@ describe('OrdersService', () => {
     it('sets deliveredAt when transitioning to DELIVERED', async () => {
       seedOrder(OrderStatus.SHIPPED);
 
-      const result = await service.updateStatus(ORDER_ID, {
-        status: OrderStatus.DELIVERED,
-      }, actingBuyer);
+      const result = await service.updateStatus(
+        ORDER_ID,
+        {
+          status: OrderStatus.DELIVERED,
+        },
+        actingBuyer,
+      );
 
       expect(result.deliveredAt).toBeInstanceOf(Date);
     });
@@ -428,7 +464,11 @@ describe('OrdersService', () => {
     it('emits ORDER_UPDATED with the correct event name after any status change', async () => {
       const order = seedOrder(OrderStatus.PENDING);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED }, actingBuyer);
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.CONFIRMED },
+        actingBuyer,
+      );
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         EventNames.ORDER_UPDATED,
@@ -451,7 +491,11 @@ describe('OrdersService', () => {
     it('emits ORDER_COMPLETED in addition to ORDER_UPDATED when status becomes COMPLETED', async () => {
       const order = seedOrder(OrderStatus.DELIVERED);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }, actingBuyer);
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.COMPLETED },
+        actingBuyer,
+      );
 
       const emittedNames = eventEmitter.emit.mock.calls.map(
         ([name]: [string]) => name,
@@ -475,7 +519,11 @@ describe('OrdersService', () => {
     it('does NOT emit ORDER_COMPLETED for non-COMPLETED transitions', async () => {
       seedOrder(OrderStatus.PENDING);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.CONFIRMED }, actingBuyer);
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.CONFIRMED },
+        actingBuyer,
+      );
 
       const emittedNames = eventEmitter.emit.mock.calls.map(
         ([name]: [string]) => name,
@@ -486,7 +534,11 @@ describe('OrdersService', () => {
     it('emits exactly once for a regular status change (no extra ORDER_COMPLETED)', async () => {
       seedOrder(OrderStatus.CONFIRMED);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.PROCESSING }, actingBuyer);
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.PROCESSING },
+        actingBuyer,
+      );
 
       expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
       expect(eventEmitter.emit).toHaveBeenCalledWith(
@@ -498,7 +550,11 @@ describe('OrdersService', () => {
     it('emits exactly twice when transitioning to COMPLETED', async () => {
       seedOrder(OrderStatus.DELIVERED);
 
-      await service.updateStatus(ORDER_ID, { status: OrderStatus.COMPLETED }, actingBuyer);
+      await service.updateStatus(
+        ORDER_ID,
+        { status: OrderStatus.COMPLETED },
+        actingBuyer,
+      );
 
       expect(eventEmitter.emit).toHaveBeenCalledTimes(2);
     });
