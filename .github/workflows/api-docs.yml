@@ -57,6 +57,7 @@ jobs:
           REDIS_PORT: 6379
           JWT_ACCESS_SECRET: docs-generation-placeholder-access-secret-32chars
           JWT_REFRESH_SECRET: docs-generation-placeholder-refresh-secret-32chars
+          JWT_SECRET: docs-generation-placeholder-jwt-secret-32chars
 
       - name: Render static API docs
         run: npm run docs:render

@@ -14,13 +14,15 @@ async function bootstrap() {
   process.env.DATABASE_NAME ||= 'marketx_docs';
   process.env.REDIS_HOST ||= 'localhost';
   process.env.REDIS_PORT ||= '6379';
-  // ConfigValidationService requires these to be set and >= 32 chars; only
-  // used to satisfy startup validation while generating docs, never to sign
-  // real tokens.
+  // ConfigValidationService requires these to be set and >= 32 chars, and
+  // the passport-jwt strategies throw synchronously at construction if
+  // JWT_SECRET is missing. Placeholders only, used to satisfy startup, never
+  // to sign real tokens.
   process.env.JWT_ACCESS_SECRET ||=
     'docs-generation-placeholder-access-secret-32chars';
   process.env.JWT_REFRESH_SECRET ||=
     'docs-generation-placeholder-refresh-secret-32chars';
+  process.env.JWT_SECRET ||= 'docs-generation-placeholder-jwt-secret-32chars';
 
   const app = await NestFactory.create(AppModule);
 
