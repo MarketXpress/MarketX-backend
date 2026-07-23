@@ -9,6 +9,8 @@ jobs:
   build-and-publish-api-docs:
     name: Generate and Publish API Docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     services:
       postgres:
