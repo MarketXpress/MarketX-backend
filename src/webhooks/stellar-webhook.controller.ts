@@ -18,6 +18,7 @@ import { Cache } from 'cache-manager';
 import * as crypto from 'crypto';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { LoggerService } from '../common/logger/logger.service';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 export class StellarWebhookDto {
   @IsString()
@@ -40,6 +41,7 @@ export class StellarWebhookDto {
   status?: string;
 }
 
+@ApiTags('Stellar Webhooks')
 @Controller('webhooks/stellar')
 export class StellarWebhookController implements OnModuleInit {
   private static readonly SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
@@ -59,6 +61,12 @@ export class StellarWebhookController implements OnModuleInit {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Receive a signed Stellar payment webhook' })
+  @ApiResponse({ status: 200, description: 'Webhook accepted and queued.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or missing webhook signature.',
+  })
   async handleWebhook(
     @Headers('x-stellar-signature') signature: string,
     @Body() body: StellarWebhookDto,

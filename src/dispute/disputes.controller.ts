@@ -10,7 +10,13 @@ import {
   ParseUUIDPipe,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { DisputesService } from './disputes.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../guards/admin.guard';
@@ -31,6 +37,8 @@ export class DisputesController {
       },
     },
   })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 201, description: 'Dispute raised successfully.' })
   @UseGuards(JwtAuthGuard)
   @Post('orders/:id/dispute')
   async raise(
@@ -52,6 +60,8 @@ export class DisputesController {
   }
 
   @ApiOperation({ summary: 'List all ongoing platform disputes (Admin Only)' })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Open disputes returned.' })
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Get('disputes')
   async listOpenCases() {
@@ -75,6 +85,8 @@ export class DisputesController {
       },
     },
   })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Dispute resolved successfully.' })
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch('disputes/:id/resolve')
   async resolve(

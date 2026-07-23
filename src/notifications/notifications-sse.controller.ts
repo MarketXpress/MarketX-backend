@@ -6,6 +6,12 @@ import { filter, map } from 'rxjs/operators';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
   EventNames,
   NotificationCreatedEvent,
   NotificationSendPushEvent,
@@ -23,6 +29,7 @@ import {
  * `@microsoft/fetch-event-source`) so that the `Authorization: Bearer <token>`
  * header can be attached to the initial handshake request.
  */
+@ApiTags('Notifications')
 @Controller('notifications')
 export class NotificationsSseController {
   constructor(private readonly eventEmitter: EventEmitter2) {}
@@ -34,7 +41,13 @@ export class NotificationsSseController {
    * authenticated user.  The stream closes when the client disconnects.
    */
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Sse('stream')
+  @ApiOperation({ summary: 'Stream real-time notifications' })
+  @ApiResponse({
+    status: 200,
+    description: 'Server-sent notification stream opened.',
+  })
   stream(@Req() req: Request): Observable<MessageEvent> {
     const user = req.user as Record<string, unknown>;
     const rawId = user['userId'] ?? user['id'] ?? user['sub'];

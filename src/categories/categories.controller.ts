@@ -8,7 +8,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create.dto';
 
@@ -25,6 +25,7 @@ export class CategoriesController {
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
   @ApiOperation({ summary: 'Get category tree' })
+  @ApiResponse({ status: 200, description: 'Nested category tree returned.' })
   async getCategoriesTree() {
     return this.categoriesService.getTree();
   }
@@ -35,6 +36,7 @@ export class CategoriesController {
    */
   @Post()
   @ApiOperation({ summary: 'Create a new category' })
+  @ApiResponse({ status: 201, description: 'Category created successfully.' })
   async createCategory(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto);
   }
@@ -47,6 +49,7 @@ export class CategoriesController {
   @Get(':id/products')
   @ApiOperation({ summary: 'Get products by category (dummy placeholder)' })
   @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, description: 'Category products returned.' })
   getProductsByCategory(@Param('id', ParseIntPipe) id: number) {
     this.categoriesService.getProductsByCategory(id);
     return {

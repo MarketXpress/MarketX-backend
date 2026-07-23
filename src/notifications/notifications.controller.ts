@@ -12,7 +12,9 @@ import {
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './notification.entity';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Notifications')
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
@@ -23,6 +25,8 @@ export class NotificationsController {
    * @query isRead - Optional filter to get only read or unread notifications
    */
   @Get()
+  @ApiOperation({ summary: 'List notifications' })
+  @ApiResponse({ status: 200, description: 'Notifications returned.' })
   async findAll(
     @Query('isRead', new ParseBoolPipe({ optional: true }))
     isRead?: boolean,
@@ -37,6 +41,8 @@ export class NotificationsController {
    * Get the count of unread notifications
    */
   @Get('unread-count')
+  @ApiOperation({ summary: 'Get unread notification count' })
+  @ApiResponse({ status: 200, description: 'Unread count returned.' })
   async getUnreadCount(): Promise<{ unreadCount: number }> {
     // In a real implementation, get recipientId from authenticated user context
     const recipientId = '';
@@ -50,6 +56,9 @@ export class NotificationsController {
    * Retrieve a specific notification by ID
    */
   @Get(':id')
+  @ApiOperation({ summary: 'Get a notification by ID' })
+  @ApiResponse({ status: 200, description: 'Notification returned.' })
+  @ApiResponse({ status: 404, description: 'Notification not found.' })
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Notification> {
     return this.notificationsService.findOne(id);
   }
@@ -59,6 +68,8 @@ export class NotificationsController {
    * Create a new notification (typically called by internal services)
    */
   @Post()
+  @ApiOperation({ summary: 'Create a notification' })
+  @ApiResponse({ status: 201, description: 'Notification created.' })
   async create(
     @Body() createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
@@ -72,6 +83,8 @@ export class NotificationsController {
    * Mark a specific notification as read
    */
   @Patch(':id/read')
+  @ApiOperation({ summary: 'Mark a notification as read' })
+  @ApiResponse({ status: 200, description: 'Notification marked as read.' })
   async markRead(@Param('id', ParseIntPipe) id: number): Promise<Notification> {
     return this.notificationsService.markRead(id);
   }
@@ -81,6 +94,8 @@ export class NotificationsController {
    * Mark all notifications for the user as read
    */
   @Patch('read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiResponse({ status: 200, description: 'Notifications marked as read.' })
   async markAllRead(): Promise<{ affected: number }> {
     // In a real implementation, get recipientId from authenticated user context
     const recipientId = '';
