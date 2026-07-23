@@ -59,7 +59,10 @@ export class AuthController {
     status: 200,
     description: 'Refreshed authentication tokens returned.',
   })
-  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token.',
+  })
   async refresh(@Req() req: any, @Body('email') email: string) {
     const { userId, refreshToken } = req.user;
     return this.authService.refreshTokens(userId, email, refreshToken);
