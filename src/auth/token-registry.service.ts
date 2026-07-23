@@ -25,23 +25,23 @@ export class TokenRegistryService {
     const key = `refresh_token:${userId}:${token}`;
     await this.cacheManager.del(key);
 
-    // Remove from user list
+    // Remove from users list
     await this.removeTokenFromUserList(userId, token);
   }
 
   // REUSE DETECTION: Invalidate all tokens for a user
   async invalidateAllForUser(userId: string): Promise<void> {
     const userTokensKey = `user_refresh_tokens:${userId}`;
-    const tokens: string[] = (await this.cacheManager.get(userTokensKey)) || [];
 
-    if (tokens.length > 0) {
-      const tokenKeys = tokens.map(
-        (token) => `refresh_token:${userId}:${token}`,
-      );
-      await Promise.all(tokenKeys.map((key) => this.cacheManager.del(key)));
-    }
+    const tokens =
+      (await this.cacheManager.get<string[]>(userTokensKey)) ?? [];
 
-    // Clear the user tokens list
+    await Promise.all(
+      tokens.map(token =>
+        this.cacheManager.del(`refresh_token:${userId}:${token}`),
+      ),
+    );
+
     await this.cacheManager.del(userTokensKey);
   }
 

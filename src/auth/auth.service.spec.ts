@@ -28,7 +28,7 @@ jest.mock('qrcode', () => ({
 }));
 
 describe('AuthService', () => {
-  let service: AuthService;
+  let authService: AuthService;
   let usersService: UsersService;
   let jwtService: JwtService;
   let tokenRegistry: TokenRegistryService;
@@ -41,6 +41,17 @@ describe('AuthService', () => {
     name: 'Test User',
     twoFAEnabled: false,
     twoFASecret: null,
+  };
+
+  const mockUserId = 'user-123';
+  const mockEmail = 'test@example.com';
+  const mockRefreshToken = 'mock-refresh-token';
+
+  const mockTokenRegistry = {
+    store: jest.fn(),
+    exists: jest.fn(),
+    invalidate: jest.fn(),
+    invalidateAllForUser: jest.fn(),
   };
 
   const getMockUser = (email: string) => ({
@@ -93,7 +104,7 @@ describe('AuthService', () => {
       ],
     }).compile();
 
-    service = module.get<AuthService>(AuthService);
+    authService = module.get<AuthService>(AuthService);
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
     tokenRegistry = module.get<TokenRegistryService>(TokenRegistryService);
@@ -123,7 +134,7 @@ describe('AuthService', () => {
       );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.register(registerDto);
+      const result = await authService.register(registerDto);
 
       expect(bcryptHashSpy).toHaveBeenCalledWith('plainPassword', 10);
       expect(usersService.create).toHaveBeenCalledWith({
@@ -149,7 +160,7 @@ describe('AuthService', () => {
       const conflictError = new ConflictException('Email already exists');
       (usersService.create as jest.Mock).mockRejectedValue(conflictError);
 
-      await expect(service.register(registerDto)).rejects.toThrow(
+      await expect(authService.register(registerDto)).rejects.toThrow(
         ConflictException,
       );
     });
@@ -169,7 +180,7 @@ describe('AuthService', () => {
       );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      await service.register(registerDto);
+      await authService.register(registerDto);
 
       expect(usersService.create).toHaveBeenCalledWith({
         email: 'new@example.com',
@@ -191,7 +202,7 @@ describe('AuthService', () => {
       );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      await service.register(registerDto);
+      await authService.register(registerDto);
 
       expect(usersService.create).toHaveBeenCalledWith({
         email: 'new@example.com',
@@ -206,10 +217,10 @@ describe('AuthService', () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.validateUser('nonexistent@example.com', 'password'),
+        authService.validateUser('nonexistent@example.com', 'password'),
       ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.validateUser('nonexistent@example.com', 'password'),
+        authService.validateUser('nonexistent@example.com', 'password'),
       ).rejects.toThrow('Invalid credentials');
     });
 
@@ -218,10 +229,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(
-        service.validateUser('test@example.com', 'wrongPassword'),
+        authService.validateUser('test@example.com', 'wrongPassword'),
       ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.validateUser('test@example.com', 'wrongPassword'),
+        authService.validateUser('test@example.com', 'wrongPassword'),
       ).rejects.toThrow('Invalid credentials');
     });
 
@@ -232,7 +243,7 @@ describe('AuthService', () => {
       );
 
       await expect(
-        service.validateUser('test@example.com', 'password'),
+        authService.validateUser('test@example.com', 'password'),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -244,7 +255,7 @@ describe('AuthService', () => {
       );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.validateUser(
+      const result = await authService.validateUser(
         'test@example.com',
         'correctPassword',
       );
@@ -264,14 +275,14 @@ describe('AuthService', () => {
   });
 
   describe('refreshTokens', () => {
-    it('should throw ForbiddenException when refresh token is invalid/expired', async () => {
+    it('should throw UnauthorizedException when refresh token is invalid/expired', async () => {
       (tokenRegistry.exists as jest.Mock).mockResolvedValue(false);
 
       await expect(
-        service.refreshTokens('1', 'test@example.com', 'invalid-token'),
-      ).rejects.toThrow(ForbiddenException);
+        authService.refreshTokens('1', 'test@example.com', 'invalid-token'),
+      ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.refreshTokens('1', 'test@example.com', 'invalid-token'),
+        authService.refreshTokens('1', 'test@example.com', 'invalid-token'),
       ).rejects.toThrow('Access Denied: Refresh token reuse detected.');
       expect(tokenRegistry.invalidateAllForUser).toHaveBeenCalledWith('1');
     });
@@ -284,7 +295,7 @@ describe('AuthService', () => {
       );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.refreshTokens(
+      const result = await authService.refreshTokens(
         '1',
         'test@example.com',
         'valid-token',
@@ -301,6 +312,38 @@ describe('AuthService', () => {
       expect(result.refreshToken).toBeDefined();
     });
 
+    it('should succeed, invalidate the old token, and store a new token pair', async () => {
+      // Setup successful path
+      (tokenRegistry.exists as jest.Mock).mockResolvedValueOnce(true);
+      (jwtService.signAsync as jest.Mock).mockResolvedValueOnce(
+        mockTokens.accessToken,
+      );
+
+      const result = await authService.refreshTokens(
+        mockUserId,
+        mockEmail,
+        mockRefreshToken,
+      );
+
+      // 1. Validated the old token existed
+      expect(tokenRegistry.exists).toHaveBeenCalledWith(
+        mockUserId,
+        mockRefreshToken,
+      );
+      // 2. Invalidated the old token (Rotation)
+      expect(tokenRegistry.invalidate).toHaveBeenCalledWith(
+        mockUserId,
+        mockRefreshToken,
+      );
+      // 3. Stored the newly generated token inside getTokens()
+      expect(tokenRegistry.store).toHaveBeenCalledTimes(1);
+
+      // Verify the returned token structure
+      expect(result).toHaveProperty('accessToken', mockTokens.accessToken);
+      expect(result).toHaveProperty('refreshToken');
+      expect(result.refreshToken).toBeDefined();
+    });
+
     it('should revoke all user tokens when reuse is detected', async () => {
       (tokenRegistry.exists as jest.Mock).mockResolvedValue(false);
       (tokenRegistry.invalidateAllForUser as jest.Mock).mockResolvedValue(
@@ -308,10 +351,114 @@ describe('AuthService', () => {
       );
 
       await expect(
-        service.refreshTokens('1', 'test@example.com', 'reused-token'),
-      ).rejects.toThrow(ForbiddenException);
+        authService.refreshTokens('1', 'test@example.com', 'reused-token'),
+      ).rejects.toThrow(UnauthorizedException);
 
       expect(tokenRegistry.invalidateAllForUser).toHaveBeenCalledWith('1');
+    });
+
+    it('should throw db exceptions if the registry fails during bulk revocation', async () => {
+      const dbError = new Error('Cache timeout');
+      (tokenRegistry.invalidateAllForUser as jest.Mock).mockRejectedValueOnce(
+        dbError,
+      );
+
+        await expect(authService.revokeAllUserTokens(mockUserId)).rejects.toThrow(
+        dbError,
+      );
+    });
+
+    it('should trigger reuse detection, revoke all tokens, and throw exact 401 if token does not exist', async () => {
+      // Simulate token missing from registry
+      (tokenRegistry.exists as jest.Mock).mockResolvedValueOnce(false);
+
+      // Spy on the internal revoke method to ensure it's called
+      const revokeSpy = jest.spyOn(authService, 'revokeAllUserTokens');
+
+      const promise = authService.refreshTokens(
+        mockUserId,
+        mockEmail,
+        mockRefreshToken,
+      );
+
+      // Assert it throws 401 with the exact message
+      await expect(promise).rejects.toThrow(UnauthorizedException);
+      await expect(promise).rejects.toMatchObject({
+        message: 'Access Denied: Refresh token reuse detected.',
+      });
+
+      // Assert defensive mechanism triggered
+      expect(revokeSpy).toHaveBeenCalledWith(mockUserId);
+      expect(tokenRegistry.invalidateAllForUser).toHaveBeenCalledWith(
+        mockUserId,
+      );
+
+      // Assert the specific invalidate was skipped
+      expect(tokenRegistry.invalidate).not.toHaveBeenCalled();
+    });
+
+    it('should bubble up registry errors if checking token existence fails', async () => {
+      const dbError = new Error('Redis connection error');
+      (tokenRegistry.exists as jest.Mock).mockRejectedValueOnce(dbError);
+
+      await expect(
+        authService.refreshTokens(mockUserId, mockEmail, mockRefreshToken),
+      ).rejects.toThrow(dbError);
+    });
+
+    it('should execute registry errors if reuse detection revocation fails', async () => {
+      (tokenRegistry.exists as jest.Mock).mockResolvedValueOnce(false);
+
+      const dbError = new Error('Failed to purge tokens');
+      (tokenRegistry.invalidateAllForUser as jest.Mock).mockRejectedValueOnce(
+        dbError,
+      );
+
+      await expect(
+        authService.refreshTokens(mockUserId, mockEmail, mockRefreshToken),
+      ).rejects.toThrow(dbError);
+    });
+
+    it('should fail if generating the new token fails, but still invalidate the old token', async () => {
+      (tokenRegistry.exists as jest.Mock).mockResolvedValueOnce(true);
+
+      const jwtError = new Error('JWT Signing failed');
+      (jwtService.signAsync as jest.Mock).mockRejectedValueOnce(jwtError);
+
+      await expect(
+        authService.refreshTokens(mockUserId, mockEmail, mockRefreshToken),
+      ).rejects.toThrow(jwtError);
+
+      // Because `this.tokenRegistry.invalidate` is called BEFORE `this.getTokens()`,
+      // the old token MUST be invalidated even if creating the new one fails.
+      expect(tokenRegistry.invalidate).toHaveBeenCalledWith(
+        mockUserId,
+        mockRefreshToken,
+      );
+
+      // But no new token should be stored.
+      expect(tokenRegistry.store).not.toHaveBeenCalled();
+    });
+  });
+
+ describe('logout()', () => {
+    it('should revoke the specific refresh token successfully', async () => {
+      await authService.logout(mockUserId, mockRefreshToken);
+
+      expect(tokenRegistry.invalidate).toHaveBeenCalledWith(
+        mockUserId,
+        mockRefreshToken,
+      );
+      expect(tokenRegistry.invalidate).toHaveBeenCalledTimes(1);
+    });
+
+    it('should bubble up exceptions if the registry fails during logout', async () => {
+      const dbError = new Error('Database connection lost');
+      (tokenRegistry.invalidate as jest.Mock).mockRejectedValueOnce(dbError);
+
+      await expect(
+        authService.logout(mockUserId, mockRefreshToken),
+      ).rejects.toThrow(dbError);
     });
   });
 
@@ -328,7 +475,7 @@ describe('AuthService', () => {
 
       (usersService.update2FA as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.enable2FA('1');
+      const result = await authService.enable2FA('1');
 
       expect(otplib.generateSecret).toHaveBeenCalled();
       expect(usersService.update2FA).toHaveBeenCalledWith(1, mockSecret, true);
@@ -346,10 +493,10 @@ describe('AuthService', () => {
       };
       (usersService.findOne as jest.Mock).mockResolvedValue(userWithout2FA);
 
-      await expect(service.verify2FA('1', '123456')).rejects.toThrow(
+      await expect(authService.verify2FA('1', '123456')).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.verify2FA('1', '123456')).rejects.toThrow(
+      await expect(authService.verify2FA('1', '123456')).rejects.toThrow(
         '2FA not enabled for this user',
       );
     });
@@ -357,7 +504,7 @@ describe('AuthService', () => {
     it('should throw BadRequestException when user not found', async () => {
       (usersService.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.verify2FA('1', '123456')).rejects.toThrow(
+      await expect(authService.verify2FA('1', '123456')).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -371,10 +518,10 @@ describe('AuthService', () => {
       (usersService.findOne as jest.Mock).mockResolvedValue(userWith2FA);
       jest.spyOn(otplib, 'verify').mockResolvedValue({ valid: false } as never);
 
-      await expect(service.verify2FA('1', '000000')).rejects.toThrow(
+      await expect(authService.verify2FA('1', '000000')).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.verify2FA('1', '000000')).rejects.toThrow(
+      await expect(authService.verify2FA('1', '000000')).rejects.toThrow(
         'Invalid 2FA code',
       );
     });
@@ -388,7 +535,7 @@ describe('AuthService', () => {
       (usersService.findOne as jest.Mock).mockResolvedValue(userWith2FA);
       jest.spyOn(otplib, 'verify').mockResolvedValue({ valid: true, delta: 0 });
 
-      const result = await service.verify2FA('1', '123456');
+      const result = await authService.verify2FA('1', '123456');
 
       expect(otplib.verify).toHaveBeenCalledWith({
         secret: 'JBSWY3DPEHPK3PXP',
@@ -404,7 +551,7 @@ describe('AuthService', () => {
         undefined,
       );
 
-      await service.revokeAllUserTokens('1');
+      await authService.revokeAllUserTokens('1');
 
       expect(tokenRegistry.invalidateAllForUser).toHaveBeenCalledWith('1');
     });
@@ -417,7 +564,7 @@ describe('AuthService', () => {
       );
       (tokenRegistry.store as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.getTokens('1', 'test@example.com');
+      const result = await authService.getTokens('1', 'test@example.com');
 
       expect(jwtService.signAsync).toHaveBeenCalledWith(
         { sub: '1', email: 'test@example.com' },

@@ -39,14 +39,32 @@ describe('Auth lifecycle (e2e)', () => {
   };
 
   let accessToken: string;
-  let _refreshToken: string;
+  let refreshToken: string;
 
   beforeAll(async () => {
     ctx = await createE2EApp();
   }, 120_000);
 
+  // We mock the TokenRegistry so we don't need a live Redis connection
+  const mockTokenRegistryService = {
+    store: jest.fn(),
+    exists: jest.fn(),
+    invalidate: jest.fn(),
+    invalidateAllForUser: jest.fn(),
+  };
+
+  // Basic mocks for standard services
+  const mockUsersService = {};
+  const mockJwtService = {
+    signAsync: jest.fn().mockResolvedValue('new-mock-access-token'),
+  };
+
   afterAll(async () => {
     await teardownE2EApp(ctx);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   // ── Register ──────────────────────────────────────────────────────────────────
@@ -96,7 +114,7 @@ describe('Auth lifecycle (e2e)', () => {
       expect(typeof res.body.refreshToken).toBe('string');
 
       accessToken = res.body.accessToken;
-      _refreshToken = res.body.refreshToken;
+      refreshToken = res.body.refreshToken;
     });
 
     it('rejects login for non-existent email with 401', async () => {
@@ -131,12 +149,11 @@ describe('Auth lifecycle (e2e)', () => {
      *
      * This is the current effective "logout" path.
      */
-    it('revokes the session and returns 403 when called with a valid bearer token', async () => {
+    it('revokes the session and returns 401 when called with a valid bearer token', async () => {
       await request(ctx.app.getHttpServer())
         .post('/auth/refresh')
-        .set('Authorization', `Bearer ${accessToken}`)
         .send({ email: testUser.email })
-        .expect(403);
+        .expect(401);
     });
   });
 
@@ -155,6 +172,57 @@ describe('Auth lifecycle (e2e)', () => {
         .post('/auth/login')
         .send({})
         .expect(400);
+    });
+  });
+
+  // ── Explicit Session Revocation (Logout) ──────────────────────────────────────
+
+  describe('POST /auth/logout & /auth/logout-all', () => {
+    beforeAll(async () => {
+      // Log in again to get fresh tokens for the logout tests
+      const res = await request(ctx.app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: testUser.email, password: testUser.password });
+
+      accessToken = res.body.accessToken;
+      refreshToken = res.body.refreshToken;
+    });
+
+    it('POST /auth/logout — successfully revokes the specific refresh token', async () => {
+      const res = await request(ctx.app.getHttpServer())
+        .post('/auth/logout')
+        // JwtAuthGuard expects the Access Token
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ refreshToken })
+        .expect(200);
+
+      expect(res.body).toEqual({ message: 'Logged out successfully' });
+    });
+
+    it('POST /auth/refresh — returns 401 if trying to refresh a logged-out token', async () => {
+      const res = await request(ctx.app.getHttpServer())
+        .post('/auth/refresh')
+        .set('Authorization', `Bearer ${refreshToken}`)
+        .send({ email: testUser.email })
+        .expect(401);
+
+      expect(res.body.message).toEqual('Access Denied: Refresh token reuse detected.');
+    });
+
+    it('POST /auth/logout-all — successfully revokes all active tokens', async () => {
+      // Log in one last time to test logout-all
+      const loginRes = await request(ctx.app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: testUser.email, password: testUser.password });
+
+      const newAccessToken = loginRes.body.accessToken;
+
+      const res = await request(ctx.app.getHttpServer())
+        .post('/auth/logout-all')
+        .set('Authorization', `Bearer ${newAccessToken}`)
+        .expect(200);
+
+      expect(res.body).toEqual({ message: 'All sessions logged out successfully' });
     });
   });
 });

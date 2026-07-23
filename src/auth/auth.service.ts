@@ -97,10 +97,11 @@ export class AuthService {
        * If the token isn't in Redis, it was either already used or is fake.
        * We invalidate all tokens for this user for safety.
        */
+      // Token doesn't exist -> Revoked or already used.
       await this.revokeAllUserTokens(userId);
-      throw new ForbiddenException(
-        'Access Denied: Refresh token reuse detected.',
-      );
+
+      // Changed from ForbiddenException to UnauthorizedException (401)
+      throw new UnauthorizedException('Access Denied: Refresh token reuse detected.');
     }
 
     // Delete the used token (Rotation)
@@ -108,6 +109,10 @@ export class AuthService {
 
     // Issue new pair
     return this.getTokens(userId, email);
+  }
+
+  async logout(userId: string, refreshToken: string): Promise<void> {
+    await this.tokenRegistry.invalidate(userId, refreshToken);
   }
 
   async revokeAllUserTokens(userId: string): Promise<void> {
