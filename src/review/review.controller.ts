@@ -15,6 +15,7 @@ import {
 import { CreateReviewDto } from './dto/create-review.dto';
 import { PaginatedReviewsResult, ReviewsService } from './review.service';
 import { Review } from './entities/review.entity';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 // ── Adjust to your auth guard path ──────────────────────────────────────────
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -27,6 +28,7 @@ import { Review } from './entities/review.entity';
  *   POST /products/:id/reviews  — authenticated buyer submits a review
  *   GET  /products/:id/reviews  — public paginated list of reviews
  */
+@ApiTags('Reviews')
 @Controller('products/:id/reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
@@ -38,6 +40,8 @@ export class ReviewsController {
   // @UseGuards(JwtAuthGuard)   ← uncomment once JwtAuthGuard path is confirmed
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a product review' })
+  @ApiResponse({ status: 201, description: 'Review created successfully.' })
   async create(
     @Param('id', ParseUUIDPipe) productId: string,
     @Body() dto: CreateReviewDto,
@@ -51,6 +55,11 @@ export class ReviewsController {
    * Public endpoint — no auth required.
    */
   @Get()
+  @ApiOperation({ summary: 'List reviews for a product' })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated product reviews returned.',
+  })
   async findAll(
     @Param('id', ParseUUIDPipe) productId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,

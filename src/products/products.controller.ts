@@ -17,6 +17,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiHeader,
+  ApiResponse,
 } from '@nestjs/swagger';
 import {
   CacheInterceptor,
@@ -49,6 +50,7 @@ export class ProductsController {
     required: false,
     description: 'Target currency',
   })
+  @ApiResponse({ status: 200, description: 'Products returned.' })
   findAll(@Query() filters: FilterProductDto) {
     return this.productsService.findAll(filters);
   }
@@ -57,6 +59,8 @@ export class ProductsController {
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(30)
   @ApiOperation({ summary: 'Get product by ID' })
+  @ApiResponse({ status: 200, description: 'Product returned.' })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
   findOne(
     @Param('id') id: string,
     @Query('preferredCurrency') preferredCurrency?: SupportedCurrency,
@@ -68,6 +72,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create product' })
+  @ApiResponse({ status: 201, description: 'Product created successfully.' })
   async create(@Req() req: any, @Body() dto: CreateProductDto) {
     const product = await this.productsService.create(
       req.user.id.toString(),
@@ -81,6 +86,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update product' })
+  @ApiResponse({ status: 200, description: 'Product updated successfully.' })
   async update(
     @Param('id') id: string,
     @Req() req: any,
@@ -99,6 +105,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update product price' })
+  @ApiResponse({ status: 200, description: 'Product price updated.' })
   async updatePrice(
     @Param('id') id: string,
     @Req() req: any,
@@ -115,6 +122,7 @@ export class ProductsController {
 
   @Get(':id/price-history')
   @ApiOperation({ summary: 'Get price change history for a product' })
+  @ApiResponse({ status: 200, description: 'Price history returned.' })
   getPriceHistory(@Param('id') id: string) {
     return this.productsService.getPriceHistory(id);
   }
@@ -123,6 +131,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete product' })
+  @ApiResponse({ status: 200, description: 'Product deleted successfully.' })
   remove(@Param('id') id: string, @Req() req: any) {
     const result = this.productsService.remove(id, req.user.id.toString());
     (this.cacheManager as any).reset();

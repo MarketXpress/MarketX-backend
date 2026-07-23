@@ -58,6 +58,8 @@ export class UsersController {
   }
 
   @Get(':id/stats')
+  @ApiOperation({ summary: 'Get user statistics' })
+  @ApiResponse({ status: 200, description: 'User statistics returned.' })
   getUserStats(@Param('id') id: string) {
     return this.usersService.getUserStats(id);
   }

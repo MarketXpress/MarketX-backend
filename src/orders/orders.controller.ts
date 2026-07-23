@@ -18,7 +18,12 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Response } from 'express';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrdersService } from './orders.service';
@@ -47,6 +52,8 @@ export class OrdersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create an order' })
+  @ApiResponse({ status: 201, description: 'Order created successfully.' })
   async create(
     @Body() createOrderDto: CreateOrderDto,
     @Request() req: any,
@@ -116,6 +123,8 @@ export class OrdersController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List orders' })
+  @ApiResponse({ status: 200, description: 'Orders returned.' })
   async findAll(@Request() req: any, @Query('buyerId') buyerId?: string) {
     // Only admins may look up another buyer's orders; everyone else is
     // scoped to their own, regardless of what the query string says.
@@ -124,6 +133,8 @@ export class OrdersController {
   }
 
   @Get('export')
+  @ApiOperation({ summary: 'Export order history' })
+  @ApiResponse({ status: 200, description: 'Order history exported.' })
   async exportOrders(
     @Query('format') format: string,
     @Query('buyerId') buyerId: string,
@@ -152,11 +163,16 @@ export class OrdersController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get an order by ID' })
+  @ApiResponse({ status: 200, description: 'Order returned.' })
+  @ApiResponse({ status: 404, description: 'Order not found.' })
   async findOne(@Param('id') id: string, @Request() req: any) {
     return await this.ordersService.findOne(id, req.user);
   }
 
   @Patch(':id/status')
+  @ApiOperation({ summary: 'Update order status' })
+  @ApiResponse({ status: 200, description: 'Order status updated.' })
   async updateStatus(
     @Param('id') id: string,
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,
@@ -170,6 +186,8 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Cancel an order' })
+  @ApiResponse({ status: 200, description: 'Order cancelled.' })
   async cancelOrder(@Param('id') id: string, @Request() req: any) {
     const order = await this.ordersService.cancelOrder(id, req.user.id);
 

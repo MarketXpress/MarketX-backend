@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import * as compression from 'compression';
 import * as express from 'express';
 import { join } from 'path';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -39,6 +40,15 @@ async function bootstrap() {
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('MarketX API')
+    .setDescription('MarketX backend API documentation')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
