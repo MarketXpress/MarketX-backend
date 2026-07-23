@@ -15,6 +15,8 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings=0",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "docs:generate": "ts-node -r tsconfig-paths/register scripts/generate-api-docs.ts",
+    "docs:render": "node scripts/render-api-docs.js",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "jest",
     "pr:check": "npm run lint && npm run typecheck && npm test -- --passWithNoTests --forceExit",
@@ -76,7 +78,7 @@
     "amqplib": "^0.10.9",
     "aws-sdk": "^2.1693.0",
     "axios": "^1.13.5",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "cache-manager": "^7.2.8",
     "cache-manager-ioredis": "^2.1.0",
@@ -161,6 +163,9 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "overrides": {
+    "tar": "^7.5.19"
   },
   "jest": {
     "moduleFileExtensions": [
