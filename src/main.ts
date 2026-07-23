@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as compression from 'compression';
 import * as express from 'express';
+import helmet from 'helmet';
 import { join } from 'path';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -36,6 +37,7 @@ async function bootstrap() {
 
   app.use(express.json({ limit: '10mb' }) as any);
   app.use(express.urlencoded({ limit: '10mb', extended: true }) as any);
+  app.use(helmet());
   app.use(compression());
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
