@@ -3,7 +3,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   ConflictException,
   UnauthorizedException,
-  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -46,13 +45,6 @@ describe('AuthService', () => {
   const mockUserId = 'user-123';
   const mockEmail = 'test@example.com';
   const mockRefreshToken = 'mock-refresh-token';
-
-  const mockTokenRegistry = {
-    store: jest.fn(),
-    exists: jest.fn(),
-    invalidate: jest.fn(),
-    invalidateAllForUser: jest.fn(),
-  };
 
   const getMockUser = (email: string) => ({
     ...mockUser,
@@ -363,7 +355,7 @@ describe('AuthService', () => {
         dbError,
       );
 
-        await expect(authService.revokeAllUserTokens(mockUserId)).rejects.toThrow(
+      await expect(authService.revokeAllUserTokens(mockUserId)).rejects.toThrow(
         dbError,
       );
     });
@@ -441,7 +433,7 @@ describe('AuthService', () => {
     });
   });
 
- describe('logout()', () => {
+  describe('logout()', () => {
     it('should revoke the specific refresh token successfully', async () => {
       await authService.logout(mockUserId, mockRefreshToken);
 

@@ -33,11 +33,10 @@ export class TokenRegistryService {
   async invalidateAllForUser(userId: string): Promise<void> {
     const userTokensKey = `user_refresh_tokens:${userId}`;
 
-    const tokens =
-      (await this.cacheManager.get<string[]>(userTokensKey)) ?? [];
+    const tokens = (await this.cacheManager.get<string[]>(userTokensKey)) ?? [];
 
     await Promise.all(
-      tokens.map(token =>
+      tokens.map((token) =>
         this.cacheManager.del(`refresh_token:${userId}:${token}`),
       ),
     );

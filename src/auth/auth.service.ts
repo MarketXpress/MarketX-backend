@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
-  ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -101,7 +100,9 @@ export class AuthService {
       await this.revokeAllUserTokens(userId);
 
       // Changed from ForbiddenException to UnauthorizedException (401)
-      throw new UnauthorizedException('Access Denied: Refresh token reuse detected.');
+      throw new UnauthorizedException(
+        'Access Denied: Refresh token reuse detected.',
+      );
     }
 
     // Delete the used token (Rotation)

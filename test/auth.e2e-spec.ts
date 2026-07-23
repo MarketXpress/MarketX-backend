@@ -45,20 +45,6 @@ describe('Auth lifecycle (e2e)', () => {
     ctx = await createE2EApp();
   }, 120_000);
 
-  // We mock the TokenRegistry so we don't need a live Redis connection
-  const mockTokenRegistryService = {
-    store: jest.fn(),
-    exists: jest.fn(),
-    invalidate: jest.fn(),
-    invalidateAllForUser: jest.fn(),
-  };
-
-  // Basic mocks for standard services
-  const mockUsersService = {};
-  const mockJwtService = {
-    signAsync: jest.fn().mockResolvedValue('new-mock-access-token'),
-  };
-
   afterAll(async () => {
     await teardownE2EApp(ctx);
   });
@@ -206,7 +192,9 @@ describe('Auth lifecycle (e2e)', () => {
         .send({ email: testUser.email })
         .expect(401);
 
-      expect(res.body.message).toEqual('Access Denied: Refresh token reuse detected.');
+      expect(res.body.message).toEqual(
+        'Access Denied: Refresh token reuse detected.',
+      );
     });
 
     it('POST /auth/logout-all — successfully revokes all active tokens', async () => {
@@ -222,7 +210,9 @@ describe('Auth lifecycle (e2e)', () => {
         .set('Authorization', `Bearer ${newAccessToken}`)
         .expect(200);
 
-      expect(res.body).toEqual({ message: 'All sessions logged out successfully' });
+      expect(res.body).toEqual({
+        message: 'All sessions logged out successfully',
+      });
     });
   });
 });
