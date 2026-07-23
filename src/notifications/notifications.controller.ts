@@ -32,7 +32,7 @@ export class NotificationsController {
     isRead?: boolean,
   ): Promise<Notification[]> {
     // In a real implementation, get recipientId from authenticated user context
-    const recipientId = ''; // This should come from request context/JWT
+    const recipientId = 0; // This should come from request context/JWT
     return this.notificationsService.findAllForUser(recipientId, isRead);
   }
 
@@ -45,7 +45,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Unread count returned.' })
   async getUnreadCount(): Promise<{ unreadCount: number }> {
     // In a real implementation, get recipientId from authenticated user context
-    const recipientId = '';
+    const recipientId = 0;
     const unreadCount =
       await this.notificationsService.getUnreadCount(recipientId);
     return { unreadCount };
@@ -74,7 +74,7 @@ export class NotificationsController {
     @Body() createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     // In a real implementation, get recipientId from request or body
-    const recipientId = ''; // This should come from authenticated context or request body
+    const recipientId = 0; // This should come from authenticated context or request body
     return this.notificationsService.create(recipientId, createNotificationDto);
   }
 
@@ -98,7 +98,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Notifications marked as read.' })
   async markAllRead(): Promise<{ affected: number }> {
     // In a real implementation, get recipientId from authenticated user context
-    const recipientId = '';
+    const recipientId = 0;
     return this.notificationsService.markAllRead(recipientId);
   }
 }

@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { User } from './user.entity';
+import { Users } from '../users/users.entity';
 import { Order } from './order.entity';
 
 export enum TransactionStatus {
@@ -80,13 +80,13 @@ export class Transaction {
   })
   paymentMethod: PaymentMethod;
 
-  @Column('uuid')
+  @Column()
   @Index()
-  senderId: string;
+  senderId: number;
 
-  @Column('uuid')
+  @Column()
   @Index()
-  receiverId: string;
+  receiverId: number;
 
   @Column({ nullable: true })
   @Index()
@@ -133,17 +133,17 @@ export class Transaction {
   reversedAt?: Date;
 
   // Relationships
-  @ManyToOne(() => User, {
+  @ManyToOne(() => Users, {
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'senderId' })
-  sender: User;
+  sender: Users;
 
-  @ManyToOne(() => User, {
+  @ManyToOne(() => Users, {
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'receiverId' })
-  receiver: User;
+  receiver: Users;
 
   @ManyToOne(() => Order, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'orderId' })

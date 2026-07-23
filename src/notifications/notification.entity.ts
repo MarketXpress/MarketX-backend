@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../entities/user.entity';
+import { Users } from '../users/users.entity';
 
 export enum NotificationType {
   INFO = 'info',
@@ -48,9 +48,9 @@ export class Notification {
   readAt: Date | null;
 
   @Column({ name: 'recipient_id' })
-  recipientId: string;
+  recipientId: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE', eager: false })
+  @ManyToOne(() => Users, { onDelete: 'CASCADE', eager: false })
   @JoinColumn({ name: 'recipient_id' })
-  recipient: User;
+  recipient: Users;
 }

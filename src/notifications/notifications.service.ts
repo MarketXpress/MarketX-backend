@@ -15,7 +15,7 @@ export class NotificationsService {
    * Create a new notification for a user
    */
   async create(
-    recipientId: string,
+    recipientId: number,
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     const notification = this.notificationRepository.create({
@@ -29,7 +29,7 @@ export class NotificationsService {
    * Find all notifications for a specific user, optionally filtered by read status
    */
   async findAllForUser(
-    recipientId: string,
+    recipientId: number,
     isRead?: boolean,
   ): Promise<Notification[]> {
     const query = this.notificationRepository.createQueryBuilder('n');
@@ -76,7 +76,7 @@ export class NotificationsService {
   /**
    * Mark all notifications for a user as read
    */
-  async markAllRead(recipientId: string): Promise<{ affected: number }> {
+  async markAllRead(recipientId: number): Promise<{ affected: number }> {
     const result = await this.notificationRepository.update(
       { recipientId, isRead: false },
       { isRead: true, readAt: new Date() },
@@ -98,7 +98,7 @@ export class NotificationsService {
   /**
    * Delete all notifications for a user
    */
-  async removeAllForUser(recipientId: string): Promise<{ affected: number }> {
+  async removeAllForUser(recipientId: number): Promise<{ affected: number }> {
     const result = await this.notificationRepository.delete({ recipientId });
     return { affected: result.affected || 0 };
   }
@@ -106,7 +106,7 @@ export class NotificationsService {
   /**
    * Get unread notification count for a user
    */
-  async getUnreadCount(recipientId: string): Promise<number> {
+  async getUnreadCount(recipientId: number): Promise<number> {
     return await this.notificationRepository.countBy({
       recipientId,
       isRead: false,
