@@ -1,8 +1,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from '../src/app.module';
+import { buildSwaggerConfig } from '../src/swagger.config';
 
 async function bootstrap() {
   process.env.NODE_ENV ||= 'development';
@@ -13,17 +14,17 @@ async function bootstrap() {
   process.env.DATABASE_NAME ||= 'marketx_docs';
   process.env.REDIS_HOST ||= 'localhost';
   process.env.REDIS_PORT ||= '6379';
+  // ConfigValidationService requires these to be set and >= 32 chars; only
+  // used to satisfy startup validation while generating docs, never to sign
+  // real tokens.
+  process.env.JWT_ACCESS_SECRET ||=
+    'docs-generation-placeholder-access-secret-32chars';
+  process.env.JWT_REFRESH_SECRET ||=
+    'docs-generation-placeholder-refresh-secret-32chars';
 
-  const app = await NestFactory.create(AppModule, { logger: false });
+  const app = await NestFactory.create(AppModule);
 
-  const config = new DocumentBuilder()
-    .setTitle('MarketX API')
-    .setDescription('MarketX backend API documentation')
-    .setVersion('1.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'Authorization')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config, {
+  const document = SwaggerModule.createDocument(app, buildSwaggerConfig(), {
     deepScanRoutes: true,
   });
 
@@ -33,6 +34,12 @@ async function bootstrap() {
 
   await app.close();
   console.log(`✅ OpenAPI schema generated at ${join(outputDir, 'openapi.json')}`);
+
+  // Some providers (Bull/ioredis queues, cron schedulers) keep handles open
+  // after app.close() resolves, which would otherwise hang this one-shot
+  // script indefinitely. This is a one-shot CLI tool, not a long-running
+  // process, so forcing exit here is intentional.
+  process.exit(0);
 }
 
 bootstrap().catch((error) => {

@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# generated API docs (published to gh-pages by the API Documentation workflow)
+/docs/api
+
 # local env files
 .env.local
 

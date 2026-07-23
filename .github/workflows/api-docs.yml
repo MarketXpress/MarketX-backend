@@ -55,12 +55,14 @@ jobs:
           DATABASE_NAME: marketx_docs
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: docs-generation-placeholder-access-secret-32chars
+          JWT_REFRESH_SECRET: docs-generation-placeholder-refresh-secret-32chars
 
       - name: Render static API docs
         run: npm run docs:render
 
       - name: Publish API docs to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v5
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/api
