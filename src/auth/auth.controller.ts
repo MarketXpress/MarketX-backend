@@ -46,6 +46,7 @@ export class AuthController {
     return this.authService.refreshTokens(userId, email, refreshToken);
   }
 
+  @UseGuards(JwtRefreshGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
@@ -57,6 +58,7 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @UseGuards(JwtRefreshGuard)
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   async logoutAll(@Req() req: any) {
