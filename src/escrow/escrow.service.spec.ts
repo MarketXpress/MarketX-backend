@@ -2,16 +2,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Repository } from 'typeorm';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import axios from 'axios';
 
 import { EscrowService } from './escrow.service';
+import { EscrowController } from './escrow.controller';
 import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { LoggerService } from '../common/logger/logger.service';
 import { EncryptionService } from '../common/services/encryption.service';
 import { CreateEscrowDto } from './dto/create-escrow.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 // ---------------------------------------------------------------------------
 // Module-level mocks
@@ -64,6 +71,40 @@ function buildMockEscrow(overrides: Partial<Escrow> = {}): Escrow {
 // ---------------------------------------------------------------------------
 // Test Suite
 // ---------------------------------------------------------------------------
+
+const actingBuyer = { id: 'buyer-uuid-5678' };
+const actingSeller = { id: 'seller-uuid-9012' };
+const actingAdmin = { id: 'admin-uuid', role: 'admin' };
+
+describe('EscrowController', () => {
+  it('rejects unauthenticated escrow requests by requiring JwtAuthGuard', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, EscrowController) as
+      | unknown[]
+      | undefined;
+
+    expect(guards).toContain(JwtAuthGuard);
+  });
+
+  it('overrides any client-supplied buyerId with req.user.id', async () => {
+    const escrowService = {
+      createEscrow: jest.fn().mockResolvedValue(buildMockEscrow()),
+    };
+    const controller = new EscrowController(
+      escrowService as unknown as EscrowService,
+    );
+
+    await controller.create(
+      { user: { id: 'authenticated-buyer-id' } },
+      { amount: 100, buyerId: 'attacker-buyer-id', sellerId: 'seller-id' },
+    );
+
+    expect(escrowService.createEscrow).toHaveBeenCalledWith({
+      amount: 100,
+      buyerId: 'authenticated-buyer-id',
+      sellerId: 'seller-id',
+    });
+  });
+});
 
 describe('EscrowService', () => {
   let service: EscrowService;
@@ -272,12 +313,66 @@ describe('EscrowService', () => {
         { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
       ]);
 
-      const result = await service.releaseEscrow('escrow-uuid-1234');
+      const result = await service.releaseEscrow(
+        'escrow-uuid-1234',
+        actingBuyer,
+      );
 
       expect(mockSubmitTransaction).toHaveBeenCalledTimes(1);
       expect(result.status).toBe(EscrowStatus.RELEASED);
       expect(result.transactionHash).toBe('release-tx-hash-xyz');
       expect(result.released).toBe(true);
+    });
+
+    it('allows the seller party to release the escrow', async () => {
+      const fundedEscrow = buildMockEscrow();
+      escrowRepo.findOne.mockResolvedValue(fundedEscrow);
+      escrowRepo.save.mockResolvedValue({
+        ...fundedEscrow,
+        status: EscrowStatus.RELEASED,
+      });
+      mockLoadAccount.mockResolvedValue(
+        new StellarSdk.Account(MOCK_ESCROW_KEYPAIR.publicKey(), '100'),
+      );
+      mockSubmitTransaction.mockResolvedValue({ hash: 'release-tx-hash-xyz' });
+      mockManager.query.mockResolvedValue([
+        { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
+      ]);
+
+      await service.releaseEscrow('escrow-uuid-1234', actingSeller);
+
+      expect(mockSubmitTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows an admin to release the escrow even when not a party', async () => {
+      const fundedEscrow = buildMockEscrow();
+      escrowRepo.findOne.mockResolvedValue(fundedEscrow);
+      escrowRepo.save.mockResolvedValue({
+        ...fundedEscrow,
+        status: EscrowStatus.RELEASED,
+      });
+      mockLoadAccount.mockResolvedValue(
+        new StellarSdk.Account(MOCK_ESCROW_KEYPAIR.publicKey(), '100'),
+      );
+      mockSubmitTransaction.mockResolvedValue({ hash: 'release-tx-hash-xyz' });
+      mockManager.query.mockResolvedValue([
+        { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
+      ]);
+
+      await service.releaseEscrow('escrow-uuid-1234', actingAdmin);
+
+      expect(mockSubmitTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects release attempts from users who are neither parties nor admins', async () => {
+      const fundedEscrow = buildMockEscrow();
+      escrowRepo.findOne.mockResolvedValue(fundedEscrow);
+
+      await expect(
+        service.releaseEscrow('escrow-uuid-1234', { id: 'stranger-uuid' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockLoadAccount).not.toHaveBeenCalled();
+      expect(mockSubmitTransaction).not.toHaveBeenCalled();
     });
 
     it('decrypts the stored secret and signs the release transaction with the escrow keypair', async () => {
@@ -296,7 +391,7 @@ describe('EscrowService', () => {
         { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
       ]);
 
-      await service.releaseEscrow('escrow-uuid-1234');
+      await service.releaseEscrow('escrow-uuid-1234', actingBuyer);
 
       const submittedTx = mockSubmitTransaction.mock
         .calls[0][0] as StellarSdk.Transaction;
@@ -326,7 +421,7 @@ describe('EscrowService', () => {
         { stellarWalletAddress: MOCK_SELLER_KEYPAIR.publicKey() },
       ]);
 
-      await service.releaseEscrow('escrow-uuid-1234');
+      await service.releaseEscrow('escrow-uuid-1234', actingBuyer);
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('decrypted for transaction signing'),
@@ -353,18 +448,18 @@ describe('EscrowService', () => {
         getOne: jest.fn().mockResolvedValue({ escrowSecretKey: null }),
       });
 
-      await expect(service.releaseEscrow('escrow-uuid-1234')).rejects.toThrow(
-        'missing keypair data',
-      );
+      await expect(
+        service.releaseEscrow('escrow-uuid-1234', actingBuyer),
+      ).rejects.toThrow('missing keypair data');
     });
 
     it('should throw BadRequestException when escrow is not FUNDED', async () => {
       const releasedEscrow = buildMockEscrow({ status: EscrowStatus.RELEASED });
       escrowRepo.findOne.mockResolvedValue(releasedEscrow);
 
-      await expect(service.releaseEscrow('escrow-uuid-1234')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.releaseEscrow('escrow-uuid-1234', actingBuyer),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw InternalServerErrorException when escrow has no keypair', async () => {
@@ -374,9 +469,9 @@ describe('EscrowService', () => {
       });
       escrowRepo.findOne.mockResolvedValue(brokenEscrow);
 
-      await expect(service.releaseEscrow('escrow-uuid-1234')).rejects.toThrow(
-        'missing keypair data',
-      );
+      await expect(
+        service.releaseEscrow('escrow-uuid-1234', actingBuyer),
+      ).rejects.toThrow('missing keypair data');
     });
 
     it('should throw InternalServerErrorException on Stellar submission error', async () => {
@@ -391,9 +486,9 @@ describe('EscrowService', () => {
       ]);
       mockSubmitTransaction.mockRejectedValue(new Error('Horizon error'));
 
-      await expect(service.releaseEscrow('escrow-uuid-1234')).rejects.toThrow(
-        'Stellar escrow release failed',
-      );
+      await expect(
+        service.releaseEscrow('escrow-uuid-1234', actingBuyer),
+      ).rejects.toThrow('Stellar escrow release failed');
     });
   });
 
