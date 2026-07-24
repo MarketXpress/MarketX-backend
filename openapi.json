@@ -1641,7 +1641,7 @@
           },
           "buyerId": {
             "type": "string",
-            "description": "UUID of the buyer initiating the escrow",
+            "description": "Deprecated: ignored. Buyer is derived from the authenticated user.",
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
           },
           "sellerId": {
