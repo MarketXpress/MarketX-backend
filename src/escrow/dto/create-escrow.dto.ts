@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsNumber, IsPositive, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateEscrowDto {
@@ -11,12 +17,13 @@ export class CreateEscrowDto {
   amount: number;
 
   @ApiProperty({
-    description: 'UUID of the buyer initiating the escrow',
+    description:
+      'Deprecated: ignored. Buyer is derived from the authenticated user.',
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   })
   @IsUUID()
-  @IsNotEmpty()
-  buyerId: string;
+  @IsOptional()
+  buyerId?: string;
 
   @ApiProperty({
     description: 'UUID of the seller who will receive the funds on release',

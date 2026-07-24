@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -14,6 +15,11 @@ import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { LoggerService } from '../common/logger/logger.service';
 import { EncryptionService } from '../common/services/encryption.service';
 import { CreateEscrowDto } from './dto/create-escrow.dto';
+
+export interface EscrowActor {
+  id: string;
+  role?: string;
+}
 
 @Injectable()
 export class EscrowService {
@@ -59,8 +65,14 @@ export class EscrowService {
    *       the buyer to sign a payment from their own Stellar account instead.
    */
   async createEscrow(dto: CreateEscrowDto): Promise<Escrow> {
+    if (!dto.buyerId) {
+      throw new BadRequestException('Authenticated buyer is required');
+    }
+
+    const buyerId = dto.buyerId;
+
     this.logger.info('Creating escrow', {
-      buyerId: dto.buyerId,
+      buyerId,
       sellerId: dto.sellerId,
       amount: dto.amount,
     });
@@ -76,7 +88,7 @@ export class EscrowService {
     // envelope-encrypted at rest; it is only ever decrypted in-memory, and
     // only at the point of signing a release transaction.
     const escrow = this.escrowRepository.create({
-      buyerId: dto.buyerId,
+      buyerId,
       sellerId: dto.sellerId,
       amount: dto.amount,
       status: EscrowStatus.PENDING,
@@ -131,10 +143,14 @@ export class EscrowService {
    * purposes, if the seller has no wallet address, a new random keypair is
    * generated and Friendbot-funded as a stand-in destination.
    */
-  async releaseEscrow(escrowId: string): Promise<Escrow> {
+  async releaseEscrow(
+    escrowId: string,
+    actingUser: EscrowActor,
+  ): Promise<Escrow> {
     this.logger.info('Releasing escrow', { escrowId });
 
     const escrow = await this.findOne(escrowId);
+    this.assertReleaseAccess(escrow, actingUser);
 
     if (escrow.status !== EscrowStatus.FUNDED) {
       throw new BadRequestException(
@@ -215,6 +231,18 @@ export class EscrowService {
       // so the operator can retry or investigate.
       throw new InternalServerErrorException(
         'Stellar escrow release failed. See server logs for details.',
+      );
+    }
+  }
+
+  private assertReleaseAccess(escrow: Escrow, actingUser: EscrowActor): void {
+    const isParty =
+      actingUser.id === escrow.buyerId || actingUser.id === escrow.sellerId;
+    const isAdmin = actingUser.role === 'admin';
+
+    if (!isParty && !isAdmin) {
+      throw new ForbiddenException(
+        'You are not allowed to release this escrow',
       );
     }
   }
