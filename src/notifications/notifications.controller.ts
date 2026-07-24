@@ -13,6 +13,9 @@ import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './notification.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -101,4 +104,17 @@ export class NotificationsController {
     const recipientId = 0;
     return this.notificationsService.markAllRead(recipientId);
   }
+
+  @Get()
+async findAll(
+    @Req() req: Request,
+    @Query('isRead') isRead?: boolean,
+) {
+    const recipientId = req.user.id;
+
+    return this.notificationsService.findAllForUser(
+        recipientId,
+        isRead,
+    );
+}
 }
