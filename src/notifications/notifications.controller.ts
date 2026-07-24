@@ -13,7 +13,7 @@ import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './notification.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Req, UseGuards } from '@nestjs/common';
+import { Req } from '@nestjs/common';
 import { Request } from 'express';
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
