@@ -14,7 +14,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './notification.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Req } from '@nestjs/common';
-import { Request } from 'express';
+
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Notifications')
@@ -31,7 +31,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List notifications' })
   @ApiResponse({ status: 200, description: 'Notifications returned.' })
   async findAll(
-    @Req() req: Request,
+    @Req() req: any,
     @Query('isRead', new ParseBoolPipe({ optional: true }))
     isRead?: boolean,
   ): Promise<Notification[]> {
