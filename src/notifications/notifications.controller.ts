@@ -31,11 +31,11 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List notifications' })
   @ApiResponse({ status: 200, description: 'Notifications returned.' })
   async findAll(
+    @Req() req: Request,
     @Query('isRead', new ParseBoolPipe({ optional: true }))
     isRead?: boolean,
   ): Promise<Notification[]> {
-    // In a real implementation, get recipientId from authenticated user context
-    const recipientId = 0; // This should come from request context/JWT
+    const recipientId = req.user.id;
     return this.notificationsService.findAllForUser(recipientId, isRead);
   }
 
@@ -104,17 +104,4 @@ export class NotificationsController {
     const recipientId = 0;
     return this.notificationsService.markAllRead(recipientId);
   }
-
-  @Get()
-async findAll(
-    @Req() req: Request,
-    @Query('isRead') isRead?: boolean,
-) {
-    const recipientId = req.user.id;
-
-    return this.notificationsService.findAllForUser(
-        recipientId,
-        isRead,
-    );
-}
 }
