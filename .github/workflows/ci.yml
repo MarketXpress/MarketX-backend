@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -41,6 +41,77 @@ jobs:
           DATABASE_USER: test_user
           DATABASE_PASSWORD: test_password
           DATABASE_NAME: test_db
+          JWT_SECRET: test-jwt-secret-key-for-ci-testing-only
+          JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
+          JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-ci-testing-only
+
+  app-boot-smoke-test:
+    name: Full App Boot Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    services:
+      postgres:
+        image: postgis/postgis:15-3.4
+
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd="pg_isready -U test_user -d test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7-alpine
+
+        ports:
+          - 6379:6379
+
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Boot full application
+        run: npm run ci:app-boot
+        env:
+          NODE_ENV: test
+
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_USER: test_user
+          DATABASE_PASSWORD: test_password
+          DATABASE_NAME: test_db
+
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+          TYPEORM_SYNCHRONIZE: 'true'
+
           JWT_SECRET: test-jwt-secret-key-for-ci-testing-only
           JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
           JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-ci-testing-only

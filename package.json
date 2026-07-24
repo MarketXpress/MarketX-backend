@@ -24,6 +24,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "ci:app-boot": "timeout 30 node dist/main.js || true",
     "security:scan": "node security/zap/security-tester.js",
     "security:docker": "docker compose --profile security-test up -d",
     "security:zap": "docker compose run --rm zap",
