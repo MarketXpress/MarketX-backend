@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
           cache: npm
 
       - name: Install dependencies
@@ -87,7 +87,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
           cache: npm
 
       - name: Install dependencies
@@ -110,7 +110,7 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
-          TYPEORM_SYNCHRONIZE: "true"
+          TYPEORM_SYNCHRONIZE: 'true'
 
           JWT_SECRET: test-jwt-secret-key-for-ci-testing-only
           JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
