@@ -19,8 +19,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -45,7 +45,6 @@ jobs:
           JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
           JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-ci-testing-only
 
-
   app-boot-smoke-test:
     name: Full App Boot Smoke Test
     runs-on: ubuntu-latest
@@ -69,7 +68,6 @@ jobs:
           --health-timeout=5s
           --health-retries=10
 
-
       redis:
         image: redis:7-alpine
 
@@ -89,8 +87,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -112,7 +110,7 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
-          TYPEORM_SYNCHRONIZE: 'true'
+          TYPEORM_SYNCHRONIZE: "true"
 
           JWT_SECRET: test-jwt-secret-key-for-ci-testing-only
           JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
