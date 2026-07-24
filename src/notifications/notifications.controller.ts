@@ -13,6 +13,9 @@ import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './notification.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Req } from '@nestjs/common';
+
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -28,11 +31,11 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List notifications' })
   @ApiResponse({ status: 200, description: 'Notifications returned.' })
   async findAll(
+    @Req() req: any,
     @Query('isRead', new ParseBoolPipe({ optional: true }))
     isRead?: boolean,
   ): Promise<Notification[]> {
-    // In a real implementation, get recipientId from authenticated user context
-    const recipientId = 0; // This should come from request context/JWT
+    const recipientId = req.user.id;
     return this.notificationsService.findAllForUser(recipientId, isRead);
   }
 
