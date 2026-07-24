@@ -91,6 +91,7 @@
     "csv-stringify": "^6.7.0",
     "geoip-lite": "^1.4.3",
     "handlebars": "^4.7.8",
+    "helmet": "^8.3.0",
     "ioredis": "^5.6.1",
     "json2csv": "^6.0.0-alpha.2",
     "multer": "^2.0.1",

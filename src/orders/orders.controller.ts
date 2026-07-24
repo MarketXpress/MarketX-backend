@@ -13,6 +13,7 @@ import {
   Request,
   Inject,
   Res,
+  BadRequestException,
   ConflictException,
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -146,11 +147,11 @@ export class OrdersController {
     const scopedBuyerId = req.user.role === 'admin' ? buyerId : req.user.id;
 
     if (!scopedBuyerId) {
-      throw new Error('Buyer ID is required to export orders');
+      throw new BadRequestException('Buyer ID is required to export orders');
     }
 
     if (format !== 'csv' && format !== 'pdf') {
-      throw new Error('Format must be either csv or pdf');
+      throw new BadRequestException('Format must be either csv or pdf');
     }
 
     const orders = await this.ordersService.findAll(scopedBuyerId);
