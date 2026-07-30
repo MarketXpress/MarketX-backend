@@ -1,7 +1,8 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
@@ -34,7 +35,12 @@ import { ReviewModule } from './review/review.module';
 
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
-        throttlers: [{ ttl: 60_000, limit: 100 }],
+        throttlers: [
+          {
+            ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
+            limit: parseInt(process.env.THROTTLE_LIMIT || '100', 10),
+          },
+        ],
       }),
     }),
 
@@ -92,7 +98,15 @@ import { ReviewModule } from './review/review.module';
     EscrowModule,
   ],
   controllers: [AppController],
-  providers: [AppService, AdminGuard, RolesGuard],
+  providers: [
+    AppService,
+    AdminGuard,
+    RolesGuard,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
   exports: [AdminGuard, RolesGuard, LoggerModule],
 })
 export class AppModule implements NestModule {

@@ -20,10 +20,12 @@ describe('Application health (e2e)', () => {
   let ctx: E2EApp;
 
   beforeAll(async () => {
+    process.env.THROTTLE_LIMIT = '5';
     ctx = await createE2EApp();
   }, 120_000);
 
   afterAll(async () => {
+    delete process.env.THROTTLE_LIMIT;
     await teardownE2EApp(ctx);
   });
 
@@ -54,5 +56,17 @@ describe('Application health (e2e)', () => {
     await request(ctx.app.getHttpServer())
       .get('/this-route-does-not-exist')
       .expect(404);
+  });
+
+  it('GET /health/live — returns 429 after exceeding rate limit', async () => {
+    const limit = 5;
+    for (let i = 0; i < limit; i++) {
+      await request(ctx.app.getHttpServer())
+        .get('/health/live')
+        .expect(200);
+    }
+    await request(ctx.app.getHttpServer())
+      .get('/health/live')
+      .expect(429);
   });
 });
