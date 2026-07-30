@@ -61,12 +61,8 @@ describe('Application health (e2e)', () => {
   it('GET /health/live — returns 429 after exceeding rate limit', async () => {
     const limit = 5;
     for (let i = 0; i < limit; i++) {
-      await request(ctx.app.getHttpServer())
-        .get('/health/live')
-        .expect(200);
+      await request(ctx.app.getHttpServer()).get('/health/live').expect(200);
     }
-    await request(ctx.app.getHttpServer())
-      .get('/health/live')
-      .expect(429);
+    await request(ctx.app.getHttpServer()).get('/health/live').expect(429);
   });
 });
