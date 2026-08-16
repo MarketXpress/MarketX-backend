@@ -115,3 +115,8 @@ jobs:
           JWT_SECRET: test-jwt-secret-key-for-ci-testing-only
           JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-ci-testing-only
           JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-ci-testing-only
+
+          # Required at boot by StellarWebhookController.onModuleInit ever since
+          # the hardcoded fallback was removed. The application throws and exits
+          # if this is unset, so the boot test cannot run without it.
+          STELLAR_WEBHOOK_SECRET: test-stellar-webhook-secret-for-ci-testing-only
