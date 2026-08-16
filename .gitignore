@@ -2,6 +2,7 @@
 /dist
 /node_modules
 /build
+*.tsbuildinfo
 
 # generated API docs (published to gh-pages by the API Documentation workflow)
 /docs/api

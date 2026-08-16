@@ -38,5 +38,5 @@ jobs:
           name: npm-audit-report
           path: audit-report.json
 
-      - name: Fail on critical vulnerabilities
-        run: npm audit --audit-level=critical
+      - name: Fail on high or critical vulnerabilities
+        run: npm audit --audit-level=high
