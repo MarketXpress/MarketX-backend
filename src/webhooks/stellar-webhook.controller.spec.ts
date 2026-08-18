@@ -94,12 +94,17 @@ describe('StellarWebhookController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should fail startup when STELLAR_WEBHOOK_SECRET is missing', () => {
+  it('should reject a webhook when STELLAR_WEBHOOK_SECRET is missing', async () => {
+    // Boot-time enforcement now lives in ConfigValidationService; the request
+    // path keeps its own guard so an empty secret can never verify a payload.
     mockConfigService.get.mockReturnValueOnce(undefined);
 
-    expect(() => controller.onModuleInit()).toThrow(
+    const body: StellarWebhookDto = makeBody();
+
+    await expect(controller.handleWebhook('a1b2c3', body)).rejects.toThrow(
       'STELLAR_WEBHOOK_SECRET must be set',
     );
+    expect(queue.add).not.toHaveBeenCalled();
   });
 
   it('should successfully validate signature and add to queue', async () => {

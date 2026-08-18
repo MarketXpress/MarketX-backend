@@ -8,7 +8,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  OnModuleInit,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -43,7 +42,7 @@ export class StellarWebhookDto {
 
 @ApiTags('Stellar Webhooks')
 @Controller('webhooks/stellar')
-export class StellarWebhookController implements OnModuleInit {
+export class StellarWebhookController {
   private static readonly SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
   private static readonly EVENT_ID_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -54,10 +53,6 @@ export class StellarWebhookController implements OnModuleInit {
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
     private readonly logger: LoggerService,
   ) {}
-
-  onModuleInit() {
-    this.getWebhookSecret();
-  }
 
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -125,6 +120,14 @@ export class StellarWebhookController implements OnModuleInit {
     return { received: true };
   }
 
+  /**
+   * STELLAR_WEBHOOK_SECRET is validated at startup by ConfigValidationService
+   * (see src/common/config/config-validation.rules.ts), so this controller no
+   * longer verifies it in a lifecycle hook: doing so produced a boot failure
+   * naming a single variable that was documented nowhere. The guard below stays
+   * as a request-time invariant, because signing a payload with an empty secret
+   * would silently accept unauthenticated webhooks.
+   */
   private getWebhookSecret(): string {
     const secret = this.configService.get<string>('STELLAR_WEBHOOK_SECRET');
 

@@ -28,10 +28,16 @@ import { RolesGuard } from './guards/roles.guard';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { ReviewModule } from './review/review.module';
+import { ConfigValidationModule } from './common/config/config-validation.module';
+import { validateEnvironment } from './common/config/config-validation.rules';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // `validate` runs before any provider is constructed, so a deployment
+    // missing required variables fails with one consolidated message instead
+    // of whichever dependency happens to blow up first during DI resolution.
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    ConfigValidationModule,
 
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
