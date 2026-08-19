@@ -1,9 +1,6 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import {
-  PricingService,
-  SupportedCurrency,
-} from './services/pricing.service';
+import { PricingService, SupportedCurrency } from './services/pricing.service';
 
 import { ProductsService } from './products.service';
 
@@ -80,15 +77,12 @@ describe('ProductsService price history & events', () => {
       find: jest.fn().mockImplementation(async (options) => {
         if (options?.where?.productId) {
           return storedHistory.filter(
-            (history) =>
-              history.productId === options.where.productId,
+            (history) => history.productId === options.where.productId,
           );
         }
 
         if (Array.isArray(options?.where)) {
-          const ids = options.where.map(
-            (where: any) => where.productId,
-          );
+          const ids = options.where.map((where: any) => where.productId);
 
           return storedHistory.filter((history) =>
             ids.includes(history.productId),
@@ -116,10 +110,7 @@ describe('ProductsService price history & events', () => {
       images: ['http://x/1.jpg'],
     };
 
-    const p = await products.create(
-      'seller-1',
-      dto,
-    );
+    const p = await products.create('seller-1', dto);
 
     expect(p.basePrice).toBe('12.34');
 
@@ -157,121 +148,75 @@ describe('ProductsService price history & events', () => {
    *
    *   it(...)
    */
-  it.skip(
-    'updatePrice pushes history and emits enriched event',
-    async () => {
-      const dto: any = {
-        name: 'T',
-        category: 'c',
-        basePrice: 12.34,
-        baseCurrency: SupportedCurrency.USD,
-        images: [],
-      };
+  it.skip('updatePrice pushes history and emits enriched event', async () => {
+    const dto: any = {
+      name: 'T',
+      category: 'c',
+      basePrice: 12.34,
+      baseCurrency: SupportedCurrency.USD,
+      images: [],
+    };
 
-      const initialProduct = createProduct();
+    const initialProduct = createProduct();
 
-      productRepo.create.mockReturnValue(
-        initialProduct,
-      );
+    productRepo.create.mockReturnValue(initialProduct);
 
-      productRepo.save.mockResolvedValue(
-        initialProduct,
-      );
+    productRepo.save.mockResolvedValue(initialProduct);
 
-      productRepo.findOne.mockResolvedValue(
-        initialProduct,
-      );
+    productRepo.findOne.mockResolvedValue(initialProduct);
 
-      const p = await products.create(
-        'seller-1',
-        dto,
-      );
+    const p = await products.create('seller-1', dto);
 
-      let payload: any = null;
+    let payload: any = null;
 
-      events.on(
-        'product.price.updated',
-        (pl) => {
-          payload = pl;
-        },
-      );
+    events.on('product.price.updated', (pl) => {
+      payload = pl;
+    });
 
-      const updatedProduct = createProduct({
-        id: p.id,
+    const updatedProduct = createProduct({
+      id: p.id,
 
-        basePrice: '15.5',
+      basePrice: '15.5',
 
-        basePriceMinor:
-          pricing.toMinorUnitsString(
-            15.5,
-            SupportedCurrency.USD,
-          ),
+      basePriceMinor: pricing.toMinorUnitsString(15.5, SupportedCurrency.USD),
 
-        price: '15.5',
+      price: '15.5',
 
-        priceMinor:
-          pricing.toMinorUnitsString(
-            15.5,
-            SupportedCurrency.USD,
-          ),
-      });
+      priceMinor: pricing.toMinorUnitsString(15.5, SupportedCurrency.USD),
+    });
 
-      productRepo.findOne.mockResolvedValue(
-        updatedProduct,
-      );
+    productRepo.findOne.mockResolvedValue(updatedProduct);
 
-      productRepo.save.mockResolvedValue(
-        updatedProduct,
-      );
+    productRepo.save.mockResolvedValue(updatedProduct);
 
-      const updated =
-        await products.updatePrice(
-          p.id,
-          'seller-1',
-          {
-            basePrice: 15.5,
-            baseCurrency:
-              SupportedCurrency.USD,
-            reason: 'test',
-          },
-        );
+    const updated = await products.updatePrice(p.id, 'seller-1', {
+      basePrice: 15.5,
+      baseCurrency: SupportedCurrency.USD,
+      reason: 'test',
+    });
 
-      expect(updated.price).toBe('15.5');
+    expect(updated.price).toBe('15.5');
 
-      expect(updated.priceMinor).toBe(
-        pricing.toMinorUnitsString(
-          15.5,
-          SupportedCurrency.USD,
-        ),
-      );
+    expect(updated.priceMinor).toBe(
+      pricing.toMinorUnitsString(15.5, SupportedCurrency.USD),
+    );
 
-      expect(updated.priceHistory.length).toBe(
-        2,
-      );
+    expect(updated.priceHistory.length).toBe(2);
 
-      const last =
-        updated.priceHistory[0];
+    const last = updated.priceHistory[0];
 
-      expect(last.basePrice).toBe('15.5');
+    expect(last.basePrice).toBe('15.5');
 
-      expect(last.basePriceMinor).toBe(
-        pricing.toMinorUnitsString(
-          15.5,
-          SupportedCurrency.USD,
-        ),
-      );
+    expect(last.basePriceMinor).toBe(
+      pricing.toMinorUnitsString(15.5, SupportedCurrency.USD),
+    );
 
-      expect(last.rateSnapshot).toBeDefined();
+    expect(last.rateSnapshot).toBeDefined();
 
-      expect(payload).not.toBeNull();
+    expect(payload).not.toBeNull();
 
-      expect(payload.basePrice).toBe(
-        updated.basePrice,
-      );
+    expect(payload.basePrice).toBe(updated.basePrice);
 
-      expect(payload.basePriceMinor).toBe(
-        updated.basePriceMinor,
-      );
-    },
-  );
+    expect(payload.basePriceMinor).toBe(updated.basePriceMinor);
+  });
 });
