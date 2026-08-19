@@ -1,36 +1,45 @@
 import {
+  Column,
   CreateDateColumn,
   Entity,
-  Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
-  Column,
 } from 'typeorm';
-import { SupportedCurrency } from '../services/pricing.service';
 
-@Entity('product_prices')
-@Index(['productId', 'createdAt'])
+import { SupportedCurrency } from '../services/pricing.service';
+import { Product } from './product.entity';
+
+@Entity('product_price_history')
 export class ProductPriceEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column('uuid')
-  @Index()
   productId: string;
 
-  @Column({ type: 'decimal', precision: 20, scale: 7 })
-  // Human-readable decimal in DB
-  basePrice: number;
+  @ManyToOne(() => Product, (product) => product.priceHistory, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({
+    name: 'productId',
+    referencedColumnName: 'id',
+  })
+  product: Product;
 
-  // Store minor units as integer (string in TS) for blockchain compatibility and deterministic math
-  @Column({ type: 'numeric', precision: 40, scale: 0 })
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 7,
+  })
+  basePrice: string;
+
+  @Column({
+    type: 'numeric',
+    precision: 40,
+    scale: 0,
+  })
   basePriceMinor: string;
-
-  // Snapshot of rates when price was set (USD-based rates)
-  @Column({ type: 'json', nullable: true })
-  rateSnapshot?: Record<string, string>;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  rateTimestamp?: Date;
 
   @Column({
     type: 'enum',
@@ -38,12 +47,33 @@ export class ProductPriceEntity {
   })
   baseCurrency: SupportedCurrency;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+  })
+  rateSnapshot?: Record<SupportedCurrency, string>;
+
+  @Column({
+    type: 'timestamptz',
+    nullable: true,
+  })
+  rateTimestamp?: Date;
+
+  @Column({
+    type: 'uuid',
+    nullable: true,
+  })
   updatedBy?: string;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   reason?: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    type: 'timestamptz',
+  })
   createdAt: Date;
 }

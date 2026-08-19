@@ -7,15 +7,20 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+
 import {
   OrderUpdatedEvent,
   OrderCompletedEvent,
   EventNames,
 } from '../common/events';
+
 import { SupportedCurrency } from '../products/services/pricing.service';
 import { ProductsService } from '../products/products.service';
+
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
+
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
+
 import { StatusTransitionValidator } from '../common/validators';
 import { LoggerService } from '../common/logger/logger.service';
 
@@ -34,17 +39,26 @@ export class OrdersService {
           OrderStatus.CANCELLED,
           OrderStatus.MANUAL_REVIEW,
         ],
+
         [OrderStatus.CONFIRMED]: [
           OrderStatus.PROCESSING,
           OrderStatus.CANCELLED,
         ],
+
         [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+
         [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+
         [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+
         [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.REFUNDED],
+
         [OrderStatus.COMPLETED]: [OrderStatus.REFUNDED],
+
         [OrderStatus.CANCELLED]: [],
+
         [OrderStatus.REFUNDED]: [],
+
         [OrderStatus.MANUAL_REVIEW]: [
           OrderStatus.CONFIRMED,
           OrderStatus.CANCELLED,
@@ -55,43 +69,76 @@ export class OrdersService {
 
   constructor(
     @InjectRepository(Order)
-    private ordersRepository: Repository<Order>,
-    private dataSource: DataSource,
+    private readonly ordersRepository: Repository<Order>,
+
+    private readonly dataSource: DataSource,
+
     private readonly productsService: ProductsService,
+
     private readonly eventEmitter: EventEmitter2,
+
     private readonly logger: LoggerService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    this.logger.info('Creating order', { buyerId: createOrderDto.buyerId });
+    this.logger.info('Creating order', {
+      buyerId: createOrderDto.buyerId,
+    });
+
     return await this.dataSource.transaction(async (manager) => {
       const paymentCurrency =
-        createOrderDto.paymentCurrency || SupportedCurrency.USD;
+        createOrderDto.paymentCurrency ?? SupportedCurrency.USD;
 
-      const orderItems = createOrderDto.items.map((item) => {
-        const product = this.productsService.findOne(
-          item.productId,
-          paymentCurrency,
-        );
-
-        if (!product) {
-          throw new NotFoundException(
-            `Product with ID ${item.productId} not found`,
+      /*
+       * Products are now persisted in the database.
+       *
+       * ProductsService.findOne() is therefore asynchronous.
+       * Resolve all requested products before creating the order.
+       *
+       * Promise.all keeps independent product lookups concurrent
+       * while preserving the original item order.
+       */
+      const orderItems = await Promise.all(
+        createOrderDto.items.map(async (item) => {
+          const product = await this.productsService.findOne(
+            item.productId,
+            paymentCurrency,
           );
-        }
 
-        const price = Number(product.price);
-        const subtotal = price * item.quantity;
+          if (!product) {
+            throw new NotFoundException(
+              `Product with ID ${item.productId} not found`,
+            );
+          }
 
-        return {
-          productId: item.productId,
-          productName: product.name,
-          quantity: item.quantity,
-          price,
-          subtotal,
-          priceCurrency: product.currency,
-        };
-      });
+          /*
+           * When a payment currency was requested,
+           * ProductsService converts the base price for
+           * display/order purposes.
+           *
+           * Fall back to the persisted price for
+           * backwards compatibility.
+           */
+          const price = Number(product.convertedPrice ?? product.price);
+
+          if (!Number.isFinite(price) || price <= 0) {
+            throw new BadRequestException(
+              `Product "${product.name}" has an invalid price`,
+            );
+          }
+
+          const subtotal = price * item.quantity;
+
+          return {
+            productId: item.productId,
+            productName: product.name,
+            quantity: item.quantity,
+            price,
+            subtotal,
+            priceCurrency: product.convertedCurrency ?? product.currency,
+          };
+        }),
+      );
 
       const totalAmount = orderItems.reduce(
         (sum, item) => sum + item.subtotal,
@@ -122,6 +169,7 @@ export class OrdersService {
         orderId: savedOrder.id,
         buyerId: savedOrder.buyerId,
         totalAmount: savedOrder.totalAmount,
+        currency: savedOrder.currency,
       });
 
       return savedOrder;
@@ -129,9 +177,15 @@ export class OrdersService {
   }
 
   async cancelOrder(id: string, userId: string): Promise<Order> {
-    this.logger.info('Cancelling order', { orderId: id, userId });
+    this.logger.info('Cancelling order', {
+      orderId: id,
+      userId,
+    });
+
     return await this.dataSource.transaction(async (manager) => {
-      const order = await manager.findOne(Order, { where: { id } });
+      const order = await manager.findOne(Order, {
+        where: { id },
+      });
 
       if (!order || order.buyerId !== userId) {
         throw new BadRequestException('Order not found or unauthorized');
@@ -142,7 +196,9 @@ export class OrdersService {
       }
 
       order.status = OrderStatus.CANCELLED;
+
       order.cancelledAt = new Date();
+
       const cancelledOrder = await manager.save(order);
 
       this.logger.info('Order cancelled', {
@@ -158,25 +214,35 @@ export class OrdersService {
     if (buyerId) {
       return await this.ordersRepository.find({
         where: { buyerId },
-        order: { createdAt: 'DESC' },
+        order: {
+          createdAt: 'DESC',
+        },
       });
     }
-    return await this.ordersRepository.find({ order: { createdAt: 'DESC' } });
+
+    return await this.ordersRepository.find({
+      order: {
+        createdAt: 'DESC',
+      },
+    });
   }
 
   private async fetchOrderOrFail(id: string): Promise<Order> {
     const order = await this.ordersRepository.findOne({
       where: { id },
     });
+
     if (!order) {
       throw new NotFoundException(`Order with ID "${id}" not found`);
     }
+
     return order;
   }
 
   private assertOrderAccess(order: Order, actingUser: ActingUser): void {
     const isParty =
       actingUser.id === order.buyerId || actingUser.id === order.sellerId;
+
     const isAdmin = actingUser.role === 'admin';
 
     if (!isParty && !isAdmin) {
@@ -186,7 +252,9 @@ export class OrdersService {
 
   async findOne(id: string, actingUser: ActingUser): Promise<Order> {
     const order = await this.fetchOrderOrFail(id);
+
     this.assertOrderAccess(order, actingUser);
+
     return order;
   }
 
@@ -199,8 +267,11 @@ export class OrdersService {
       orderId: id,
       newStatus: updateOrderStatusDto.status,
     });
+
     const order = await this.fetchOrderOrFail(id);
+
     this.assertOrderAccess(order, actingUser);
+
     const previousStatus = order.status;
 
     this.orderTransitionValidator.validate(
@@ -210,20 +281,24 @@ export class OrdersService {
 
     if (updateOrderStatusDto.status === OrderStatus.PAID) {
       order.paymentStatus = PaymentStatus.PAID;
+
       order.confirmedAt = new Date();
     } else if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
       order.cancelledAt = new Date();
     } else {
       const now = new Date();
+
       switch (updateOrderStatusDto.status) {
         case OrderStatus.SHIPPED:
           order.shippedAt = now;
           break;
+
         case OrderStatus.DELIVERED:
           order.deliveredAt = now;
           break;
       }
     }
+
     order.status = updateOrderStatusDto.status;
 
     const updatedOrder = await this.ordersRepository.save(order);
