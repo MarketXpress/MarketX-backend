@@ -43,7 +43,7 @@ describe('ProductsService price history & events', () => {
         updatedAt: new Date(),
       })),
 
-      save: jest.fn().mockImplementation(async (product) => ({
+      save: jest.fn().mockImplementation((product) => ({
         ...product,
         createdAt: product.createdAt ?? new Date(),
         updatedAt: new Date(),
@@ -62,7 +62,7 @@ describe('ProductsService price history & events', () => {
         ...dto,
       })),
 
-      save: jest.fn().mockImplementation(async (dto) => {
+      save: jest.fn().mockImplementation((dto) => {
         const item = {
           id: dto.id ?? crypto.randomUUID(),
           createdAt: dto.createdAt ?? new Date(),
@@ -74,7 +74,7 @@ describe('ProductsService price history & events', () => {
         return item;
       }),
 
-      find: jest.fn().mockImplementation(async (options) => {
+      find: jest.fn().mockImplementation((options) => {
         if (options?.where?.productId) {
           return storedHistory.filter(
             (history) => history.productId === options.where.productId,
