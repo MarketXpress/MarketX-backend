@@ -76,6 +76,9 @@ jobs:
           REDIS_PORT: 6379
           PORT: 3000
           JWT_SECRET: test-secret-key-for-pact-testing
+          JWT_ACCESS_SECRET: test-jwt-access-secret-key-for-pact-testing-only
+          JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-pact-testing-only
+          STELLAR_WEBHOOK_SECRET: test-stellar-webhook-secret-for-pact-testing-only
           PACT_TEST_AUTH_TOKEN: test-auth-token
         run: |
           npm run start:prod &

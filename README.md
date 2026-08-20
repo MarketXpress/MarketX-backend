@@ -80,7 +80,13 @@ Then edit `.env` with your specific configuration. The application will validate
 **Required Environment Variables:**
 
 - `DATABASE_HOST`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` - PostgreSQL connection
+- `JWT_SECRET` - Signing secret for the JWT module and passport strategies
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` - Authentication secrets (must be at least 32 characters)
+- `STELLAR_WEBHOOK_SECRET` - Shared secret used to verify inbound Stellar webhook signatures
+
+Every variable above is declared in `src/common/config/config-validation.rules.ts`.
+Missing or invalid values are reported together in a single startup error, before
+any module is constructed.
 
 **Optional but Recommended:**
 
