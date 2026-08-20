@@ -6,7 +6,7 @@ import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
-
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -37,12 +37,15 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
 
 @Module({
   imports: [
-    // `validate` runs before any provider is constructed, so a deployment
-    // missing required variables fails with one consolidated message instead
-    // of whichever dependency happens to blow up first during DI resolution.
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    // Environment configuration and validation.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnvironment,
+    }),
+
     ConfigValidationModule,
 
+    // Global rate limiting.
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
         throttlers: [
@@ -54,6 +57,7 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
       }),
     }),
 
+    // PostgreSQL / TypeORM.
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -67,6 +71,8 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
       logging: process.env.DB_LOGGING === 'true',
     }),
 
+    // Bull queues use Redis as a hard dependency because webhook/payment
+    // processing depends on the queue being available.
     BullModule.forRootAsync({
       useFactory: () => ({
         redis: {
@@ -78,6 +84,10 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
       }),
     }),
 
+    // Application cache.
+    //
+    // Redis is intentionally shared with the same connection configuration
+    // used by Bull, while retaining a separate Redis database for cache data.
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => {
@@ -89,8 +99,21 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
           password: process.env.REDIS_PASSWORD || undefined,
           database: parseInt(process.env.REDIS_CACHE_DB || '10', 10),
         });
-        return { store, ttl: 60 };
+
+        return {
+          store,
+          ttl: 60,
+        };
       },
+    }),
+
+    // Prometheus metrics.
+    //
+    // The module exposes the Prometheus registry used by the /metrics
+    // controller. Access control is applied by MetricsController rather
+    // than exposing the endpoint anonymously.
+    PrometheusModule.register({
+      path: 'metrics',
     }),
 
     LoggerModule,
@@ -108,21 +131,26 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
     ReviewModule,
     EscrowModule,
   ],
+
   controllers: [AppController],
+
   providers: [
     AppService,
     AdminGuard,
     RolesGuard,
     HttpExceptionFilter,
+
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
   ],
+
   exports: [AdminGuard, RolesGuard, LoggerModule],
 })
 export class AppModule implements NestModule {
