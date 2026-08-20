@@ -4,47 +4,42 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class DatabaseIndicator {
-  constructor(private dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) {}
 
   async isHealthy(): Promise<HealthIndicatorResult> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
     try {
-      // Test database connectivity with a simple query
-      const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
 
-      // Execute with timeout to ensure fast response
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(
           () => reject(new Error('Database health check timeout')),
-          2000,
+          2_000,
         );
       });
 
       const queryPromise = queryRunner.query('SELECT 1');
 
-      // Race the query against the timeout
       await Promise.race([queryPromise, timeoutPromise]);
-
-      await queryRunner.release();
-
-      // Get database info for detailed reporting
-      const dbName = this.dataSource.options.database;
-      const dbHost = (this.dataSource.options as any).host || 'localhost';
 
       return {
         database: {
           status: 'up',
-          database: dbName || 'unknown',
-          host: dbHost || 'unknown',
         },
       };
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown database error';
+
       throw new HealthCheckError('Database check failed', {
         database: {
           status: 'down',
-          message: error.message,
+          message,
         },
       });
+    } finally {
+      await queryRunner.release().catch(() => undefined);
     }
   }
 }
