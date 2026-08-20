@@ -19,7 +19,7 @@
     "docs:render": "node scripts/render-api-docs.js",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "jest",
-    "pr:check": "npm run lint && npm run typecheck && npm test -- --passWithNoTests --forceExit",
+    "pr:check": "npm run lint && npm run typecheck && npm test",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -183,7 +183,7 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.ts$": "ts-jest"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!(.pnpm|@scure|@noble|otplib)/)",
@@ -193,6 +193,8 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testResultsProcessor": "<rootDir>/../jest-results-processor.js",
+    "globalTeardown": "<rootDir>/../jest-min-tests.js"
   }
 }

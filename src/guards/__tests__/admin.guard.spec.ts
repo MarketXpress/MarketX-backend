@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AdminGuard } from '../admin.guard';
 
-describe.skip('AdminGuard', () => {
+describe('AdminGuard', () => {
   let guard: AdminGuard;
   let _reflector: Reflector;
 

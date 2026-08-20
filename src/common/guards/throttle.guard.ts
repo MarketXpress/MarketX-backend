@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
@@ -40,9 +41,10 @@ const ROUTE_TIER_MAP: Array<[string, keyof typeof RATE_LIMIT_CONFIG]> = [
 ];
 
 @Injectable()
-export class ThrottleGuard implements CanActivate {
+export class ThrottleGuard implements CanActivate, OnModuleDestroy {
   private readonly logger = new Logger(ThrottleGuard.name);
   private clientRequests = new Map<string, ClientRecord>();
+  private readonly cleanupTimer: ReturnType<typeof setInterval>;
   private readonly defaultConfig: RateLimitConfig = {
     limit: RATE_LIMIT_CONFIG.API.limit,
     windowMs: RATE_LIMIT_CONFIG.API.windowMs,
@@ -62,8 +64,22 @@ export class ThrottleGuard implements CanActivate {
   );
 
   constructor(private reflector: Reflector) {
-    // Cleanup expired records every 5 minutes
-    setInterval(() => this.cleanupExpiredRecords(), 5 * 60 * 1000);
+    // Cleanup expired records every 5 minutes.
+    // The handle is stored so onModuleDestroy() can clear it, preventing the
+    // timer from keeping the Node.js event loop alive after the module is torn
+    // down (e.g. at the end of each Jest test that creates this guard).
+    this.cleanupTimer = setInterval(
+      () => this.cleanupExpiredRecords(),
+      5 * 60 * 1000,
+    );
+    // Allow the process to exit even if the timer is still pending.
+    // In production NestJS clears it via onModuleDestroy; the unref() is a
+    // belt-and-suspenders safety net for environments that skip lifecycle hooks.
+    this.cleanupTimer.unref();
+  }
+
+  onModuleDestroy(): void {
+    clearInterval(this.cleanupTimer);
   }
 
   canActivate(context: ExecutionContext): boolean {

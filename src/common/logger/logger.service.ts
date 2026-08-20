@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as winston from 'winston';
 import * as path from 'path';
 import 'winston-daily-rotate-file';
@@ -9,7 +9,7 @@ interface SanitizedData {
 }
 
 @Injectable()
-export class LoggerService {
+export class LoggerService implements OnModuleDestroy {
   private logger: winston.Logger;
 
   constructor() {
@@ -297,6 +297,16 @@ export class LoggerService {
     };
 
     return sanitize(data);
+  }
+
+  /**
+   * Close all transports when the module is torn down.
+   * This prevents winston-daily-rotate-file from holding file handles open
+   * after tests or graceful application shutdown, which would cause Jest to
+   * hang indefinitely waiting for the event-loop to drain.
+   */
+  onModuleDestroy(): void {
+    this.logger.close();
   }
 
   /**

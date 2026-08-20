@@ -35,7 +35,7 @@ jobs:
         run: npm run typecheck
 
       - name: Run tests
-        run: npm test -- --passWithNoTests --forceExit
+        run: npm test
         env:
           NODE_ENV: test
           DATABASE_USER: test_user
