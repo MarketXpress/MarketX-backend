@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpExceptionFilter } from './http-exception.filter';
 import { LoggerService } from '../logger/logger.service';
-import { ConflictException, HttpException, HttpStatus } from '@nestjs/common';
+import { ConflictException, HttpStatus } from '@nestjs/common';
 
 jest.mock('nestjs-i18n', () => ({
   I18nContext: {
@@ -11,7 +11,12 @@ jest.mock('nestjs-i18n', () => ({
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
-  let loggerService: jest.Mocked<LoggerService>;
+  let mockLogger: {
+    error: jest.Mock;
+    warn: jest.Mock;
+    info: jest.Mock;
+    debug: jest.Mock;
+  };
   let mockResponse: any;
   let mockRequest: any;
 
@@ -29,23 +34,24 @@ describe('HttpExceptionFilter', () => {
       locale: undefined,
     };
 
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HttpExceptionFilter,
         {
           provide: LoggerService,
-          useValue: {
-            error: jest.fn(),
-            warn: jest.fn(),
-            info: jest.fn(),
-            debug: jest.fn(),
-          },
+          useValue: mockLogger,
         },
       ],
     }).compile();
 
     filter = module.get<HttpExceptionFilter>(HttpExceptionFilter);
-    loggerService = module.get(LoggerService) as jest.Mocked<LoggerService>;
   });
 
   afterEach(() => {
@@ -66,7 +72,9 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(error, host as any);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -133,7 +141,7 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(error, host as any);
 
-      expect(loggerService.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('500'),
         expect.objectContaining({
           statusCode: 500,
@@ -151,7 +159,7 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(exception, host as any);
 
-      expect(loggerService.warn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('409'),
         expect.objectContaining({
           statusCode: 409,
