@@ -4,13 +4,21 @@ import { runWithCorrelationId as _runWithCorrelationId } from './correlation-con
 
 describe('LoggerService', () => {
   let service: LoggerService;
+  let module: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [LoggerService],
     }).compile();
 
     service = module.get<LoggerService>(LoggerService);
+  });
+
+  afterEach(async () => {
+    // Closing the module triggers LoggerService.onModuleDestroy(), which calls
+    // logger.close() and releases all DailyRotateFile transport handles so that
+    // Jest can exit cleanly without --forceExit.
+    await module.close();
   });
 
   it('should be defined', () => {

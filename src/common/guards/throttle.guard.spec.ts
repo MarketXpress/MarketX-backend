@@ -30,17 +30,19 @@ const makeContext = (
 
 describe('ThrottleGuard', () => {
   let guard: ThrottleGuard;
+  let module: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [ThrottleGuard, Reflector],
     }).compile();
     guard = module.get<ThrottleGuard>(ThrottleGuard);
   });
 
-  afterEach(() => {
-    // Clear internal state between tests
-    (guard as any).clientRequests.clear();
+  afterEach(async () => {
+    // Closing the module triggers ThrottleGuard.onModuleDestroy(), which calls
+    // clearInterval() so the cleanup timer does not keep the worker alive.
+    await module.close();
   });
 
   it('should be defined', () => {
