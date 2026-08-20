@@ -22,12 +22,16 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { EscrowModule } from './escrow/escrow.module';
+import { ReviewModule } from './review/review.module';
 
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
-import { ReviewModule } from './review/review.module';
+
+// Entities
+import { Product } from './products/entities/product.entity';
+import { ProductPriceEntity } from './products/entities/product-price.entity';
 
 @Module({
   imports: [
@@ -52,6 +56,7 @@ import { ReviewModule } from './review/review.module';
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
       autoLoadEntities: true,
+      entities: [Product, ProductPriceEntity],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.DB_LOGGING === 'true',
     }),

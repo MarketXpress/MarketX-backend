@@ -61,9 +61,10 @@ export class ProductsController {
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Product returned.' })
   @ApiResponse({ status: 404, description: 'Product not found.' })
-  findOne(
+  async findOne(
     @Param('id') id: string,
-    @Query('preferredCurrency') preferredCurrency?: SupportedCurrency,
+    @Query('preferredCurrency')
+    preferredCurrency?: SupportedCurrency,
   ) {
     return this.productsService.findOne(id, preferredCurrency);
   }
@@ -131,10 +132,18 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete product' })
-  @ApiResponse({ status: 200, description: 'Product deleted successfully.' })
-  remove(@Param('id') id: string, @Req() req: any) {
-    const result = this.productsService.remove(id, req.user.id.toString());
+  @ApiResponse({
+    status: 200,
+    description: 'Product deleted successfully.',
+  })
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const result = await this.productsService.remove(
+      id,
+      req.user.id.toString(),
+    );
+
     (this.cacheManager as any).reset();
+
     return result;
   }
 }
