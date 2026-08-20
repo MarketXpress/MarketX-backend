@@ -22,8 +22,6 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { EscrowModule } from './escrow/escrow.module';
-import { ReviewModule } from './review/review.module';
-
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
