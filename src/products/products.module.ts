@@ -9,7 +9,10 @@ import { PricingService } from './services/pricing.service';
 import { ProductImagesController } from './product-images.controller';
 import { ProductPriceEntity } from './entities/product-price.entity';
 import { Product } from '../entities/product.entity';
-import { ProductCacheInterceptor, PRODUCT_CACHE } from './product-cache.interceptor';
+import {
+  ProductCacheInterceptor,
+  PRODUCT_CACHE,
+} from './product-cache.interceptor';
 
 @Module({
   imports: [
