@@ -19,11 +19,7 @@ import {
   ApiHeader,
   ApiResponse,
 } from '@nestjs/swagger';
-import {
-  CacheInterceptor,
-  CacheTTL,
-  CACHE_MANAGER,
-} from '@nestjs/cache-manager';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -32,17 +28,21 @@ import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import {
+  ProductCacheInterceptor,
+  PRODUCT_CACHE,
+} from './product-cache.interceptor';
 
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject(PRODUCT_CACHE) private productCache: Cache,
   ) {}
 
   @Get()
-  @UseInterceptors(CacheInterceptor)
+  @UseInterceptors(ProductCacheInterceptor)
   @CacheTTL(60)
   @ApiOperation({ summary: 'List products with filters & pagination' })
   @ApiHeader({
@@ -56,7 +56,7 @@ export class ProductsController {
   }
 
   @Get(':id')
-  @UseInterceptors(CacheInterceptor)
+  @UseInterceptors(ProductCacheInterceptor)
   @CacheTTL(30)
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Product returned.' })
@@ -79,7 +79,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    (this.cacheManager as any).reset();
+    await this.productCache.clear();
     return product;
   }
 
@@ -98,7 +98,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    (this.cacheManager as any).reset();
+    await this.productCache.clear();
     return product;
   }
 
@@ -117,7 +117,7 @@ export class ProductsController {
       req.user.id.toString(),
       dto,
     );
-    (this.cacheManager as any).reset();
+    await this.productCache.clear();
     return result;
   }
 
@@ -142,7 +142,7 @@ export class ProductsController {
       req.user.id.toString(),
     );
 
-    (this.cacheManager as any).reset();
+    await this.productCache.clear();
 
     return result;
   }
