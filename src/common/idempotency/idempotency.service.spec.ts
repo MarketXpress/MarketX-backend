@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IdempotencyService } from './idempotency.service';
 import { FakeCache, FakeLockRedis } from './testing/fake-lock-redis';
 

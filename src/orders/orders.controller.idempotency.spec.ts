@@ -1,8 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConflictException } from '@nestjs/common';
 import { OrdersController } from './orders.controller';
 import { IdempotencyService } from '../common/idempotency/idempotency.service';
-import { FakeCache, FakeLockRedis } from '../common/idempotency/testing/fake-lock-redis';
+import {
+  FakeCache,
+  FakeLockRedis,
+} from '../common/idempotency/testing/fake-lock-redis';
 
 function buildController(ordersService: any, opts?: { cache?: FakeCache }) {
   const cache = opts?.cache ?? new FakeCache();
