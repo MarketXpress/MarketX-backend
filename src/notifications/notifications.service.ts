@@ -19,8 +19,12 @@ export class NotificationsService {
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     const notification = this.notificationRepository.create({
+      title: createNotificationDto.title,
+      message: createNotificationDto.message,
+      ...(createNotificationDto.type !== undefined && {
+        type: createNotificationDto.type,
+      }),
       recipientId,
-      ...createNotificationDto,
     });
     return await this.notificationRepository.save(notification);
   }
@@ -46,13 +50,13 @@ export class NotificationsService {
   /**
    * Find a single notification by ID
    */
-  async findOne(id: number): Promise<Notification> {
+  async findOne(id: number, recipientId: number): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
-      where: { id },
+      where: { id, recipientId },
     });
 
     if (!notification) {
-      throw new NotFoundException(`Notification with ID ${id} not found`);
+      throw new NotFoundException('Notification not found');
     }
 
     return notification;
@@ -61,16 +65,16 @@ export class NotificationsService {
   /**
    * Mark a single notification as read
    */
-  async markRead(id: number): Promise<Notification> {
-    const notification = await this.findOne(id);
+  async markRead(id: number, recipientId: number): Promise<Notification> {
+    await this.notificationRepository.update(
+      { id, recipientId, isRead: false },
+      { isRead: true, readAt: new Date() },
+    );
 
-    if (!notification.isRead) {
-      notification.isRead = true;
-      notification.readAt = new Date();
-      return await this.notificationRepository.save(notification);
-    }
-
-    return notification;
+    // The ownership-scoped lookup intentionally handles both an already-read
+    // notification and an update that matched no row. Foreign and missing IDs
+    // therefore produce the same 404 without an existence-only query.
+    return this.findOne(id, recipientId);
   }
 
   /**
