@@ -19,6 +19,7 @@
     "docs:render": "node scripts/render-api-docs.js",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "jest",
+    "verify:min-tests-reporter": "node scripts/verify-jest-min-tests.js",
     "pr:check": "npm run lint && npm run typecheck && npm test",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -190,7 +191,9 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "testResultsProcessor": "<rootDir>/../jest-results-processor.js",
-    "globalTeardown": "<rootDir>/../jest-min-tests.js"
+    "reporters": [
+      "default",
+      "<rootDir>/../jest-min-tests-reporter.js"
+    ]
   }
 }
