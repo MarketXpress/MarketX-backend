@@ -1,4 +1,11 @@
-import { Controller, MessageEvent, Req, Sse, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  MessageEvent,
+  Req,
+  Sse,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { Observable, fromEvent, merge } from 'rxjs';
@@ -51,12 +58,18 @@ export class NotificationsSseController {
   stream(@Req() req: Request): Observable<MessageEvent> {
     const user = req.user as Record<string, unknown>;
     const rawId = user['userId'] ?? user['id'] ?? user['sub'];
-    const userId =
+    const recipientId =
       typeof rawId === 'string'
-        ? rawId
+        ? Number(rawId)
         : typeof rawId === 'number'
-          ? String(rawId)
-          : '';
+          ? rawId
+          : Number.NaN;
+
+    if (!Number.isSafeInteger(recipientId) || recipientId <= 0) {
+      throw new UnauthorizedException('Invalid authenticated user context');
+    }
+
+    const userId = String(recipientId);
 
     const created$ = fromEvent<NotificationCreatedEvent>(
       this.eventEmitter,

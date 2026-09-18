@@ -1,23 +1,51 @@
 import {
+  Body,
   Controller,
   Get,
+  Param,
+  ParseBoolPipe,
+  ParseIntPipe,
   Patch,
   Post,
-  Param,
-  Body,
-  ParseIntPipe,
   Query,
-  ParseBoolPipe,
+  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './notification.entity';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Req } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+interface AuthenticatedNotificationUser {
+  id?: unknown;
+}
+
+function getRecipientId(user: AuthenticatedNotificationUser): number {
+  const recipientId = user?.id;
+
+  if (
+    typeof recipientId !== 'number' ||
+    !Number.isSafeInteger(recipientId) ||
+    recipientId <= 0
+  ) {
+    throw new UnauthorizedException('Invalid authenticated user context');
+  }
+
+  return recipientId;
+}
 
 @ApiTags('Notifications')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Authentication required.' })
+@UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
@@ -31,12 +59,14 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List notifications' })
   @ApiResponse({ status: 200, description: 'Notifications returned.' })
   async findAll(
-    @Req() req: any,
+    @CurrentUser() user: AuthenticatedNotificationUser,
     @Query('isRead', new ParseBoolPipe({ optional: true }))
     isRead?: boolean,
   ): Promise<Notification[]> {
-    const recipientId = req.user.id;
-    return this.notificationsService.findAllForUser(recipientId, isRead);
+    return this.notificationsService.findAllForUser(
+      getRecipientId(user),
+      isRead,
+    );
   }
 
   /**
@@ -46,11 +76,12 @@ export class NotificationsController {
   @Get('unread-count')
   @ApiOperation({ summary: 'Get unread notification count' })
   @ApiResponse({ status: 200, description: 'Unread count returned.' })
-  async getUnreadCount(): Promise<{ unreadCount: number }> {
-    // In a real implementation, get recipientId from authenticated user context
-    const recipientId = 0;
-    const unreadCount =
-      await this.notificationsService.getUnreadCount(recipientId);
+  async getUnreadCount(
+    @CurrentUser() user: AuthenticatedNotificationUser,
+  ): Promise<{ unreadCount: number }> {
+    const unreadCount = await this.notificationsService.getUnreadCount(
+      getRecipientId(user),
+    );
     return { unreadCount };
   }
 
@@ -62,23 +93,30 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get a notification by ID' })
   @ApiResponse({ status: 200, description: 'Notification returned.' })
   @ApiResponse({ status: 404, description: 'Notification not found.' })
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<Notification> {
-    return this.notificationsService.findOne(id);
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedNotificationUser,
+  ): Promise<Notification> {
+    return this.notificationsService.findOne(id, getRecipientId(user));
   }
 
   /**
    * POST /notifications
-   * Create a new notification (typically called by internal services)
+   * Create a notification owned by the authenticated user.
+   * Internal services that need to select a recipient require a separate,
+   * explicitly authenticated path.
    */
   @Post()
   @ApiOperation({ summary: 'Create a notification' })
   @ApiResponse({ status: 201, description: 'Notification created.' })
   async create(
     @Body() createNotificationDto: CreateNotificationDto,
+    @CurrentUser() user: AuthenticatedNotificationUser,
   ): Promise<Notification> {
-    // In a real implementation, get recipientId from request or body
-    const recipientId = 0; // This should come from authenticated context or request body
-    return this.notificationsService.create(recipientId, createNotificationDto);
+    return this.notificationsService.create(
+      getRecipientId(user),
+      createNotificationDto,
+    );
   }
 
   /**
@@ -88,8 +126,12 @@ export class NotificationsController {
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read.' })
-  async markRead(@Param('id', ParseIntPipe) id: number): Promise<Notification> {
-    return this.notificationsService.markRead(id);
+  @ApiResponse({ status: 404, description: 'Notification not found.' })
+  async markRead(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedNotificationUser,
+  ): Promise<Notification> {
+    return this.notificationsService.markRead(id, getRecipientId(user));
   }
 
   /**
@@ -99,9 +141,9 @@ export class NotificationsController {
   @Patch('read-all')
   @ApiOperation({ summary: 'Mark all notifications as read' })
   @ApiResponse({ status: 200, description: 'Notifications marked as read.' })
-  async markAllRead(): Promise<{ affected: number }> {
-    // In a real implementation, get recipientId from authenticated user context
-    const recipientId = 0;
-    return this.notificationsService.markAllRead(recipientId);
+  async markAllRead(
+    @CurrentUser() user: AuthenticatedNotificationUser,
+  ): Promise<{ affected: number }> {
+    return this.notificationsService.markAllRead(getRecipientId(user));
   }
 }
