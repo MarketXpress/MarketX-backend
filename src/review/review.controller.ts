@@ -11,15 +11,19 @@ import {
   HttpCode,
   HttpStatus,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { PaginatedReviewsResult, ReviewsService } from './review.service';
 import { Review } from './entities/review.entity';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-
-// ── Adjust to your auth guard path ──────────────────────────────────────────
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// ────────────────────────────────────────────────────────────────────────────
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 
 /**
  * ReviewsController
@@ -37,7 +41,8 @@ export class ReviewsController {
    * POST /products/:id/reviews
    * Requires authentication. Only buyers with a COMPLETED order may proceed.
    */
-  // @UseGuards(JwtAuthGuard)   ← uncomment once JwtAuthGuard path is confirmed
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a product review' })
@@ -55,6 +60,7 @@ export class ReviewsController {
    * Public endpoint — no auth required.
    */
   @Get()
+  @Public()
   @ApiOperation({ summary: 'List reviews for a product' })
   @ApiResponse({
     status: 200,

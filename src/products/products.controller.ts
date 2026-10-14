@@ -28,6 +28,7 @@ import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { SupportedCurrency } from './services/pricing.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import {
   ProductCacheInterceptor,
   PRODUCT_CACHE,
@@ -42,6 +43,7 @@ export class ProductsController {
   ) {}
 
   @Get()
+  @Public()
   @UseInterceptors(ProductCacheInterceptor)
   @CacheTTL(60)
   @ApiOperation({ summary: 'List products with filters & pagination' })
@@ -56,6 +58,7 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @Public()
   @UseInterceptors(ProductCacheInterceptor)
   @CacheTTL(30)
   @ApiOperation({ summary: 'Get product by ID' })
@@ -122,6 +125,7 @@ export class ProductsController {
   }
 
   @Get(':id/price-history')
+  @Public()
   @ApiOperation({ summary: 'Get price change history for a product' })
   @ApiResponse({ status: 200, description: 'Price history returned.' })
   getPriceHistory(@Param('id') id: string) {

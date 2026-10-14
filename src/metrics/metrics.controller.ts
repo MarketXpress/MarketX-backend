@@ -7,10 +7,12 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import * as promClient from 'prom-client';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller()
 export class MetricsController {
   @Get('/metrics')
+  @Public()
   async metrics(
     @Req() request: Request,
     @Res() response: Response,

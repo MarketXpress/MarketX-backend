@@ -18,6 +18,7 @@ import * as crypto from 'crypto';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { LoggerService } from '../common/logger/logger.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 
 export class StellarWebhookDto {
   @IsString()
@@ -41,6 +42,7 @@ export class StellarWebhookDto {
 }
 
 @ApiTags('Stellar Webhooks')
+@Public()
 @Controller('webhooks/stellar')
 export class StellarWebhookController {
   private static readonly SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;

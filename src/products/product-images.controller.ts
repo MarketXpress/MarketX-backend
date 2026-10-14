@@ -1,10 +1,12 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Product Images')
 @Controller('products')
 export class ProductImagesController {
   @Get(':id/images')
+  @Public()
   @ApiOperation({
     summary: 'Get product images (media module pending reimplementation)',
   })

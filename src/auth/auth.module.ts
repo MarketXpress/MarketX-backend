@@ -40,6 +40,6 @@ import { UsersModule } from '../users/users.module';
     LocalAuthGuard,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, JwtAuthGuard],
 })
 export class AuthModule {}
