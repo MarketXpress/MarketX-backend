@@ -22,6 +22,9 @@ import {
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../guards/admin.guard';
+import { UserOwnerOrAdminGuard } from '../guards/user-owner-or-admin.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { Users } from './users.entity';
 import { CreateUserDto } from './dto/create-user-dto.dto';
 
@@ -31,6 +34,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @Public()
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({
     status: 201,
@@ -43,6 +47,8 @@ export class UsersController {
   }
 
   @Get()
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({ status: 200, description: 'List of all users', type: [Users] })
   findAll(): Promise<Users[]> {
@@ -50,6 +56,8 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(UserOwnerOrAdminGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User found', type: Users })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -58,6 +66,8 @@ export class UsersController {
   }
 
   @Get(':id/stats')
+  @UseGuards(UserOwnerOrAdminGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user statistics' })
   @ApiResponse({ status: 200, description: 'User statistics returned.' })
   getUserStats(@Param('id') id: string) {
@@ -83,6 +93,8 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @UseGuards(UserOwnerOrAdminGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft-delete user by ID' })
   @ApiResponse({ status: 200, description: 'User soft-deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })

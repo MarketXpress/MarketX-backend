@@ -16,12 +16,15 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { Public } from './decorators/public.decorator';
 
 @ApiTags('auth')
+@Public()
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new account' })
   @ApiResponse({
@@ -41,6 +44,7 @@ export class AuthController {
     return this.authService.register(body);
   }
 
+  @Public()
   @Post('login')
   @ApiOperation({ summary: 'Log in with email and password' })
   @ApiResponse({ status: 200, description: 'Authentication tokens returned.' })
@@ -53,6 +57,7 @@ export class AuthController {
     }
   }
 
+  @Public()
   @UseGuards(JwtRefreshGuard)
   @ApiBearerAuth()
   @Post('refresh')
@@ -70,6 +75,7 @@ export class AuthController {
     return this.authService.refreshTokens(userId, email, refreshToken);
   }
 
+  @Public()
   @UseGuards(JwtRefreshGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -79,6 +85,7 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @Public()
   @UseGuards(JwtRefreshGuard)
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)

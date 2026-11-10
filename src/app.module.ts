@@ -25,6 +25,7 @@ import { AdminModule } from './admin/admin.module';
 import { EscrowModule } from './escrow/escrow.module';
 import { AdminGuard } from './guards/admin.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { ReviewModule } from './review/review.module';
@@ -138,6 +139,7 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
     AppService,
     AdminGuard,
     RolesGuard,
+    JwtAuthGuard,
     HttpExceptionFilter,
 
     {
@@ -146,12 +148,17 @@ import { ProductPriceEntity } from './products/entities/product-price.entity';
     },
 
     {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+
+    {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
   ],
 
-  exports: [AdminGuard, RolesGuard, LoggerModule],
+  exports: [AdminGuard, RolesGuard, JwtAuthGuard, LoggerModule],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

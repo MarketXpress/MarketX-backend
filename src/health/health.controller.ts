@@ -4,8 +4,10 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { DatabaseIndicator } from './indicators/database.indicator';
 import { RedisIndicator } from './indicators/redis.indicator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Health')
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(

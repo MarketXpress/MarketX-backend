@@ -11,6 +11,7 @@ import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -22,6 +23,7 @@ export class CategoriesController {
    * Returns a nested category tree.
    */
   @Get()
+  @Public()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
   @ApiOperation({ summary: 'Get category tree' })
@@ -47,6 +49,7 @@ export class CategoriesController {
    * We keep the endpoint so the contract exists for later work.
    */
   @Get(':id/products')
+  @Public()
   @ApiOperation({ summary: 'Get products by category (dummy placeholder)' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, description: 'Category products returned.' })
