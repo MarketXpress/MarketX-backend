@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🛒 MarketX Backend Engine</h1>
+  <h1>🛒 Lumenbay Backend Engine</h1>
   <p><strong>A high-concurrency, scalable marketplace API built with NestJS, Postgres, and Redis.</strong></p>
   
   <a href="https://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
@@ -7,9 +7,9 @@
 
 <br />
 
-## 📖 About MarketX
+## 📖 About Lumenbay
 
-**MarketX** is an ambitious open-source marketplace backend engineered for scale, fraud resistance, and lightning-fast developer experience. Designed initially to power peer-to-peer (P2P) commerce, it provides an expansive suite of tightly coupled e-commerce micro-features.
+**Lumenbay** is an ambitious open-source marketplace backend engineered for scale, fraud resistance, and lightning-fast developer experience. Designed initially to power peer-to-peer (P2P) commerce, it provides an expansive suite of tightly coupled e-commerce micro-features.
 
 We are currently undertaking a massive open-source contribution wave (via **Drips**) to fortify the architecture, refactor technical debt, and build out enterprise-grade systems like Escrow and AI Fraud Detection.
 
@@ -60,8 +60,8 @@ Ensure you have the following installed on your machine:
 Clone the repository and install the Node dependencies:
 
 ```bash
-git clone https://github.com/Cybermaxi7/MarketX-backend.git
-cd MarketX-backend
+git clone https://github.com/Lumenbay/Lumenbay-backend.git
+cd Lumenbay-backend
 npm install
 ```
 
@@ -153,10 +153,7 @@ Before opening a PR, run the quick confidence suite:
 $ npm run pr:check
 ```
 
-<<<<<<< HEAD
 This command runs the maintained contributor confidence suite: targeted lint checks, targeted TypeScript typechecking, and focused regression tests for the current contribution slice.
-=======
-This command runs issue-slice lint checks, issue-slice TypeScript typechecking, and the focused regression test suite used for this contribution wave.
 
 ## Architecture Decisions
 
@@ -172,8 +169,6 @@ We use standardized GitHub issue templates to keep triage fast and consistent. P
 - Tech debt: for shortcuts, brittle patterns, dependency alignment, or missing safeguards that reduce engineering velocity or increase risk over time.
 
 Blank issues are disabled so requests consistently include the details reviewers need to triage, scope, and ship changes safely.
-
-> > > > > > > 19a7b48f152c83b373dd40836b279bc02c65038e
 
 ---
 
@@ -218,10 +213,10 @@ If you encounter any issues during setup, run our environment diagnostics tool:
 npm run doctor
 ```
 
-To get started, browse our active [GitHub Issues](https://github.com/Cybermaxi7/MarketX-backend/issues). When you find an issue you'd like to tackle, please **read the issue description thoroughly** before beginning your work.
+To get started, browse our active [GitHub Issues](https://github.com/Lumenbay/Lumenbay-backend/issues). When you find an issue you'd like to tackle, please **read the issue description thoroughly** before beginning your work.
 
 ---
 
 ## 📜 License & Support
 
-MarketX is MIT licensed. If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
+Lumenbay is MIT licensed. If you encounter any issues spinning up the environment, please drop an Issue on GitHub. Let's build something incredible together! 🚀
